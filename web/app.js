@@ -876,20 +876,9 @@ async function zimResults(q, el, max = 8, heading = '') {
 
 /* ------------------------------------------------------------- search -- */
 const QSTOP = new Set('a an and are can do does for from get got have how i if in is it its me my need no not of on or our so that the this to was we what when where which who why will with without you your won don can t s'.split(' '));
+// Words are split, folded and matched by web/words.js (loaded first), so accents, Chinese and other scripts work.
 function topicMatches(q) {
-  const words = q.toLowerCase().split(/[^a-z0-9]+/).filter(w => w.length > 2 && !QSTOP.has(w));
-  if (!words.length || !TOPICS) return [];
-  const has = (hay, w) => new RegExp('\\b' + w).test(hay);
-  const out = [];
-  for (const t of TOPICS) {
-    const hay = [t.title, t.short, ...(t.keywords || [])].join(' ').toLowerCase();
-    const s = words.filter(w => has(hay, w)).length;
-    let best = null, bs = 0;
-    for (const c of t.choices || []) { if (c.goto) continue; const ch = (c.label + ' ' + (c.hint || '')).toLowerCase(); const n = words.filter(w => has(ch, w)).length; if (n > bs) { bs = n; best = c } }
-    if (s || bs) out.push({ t, c: best, s: s + bs * 1.5 });
-  }
-  out.sort((a, b) => b.s - a.s);
-  return out.filter(o => o.s >= out[0]?.s * 0.6).slice(0, 3);
+  return typeof SearchWords === 'undefined' ? [] : SearchWords.rankTopics(q, TOPICS, QSTOP);
 }
 let searchSeq = 0;
 async function searchPage(q, kind) {
