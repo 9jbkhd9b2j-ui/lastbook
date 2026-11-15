@@ -1,11 +1,20 @@
 // Runs web/words.js in a fresh context and answers the cases in a JSON file.
-// Usage: node topic_search_test.mjs <words.js> <cases.json> <segmenter|fallback>
-// "fallback" removes Intl.Segmenter from the context first, as an older browser engine would.
+// Usage: node topic_search_test.mjs <words.js> <cases.json> <segmenter|webkit|fallback|throwing>
+// "fallback" removes Intl.Segmenter from the context first, as an older engine would; "throwing" leaves one
+// whose constructor throws. "webkit" marks numbers as not word-like, as JavaScriptCore's Segmenter does
+// (WebKitGTK 2.52 gives "112" isWordLike false; V8 gives true).
 import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
 const [, , wordsFile, casesFile, mode] = process.argv;
 const ctx = vm.createContext({});   // its own globals, its own Intl
 if (mode === 'fallback') vm.runInContext('delete Intl.Segmenter', ctx);
+if (mode === 'webkit') vm.runInContext(`{
+  const Real = Intl.Segmenter;
+  Intl.Segmenter = class extends Real {
+    segment(t) { return Array.from(super.segment(t), x => /^\\p{N}+$/u.test(x.segment) ? { ...x, isWordLike: false } : x) }
+  };
+}`, ctx);
+if (mode === 'throwing') vm.runInContext("Intl.Segmenter = function () { throw new Error('no segmenter') }", ctx);
 vm.runInContext(readFileSync(wordsFile, 'utf8'), ctx, { filename: 'words.js' });
 const W = ctx.SearchWords;
 const cases = JSON.parse(readFileSync(casesFile, 'utf8'));
@@ -36,4 +45,5 @@ process.stdout.write(JSON.stringify({
   words: (cases.words || []).map(q => safe(() => W.queryWords(q, stop))),
   match: (cases.match || []).map(([text, w]) => safe(() => W.matcher(text)(w))),
   rank: (cases.rank || []).map(q => ({ q, now: safe(() => brief(W.rankTopics(q, cases.topics, stop))), before: brief(before(q, cases.topics)) })),
+  rankOwn: (cases.rankOwn || []).map(([q, topics]) => safe(() => brief(W.rankTopics(q, topics, stop)))),
 }));

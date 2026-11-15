@@ -97,7 +97,7 @@ for mode, origin in (('stream', B.ORIGIN_MAC), ('buffer', B.ORIGIN_WINDOWS)):
     print(f'--- {mode}', flush=True)
     b = B.Bridge(server, mode, origin, tmpdir=str(TMP))
     piece = B.VIDEO_PIECE[mode]
-    for t, want in [('/', 200), ('/ui/app.js', 200), ('/ui/chat.js', 200), ('/api/topics', 200), ('/api/library', 200), ('/api/shelves', 200), ('/api/map/info', 200), ('/api/health', 200), ('/api/nope', 404)]:
+    for t, want in [('/', 200), ('/ui/app.js', 200), ('/ui/words.js', 200), ('/ui/chat.js', 200), ('/api/topics', 200), ('/api/library', 200), ('/api/shelves', 200), ('/api/map/info', 200), ('/api/health', 200), ('/api/nope', 404)]:
         s, h, d = call(b, 'GET', t)
         note(f'GET {t}', s == want, f'{s} {len(d)} bytes')
     counts = []

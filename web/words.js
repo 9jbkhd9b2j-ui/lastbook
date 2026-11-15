@@ -7,20 +7,22 @@
   const NO_SPACES = /[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Hangul}\p{Script=Thai}\p{Script=Lao}\p{Script=Khmer}\p{Script=Myanmar}]/u;
   // Accent marks on Latin letters, once a word is decomposed. Only Latin, the same as the library's FTS5 index (unicode61).
   const LATIN_MARKS = /(\p{Script=Latin})\p{M}+/gu;
-  const APOSTROPHE = /['’]/;
+  // Anything that isn't a letter, mark or digit separates words, as [^a-z0-9] did for a-z.
+  const NOT_WORD = /[^\p{L}\p{M}\p{N}]+/u;
 
   // The key two texts are compared by. Display text is never changed.
   // Order: lower-case, decompose (NFKD), then remove marks. Decomposing before removing marks is the part that
   // matters: NFC "İ" is one character with no mark to remove, and lower-casing it afterwards gives "i" plus a
-  // combining dot (U+0307), so "İstanbul" would miss "istanbul". NFKD also splits é into e + accent and turns
-  // full-width "ｗ" into "w".
-  // ß and final ς fold the way case folding does, so "strasse" finds "Straße" and σ matches ς.
+  // combining dot (U+0307), so "İstanbul" would miss "istanbul". NFKD also splits é into e + accent.
+  // Final ς folds to σ and ß stays, as in FTS5. One deliberate difference: NFKD also folds full-width Latin
+  // ("ｗａｔｅｒ", typed on Chinese and Japanese keyboards) to "water", which FTS5 keeps apart.
   function fold(s) {
-    return String(s).toLowerCase().normalize('NFKD').replace(LATIN_MARKS, '$1').normalize('NFC')
-      .replace(/ß/g, 'ss').replace(/ς/g, 'σ');
+    return String(s).toLowerCase().normalize('NFKD').replace(LATIN_MARKS, '$1').normalize('NFC').replace(/ς/g, 'σ');
   }
 
-  let seg;   // made once; null where Intl.Segmenter is missing
+  // Intl.Segmenter is in WebView2, WKWebView (macOS 14+) and WebKitGTK; the fallback below covers older engines
+  // and any engine whose constructor throws.
+  let seg;   // made once; null where Intl.Segmenter is missing or unusable
   function segmenter() {
     if (seg === undefined) {
       try { seg = typeof Intl !== 'undefined' && Intl.Segmenter ? new Intl.Segmenter(undefined, { granularity: 'word' }) : null }
@@ -29,22 +31,30 @@
     return seg;
   }
 
-  // Words of a text, folded. Apostrophes split a word as they always have here: water's -> water + s, l'eau -> l + eau.
-  // Without Intl.Segmenter, anything that is not a letter, mark or digit separates words; that keeps every script
-  // that uses spaces, but a run of Chinese or Japanese stays one word.
+  // Words of a text, folded. Segment first, then split each segment wherever there's no letter, mark or digit:
+  // the segmenter keeps "water's", "first_aid" and "e.coli" whole, but here they split as they always have
+  // (water + s, first + aid, e + coli), and ZWJ, ZWNJ and soft hyphens separate words, as in FTS5.
+  // Folding comes after segmenting, so the segmenter sees the text as typed. Every segment is kept and that
+  // split drops the spaces and punctuation, rather than trusting isWordLike: JavaScriptCore marks numbers
+  // such as 112 as not word-like, V8 does not.
+  // Without Intl.Segmenter that split is all there is: every script that uses spaces works, but a run of
+  // Chinese or Thai stays one word.
   function splitWords(text) {
-    const s = segmenter();
-    const raw = s ? Array.from(s.segment(String(text)), x => x.isWordLike ? x.segment : '')
-                  : String(text).split(/[^\p{L}\p{M}\p{N}'’]+/u);
+    const t = String(text), s = segmenter();
+    const raw = s ? Array.from(s.segment(t), x => x.segment) : [t];
     const out = [];
-    for (const w of raw) for (const part of w.split(APOSTROPHE)) { const f = fold(part); if (f) out.push(f) }
+    for (const w of raw) for (const part of w.split(NOT_WORD)) { const f = fold(part); if (f) out.push(f) }
     return out;
   }
 
-  // Words worth searching for: Latin, Greek, Cyrillic and similar need three characters or more, counted as
-  // characters rather than UTF-16 units; words in scripts without spaces count at any length (水, 净化).
+  // Words worth searching for, counted in characters rather than UTF-16 units: words in scripts without spaces at
+  // any length (水, 净化); two-letter words in scripts without case (आग, אש, دم); otherwise three or more, as before.
+  function keep(w) {
+    const n = Array.from(w).length;
+    return NO_SPACES.test(w) || n > 2 || (n === 2 && /\p{L}/u.test(w) && !/\p{Ll}/u.test(w));
+  }
   function queryWords(q, stop) {
-    return splitWords(q).filter(w => (NO_SPACES.test(w) || Array.from(w).length > 2) && !(stop && stop.has(w)));
+    return splitWords(q).filter(w => keep(w) && !(stop && stop.has(w)));
   }
 
   // A test for one piece of text: does a query word start one of its words? For scripts without spaces,
@@ -56,7 +66,7 @@
 
   // Topic search, scored as before: a word found in a topic's title, short line or keywords counts 1,
   // a word found in one of its choices counts 1.5; topics within 60% of the best score, top 3.
-  const cache = new WeakMap();
+  const cache = new WeakMap();   // topics are replaced, never edited in place
   function topicMatchers(t) {
     let m = cache.get(t);
     if (!m) {
