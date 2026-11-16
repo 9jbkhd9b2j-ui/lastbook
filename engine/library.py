@@ -8,7 +8,7 @@
 Lastbook's own copy. The library folder comes from LASTBOOK_LIBRARY, or library-data beside the engine folder.
 """
 from __future__ import annotations
-import argparse, collections, concurrent.futures, hashlib, html, http.server, importlib.util, json, mimetypes, os, re, shutil, sqlite3, subprocess, sys, threading, time, urllib.parse, zipfile
+import argparse, collections, concurrent.futures, hashlib, html, http.server, importlib.util, json, mimetypes, os, re, shutil, sqlite3, subprocess, sys, threading, time, unicodedata, urllib.parse, zipfile
 from pathlib import Path
 import xml.etree.ElementTree as ET
 
@@ -100,6 +100,23 @@ def zim_main_path(arc):
   entry=entry.get_redirect_entry()
  return entry.path
 DB=ROOT/'search.sqlite'
+# Combining marks (M*) count as part of a word: Devanagari and Thai vowel signs, Arabic and Hebrew vowel points. Without
+# them unicode61 breaks a word at every mark, so पानी (water) was indexed as प + न and also matched पीना (drink).
+# remove_diacritics stays at its default, so Latin accents still fold: creme finds crème.
+TOKENIZE="unicode61 categories 'L* N* Co M*'"
+PAGES_TABLE=f'CREATE VIRTUAL TABLE pages USING fts5(doc_id UNINDEXED,title,collection,category,path UNINDEXED,page UNINDEXED,body,tokenize="{TOKENIZE}")'
+
+def query_terms(text,keep='-'):
+ """The words of a search: runs of letters, numbers and combining marks, as the index reads them, with '_' and the
+ characters in keep. Python's \\w has no marks, so re.findall(r'[\\w-]+') cut पानी into प and न. Without
+ marks this gives exactly what [\\w-]+ gave (keep='-'), or [\\w'-]+ (keep="'-")."""
+ words,word=[],[]
+ for c in text:
+  if c.isalnum() or c=='_' or c in keep or unicodedata.category(c)[0]=='M':word.append(c)
+  elif word:words.append(''.join(word));word=[]
+ if word:words.append(''.join(word))
+ return words
+
 STYLE='''body{font:17px/1.65 system-ui,sans-serif;color:#202b30;background:#f8f6ef;max-width:1100px;margin:32px auto;padding:0 24px}a{color:#166456}aside{background:#e6ede4;padding:14px;margin-bottom:26px;font-size:14px}table{border-collapse:collapse;max-width:100%;overflow:auto;display:block}td,th{border:1px solid #bbc4bb;padding:8px}img,video{max-width:100%;height:auto}h1,h2,h3{line-height:1.2}pre{white-space:pre-wrap}'''
 
 def catalog():
@@ -197,7 +214,7 @@ def build():
  (ROOT/'text').mkdir(exist_ok=True)
  records,bad=catalog();building=DB.with_suffix('.building.sqlite');con=sqlite3.connect(building)
  con.execute('DROP TABLE IF EXISTS pages')
- con.execute('CREATE VIRTUAL TABLE pages USING fts5(doc_id UNINDEXED,title,collection,category,path UNINDEXED,page UNINDEXED,body,tokenize="unicode61")')
+ con.execute(PAGES_TABLE)
  built=[];errors=[];totalpages=0
  with concurrent.futures.ThreadPoolExecutor(4) as pool:
   for i,(r,pages,error) in enumerate(pool.map(extract,records)):
@@ -232,7 +249,7 @@ def rewrite_links(records):
  print(f'Linked {count} archived pages to local references',flush=True)
 
 def search(query,limit=25):
- terms=re.findall(r'[\w-]+',query,flags=re.UNICODE)
+ terms=query_terms(query)
  if not terms:return []
  expression=' AND '.join('"'+t.replace('"','""')+'"' for t in terms)
  con=sqlite3.connect(DB.resolve().as_uri()+'?mode=ro',uri=True);con.row_factory=sqlite3.Row
