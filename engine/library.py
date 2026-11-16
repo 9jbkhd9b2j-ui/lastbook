@@ -109,13 +109,14 @@ PAGES_TABLE=f'CREATE VIRTUAL TABLE pages USING fts5(doc_id UNINDEXED,title,colle
 def query_terms(text,keep='-'):
  """The words of a search: runs of letters, numbers and combining marks, as the index reads them, with '_' and the
  characters in keep. Python's \\w has no marks, so re.findall(r'[\\w-]+') cut पानी into प and न. Without
- marks this gives exactly what [\\w-]+ gave (keep='-'), or [\\w'-]+ (keep="'-")."""
+ marks this gives exactly what [\\w-]+ gave (keep='-'), or [\\w'-]+ (keep="'-"). A mark with no letter before it, as a
+ stray accent between spaces, is not a word: the index has no token for it, and as a word it would make every search fail."""
  words,word=[],[]
  for c in text:
   if c.isalnum() or c=='_' or c in keep or unicodedata.category(c)[0]=='M':word.append(c)
   elif word:words.append(''.join(word));word=[]
  if word:words.append(''.join(word))
- return words
+ return [w for w in words if not all(unicodedata.category(c)[0]=='M' for c in w)]
 
 STYLE='''body{font:17px/1.65 system-ui,sans-serif;color:#202b30;background:#f8f6ef;max-width:1100px;margin:32px auto;padding:0 24px}a{color:#166456}aside{background:#e6ede4;padding:14px;margin-bottom:26px;font-size:14px}table{border-collapse:collapse;max-width:100%;overflow:auto;display:block}td,th{border:1px solid #bbc4bb;padding:8px}img,video{max-width:100%;height:auto}h1,h2,h3{line-height:1.2}pre{white-space:pre-wrap}'''
 

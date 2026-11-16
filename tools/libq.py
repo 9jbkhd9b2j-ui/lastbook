@@ -38,7 +38,7 @@ def query_terms(text):
         if c.isalnum() or c in '_-' or unicodedata.category(c)[0] == 'M': word.append(c)
         elif word: words.append(''.join(word)); word = []
     if word: words.append(''.join(word))
-    return words
+    return [w for w in words if not all(unicodedata.category(c)[0] == 'M' for c in w)]
 _cat = None
 def cat():
     global _cat

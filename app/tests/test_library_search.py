@@ -7,15 +7,27 @@ Hebrew. No real library, no server, no port: small made-up indexes in a temporar
 The index keeps marks inside words (engine/library.py, TOKENIZE) and every search splits its words the same way
 (query_terms). English and Latin-accent searches must find exactly what they found before.
 """
-import json, os, re, sqlite3, subprocess, sys, tempfile, unicodedata, unittest
+import importlib.util, json, os, re, sqlite3, subprocess, sys, tempfile, unicodedata, unittest
 from pathlib import Path
 from unittest import mock
 
 sys.dont_write_bytecode = True
 ROOT = Path(__file__).resolve().parents[2]
 sys.path[:0] = [str(ROOT)]
-with mock.patch.dict(os.environ, {'LASTBOOK_LIBRARY': tempfile.gettempdir()}):   # no library folder of anyone's is read
-    import engine.library as library
+LIBRARY_DIR = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
+
+
+def load_library():
+    """A private copy of engine/library.py whose library folder is a new, empty temporary one. engine.library itself is left
+    alone: it fixes its folder when first imported, and test_bridge needs it to be the data folder it sets up."""
+    with mock.patch.dict(os.environ, {'LASTBOOK_LIBRARY': LIBRARY_DIR.name}):
+        spec = importlib.util.spec_from_file_location('library_under_test', ROOT / 'engine' / 'library.py')
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+    return module
+
+
+library = load_library()
 
 # The table and the split as they were before marks were kept, to show what changes and what must not.
 OLD_TABLE = 'CREATE VIRTUAL TABLE pages USING fts5(doc_id UNINDEXED,title,collection,category,path UNINDEXED,page UNINDEXED,body,tokenize="unicode61")'
@@ -23,8 +35,11 @@ SQL = "SELECT doc_id FROM pages WHERE pages MATCH ? ORDER BY bm25(pages,0,5,2,1,
 
 HINDI = [('hi-water', 'पानी को उबालें।'),          # boil the water
          ('hi-drink', 'रोज़ दवा पीना।')]            # take (drink) medicine daily: the same consonants प and न as पानी
-THAI = [('th-water', 'น้ำ สะอาด'),                  # clean water; a space between words, as unicode61 does not split Thai itself
-        ('th-lead', 'นำ ทาง')]                       # lead the way
+# Thai is written without spaces between words, and unicode61 does not segment it: a run of Thai letters is one word,
+# before this change and after. These pages put a space between words, as the fix is about each word staying whole.
+THAI = [('th-water', 'น้ำ สะอาด'),                  # clean water
+        ('th-lead', 'นำ ทาง'),                       # lead the way
+        ('th-sentence', 'ต้มน้ำให้เดือดก่อนดื่ม')]     # boil water before drinking, written as Thai is: no spaces
 ARABIC = [('ar-letter', 'هذا حَرْف'),               # this is a letter (of the alphabet)
           ('ar-joy', 'فَرَحٌ كبير')]                  # great joy: the same three letters, ف ر ح, in another order
 HEBREW = [('he-peace', 'שָׁלוֹם עֲלֵיכֶם'),          # peace be upon you
@@ -81,7 +96,6 @@ def vocabulary(db):
 
 
 def load_libq():
-    import importlib.util
     spec = importlib.util.spec_from_file_location('libq_under_test', ROOT / 'tools' / 'libq.py')
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
@@ -106,12 +120,18 @@ class Split(unittest.TestCase):
 
     def test_marks_stay_in_the_word(self):
         self.assertTrue(self.marks)
-        self.assertEqual(library.query_terms(' '.join(self.marks)), self.marks)
+        self.assertEqual(library.query_terms(' '.join('a' + m for m in self.marks)), ['a' + m for m in self.marks])
         self.assertEqual(library.query_terms('पानी उबालें'), ['पानी', 'उबालें'])
         self.assertEqual(library.query_terms('น้ำ'), ['น้ำ'])
         self.assertEqual(library.query_terms('حَرْف'), ['حَرْف'])
         self.assertEqual(library.query_terms('שָׁלוֹם'), ['שָׁלוֹם'])
         self.assertEqual(library.query_terms('café noir'), ['café', 'noir'])    # a decomposed é stays whole
+
+    def test_a_mark_alone_is_not_a_word(self):
+        """A stray accent between spaces has no token in the index; kept as a word it would make the whole search fail."""
+        self.assertEqual(library.query_terms('boil \u0301 water'), ['boil', 'water'])
+        self.assertEqual(library.query_terms(' '.join(self.marks)), [])
+        self.assertEqual(library.query_terms('\u0301\u0301-'), ['\u0301\u0301-'])     # with a '-' it is a word, as '-' was before
 
     def test_libq_splits_the_same_way(self):
         self.assertEqual(load_libq().query_terms(self.everything), library.query_terms(self.everything))
@@ -130,10 +150,34 @@ class Search(unittest.TestCase):
     def tearDownClass(cls):
         cls.dir.cleanup()
 
-    def test_the_build_uses_the_table_with_marks(self):
-        self.assertIn("categories 'L* N* Co M*'", library.PAGES_TABLE)
-        self.assertNotIn('remove_diacritics', library.TOKENIZE)       # Latin accents still fold
-        self.assertIn('con.execute(PAGES_TABLE)', (ROOT / 'engine' / 'library.py').read_text(encoding='utf-8'))
+    def test_the_build_makes_the_table_with_marks(self):
+        """build() itself, on a made-up catalog in the private library folder: nothing is read from disk to extract."""
+        records = [{'id': d, 'title': d, 'collection': 'Hindi', 'category': 'water', 'path': f'documents/{d}.pdf', 'kind': 'pdf',
+                    'pages': 1, 'bytes': 1} for d, _ in HINDI]
+        text = dict(HINDI)
+        with mock.patch.object(library, 'catalog', lambda: (records, [])), \
+                mock.patch.object(library, 'extract', lambda r: (r, [text[r['id']]], None)), \
+                mock.patch('builtins.print'):
+            library.build()
+        self.assertTrue(library.DB.is_file())
+        self.assertFalse(library.DB.with_suffix('.building.sqlite').exists())
+        con = sqlite3.connect(library.DB)
+        try:
+            sql = con.execute("SELECT sql FROM sqlite_master WHERE name='pages'").fetchone()[0]
+        finally:
+            con.close()
+        self.assertIn("categories 'L* N* Co M*'", sql)
+        self.assertNotIn('remove_diacritics', sql)                                      # Latin accents still fold
+        self.assertEqual(new_search(library.DB, 'पानी'), ['hi-water'])
+
+    def test_packs_build_the_same_table(self):
+        """packaging/build_packs.py makes each pack's index from the pack spec's schema, not from the builder's file."""
+        spec = json.loads((ROOT / 'derived' / 'packs' / 'pack-spec.json').read_text(encoding='utf-8'))
+        self.assertEqual('CREATE VIRTUAL TABLE pages USING ' + spec['search_index']['schema'], library.PAGES_TABLE)
+
+    def test_a_stray_accent_does_not_empty_the_search(self):
+        self.assertEqual(new_search(self.new, 'boil \u0301 water'), new_search(self.new, 'boil water'))
+        self.assertEqual(new_search(self.new, 'boil water'), ['en-boil'])
 
     def test_hindi_words_stay_whole(self):
         self.assertIn('hi-drink', old_search(self.old, 'पानी'))               # the bug: water also found drink
@@ -148,6 +192,10 @@ class Search(unittest.TestCase):
         self.assertEqual(new_search(self.new, 'นำ'), ['th-lead'])
         self.assertIn('น้ำ', vocabulary(self.new))
         self.assertNotIn('น้ำ', vocabulary(self.old))
+        # The limit that stays: a word inside unspaced Thai is not found, before or after. That needs a word segmenter.
+        for q in ('น้ำ', 'ดื่ม', 'เดือด'):
+            self.assertNotIn('th-sentence', new_search(self.new, q), q)
+        self.assertEqual(new_search(self.new, 'ต้มน้ำให้เดือดก่อนดื่ม'), ['th-sentence'])
 
     def test_vowelled_arabic_and_pointed_hebrew(self):
         self.assertIn('ar-joy', old_search(self.old, 'حَرْف'))              # the bug: any word with ح, ر and ف
@@ -188,7 +236,7 @@ class Search(unittest.TestCase):
 
     def test_the_app_search_splits_the_same_way(self):
         """server.py's query_groups feeds the app's search box and the assistant's retrieval."""
-        import server
+        import server            # here, not at the top, as in test_address_search: test_bridge sets its data folder first
         content, groups = server.query_groups('पानी उबालें')
         self.assertEqual(content, ['पानी', 'उबालें'])
         con = sqlite3.connect(self.new)
