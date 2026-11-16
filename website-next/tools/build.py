@@ -66,11 +66,15 @@ def head(title, desc, path, extra="", index=True):
 <meta property="og:site_name" content="Lastbook">
 <meta property="og:title" content="{full}">
 <meta property="og:description" content="{desc}">
-{ogurl}<meta property="og:image" content="{SITE}/og.png">
+{ogurl}<meta property="og:image" content="{SITE}/og-survive-rebuild-v2.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
-<meta property="og:image:alt" content="Lastbook: a free library for when the internet or power is gone. A hand-drawn wordmark whose two O’s are eyes reading an open book, with small ink people around it.">
+<meta property="og:image:alt" content="Lastbook — Everything you need to survive and rebuild society. Local AI, maps and how-to videos. Free, open source and offline.">
 <meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="{full}">
+<meta name="twitter:description" content="{desc}">
+<meta name="twitter:image" content="{SITE}/og-survive-rebuild-v2.png">
+<meta name="twitter:image:alt" content="Lastbook — Everything you need to survive and rebuild society.">
 <link rel="preload" href="{FONT}" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="{CSS}">
 <script src="{JS}"></script>{extra}
@@ -194,8 +198,8 @@ GRAIN = ('<svg class="grain" aria-hidden="true" focusable="false"><filter id="gr
 
 
 def home():
-    return head("Lastbook: a free survival library that works with no internet",
-                "Survival and repair guides, medical books, encyclopedias, how-to videos and a map, on your own Mac, Windows or Linux computer. Free. Never uses the internet.",
+    return head("Lastbook — Everything you need to survive and rebuild society.",
+                "Free, open-source survival library with local AI, maps and how-to videos. Works offline after setup on Mac, Windows and Linux.",
                 "/", extra=f'\n<script src="{CROWD}" defer></script>') + bar("/", over=True) + f"""
 <main id="main">
 
