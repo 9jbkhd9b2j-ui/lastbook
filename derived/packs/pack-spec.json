@@ -10,7 +10,7 @@
       "pack.json": "name, size, map, built, counts, add-ons merged",
       "pack-manifest.tsv": "path, bytes, sha256 for every file",
       "library-data/catalog.json": "rewritten, membership and field allow-list applied",
-      "library-data/search.sqlite": "rebuilt from existing rows, same FTS5 schema",
+      "library-data/search.sqlite": "rebuilt from existing rows with search_index.schema below (combining marks kept in words since #3)",
       "library-data/summary.json": "regenerated, 7 fields",
       "library-data/reader.css": "copied",
       "library-data/documents/": "catalog paths and the Sources page",
