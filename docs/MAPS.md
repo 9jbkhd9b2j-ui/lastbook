@@ -110,6 +110,36 @@ issue before any code.
 [REGIONS-TH.md](REGIONS-TH.md) does the same for Thailand's provinces and Bangkok.
 [REGIONS-DE.md](REGIONS-DE.md) does the same for Germany's 16 states.
 
+## Building the place finder for a region outside the US
+
+`tools/build_places_region.py` builds the two files the app already reads — `derived/geo/places.sqlite`
+(`place` + `place_fts`) and the `poi` table of `derived/geo/national.sqlite` — from one OpenStreetMap extract,
+so a region does not need a federal gazetteer of its own:
+
+```bash
+python3 tools/build_places_region.py australia-latest.osm.pbf --region Australia --fresh
+python3 tools/build_places_region.py new-zealand-latest.osm.pbf --region 'New Zealand'   # adds to the same files
+```
+
+- **Places** come from `place=city/town/village/hamlet/suburb/…` with the rank order the finder sorts by
+  (city 1, town 2, village 3, hamlet 4, suburb 5). A `name:zh` (or `name:en/ru/es/fr/ar`) goes in front of
+  `detail`, which `place_fts` indexes, so the finder matches other-language queries: `悉尼` finds Sydney,
+  `悉尼唐人街` finds Chinatown.
+- **Help points** are `amenity=hospital/clinic/doctors/pharmacy/police/fire_station/drinking_water/shelter/
+  toilets/fuel`, `emergency=ambulance_station`, `shop=supermarket/convenience/hardware/doityourself` and
+  `tourism=camp_site/alpine_hut/wilderness_hut`, named `cls` values already in `web/map.js`. `amenity=shelter`
+  is a bus shelter in much of the world, so only shelters without `shelter_type` (or `weather_shelter`,
+  `basic_hut`) are kept — without that filter Australia alone adds 27,000 bus stops.
+- **Australia**, from the Geofabrik extract of 17 November 2026 (`--bbox` is optional; use
+  `--bbox=-40,140,-25,155` when a coordinate is negative): 30,440 places and 28,973 help points,
+  3.7 MB + 1.6 MB.
+
+`tools/test_build_places_region.py` checks the schema, the rank order, the `place_fts` prefix query in English
+and Chinese, the bus-shelter filter, the bbox filter and running a second region into the same files. It needs
+only pyosmium (already a build-time dependency in `tools/build_coast.py`) and no data folder.
+
+The data is OpenStreetMap, ODbL: a pack built from it must carry the attribution the other OSM layers already do.
+
 ## Checking a map change
 
 - A change to a layer in `web/map.js` is a change you can see: include screenshots in light and dark mode.
