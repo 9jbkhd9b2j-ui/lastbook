@@ -127,7 +127,27 @@ so some of its paths and ports describe that setup. The desktop app does not use
 
 The builds write into `derived/app-build/` and refuse to finish if the package scan finds something that must not ship:
 test code, a network call outside setup's downloader, a web address in our own pages, or a word from the private list
-(see below). The builds also run the TLS roots gate.
+(see below). The builds also run the TLS roots gate, and then the finished app's own self-test.
+
+**Self-test.** Any copy of the app, built or installed, can check that it makes the library's search index and searches it
+the way it should, with the SQLite it runs with (its own on macOS and Windows, the system Python's on Linux):
+
+```bash
+Lastbook.app/Contents/MacOS/Lastbook --self-test       # macOS
+lastbook --self-test                                   # Linux, installed
+./Lastbook.exe --self-test | cat                       # Windows, in Git Bash
+python3 -B app/main.py --self-test                     # from source
+```
+
+It makes the real search table in a new database in a temporary folder, indexes पानी (water) and पीना (to drink), which
+differ only in their vowel signs, searches for each with the app's own search code and checks the file as a rebuild does.
+It opens no window and no library (not even one named by `LASTBOOK_DATA`), reads no settings and writes nothing outside
+its temporary folders. It prints one line of JSON (`"ok": true` and the SQLite version) and exits 0, or prints
+`"ok": false` with the reason and exits 1; it also exits 1 if it could not write its result. On Windows the app has no
+console of its own, so its output is piped (`| cat` in Git Bash, `| Out-String` in PowerShell); that also makes the shell
+wait for the result and keep its exit code. The builds run it on the finished app (on Linux, on the staged files with
+`/usr/bin/python3`, as the installed package runs, before they are packed); a failed self-test fails the build, and the
+result is kept beside the package as `self-test.json`.
 
 **macOS (Apple Silicon, needs [uv](https://github.com/astral-sh/uv)):**
 
@@ -193,12 +213,13 @@ before running them. Their disposable test distro is named `LastbookTest`, with 
   (a newer copy is fetched from `downloads.lastbook.org` when setup opens and used only if it validates).
 - **The search index format** is how the index cuts text into words: `TOKENIZE` in `engine/library.py` for the app, and
   `search_index.schema` in the pack spec for packs. A test keeps the two the same, and `packaging/scan_pack.py` fails a
-  pack whose index was not made with the spec's statement (`search.schema_differs`). The releases after macOS 1.1.10,
-  Windows 1.1.8 and Linux 1.1.9 keep combining marks inside words (Hindi and Thai vowel signs, Arabic and Hebrew vowel
-  points). In an index made after that change, an app from before it finds nothing for a word that has such marks, and
-  shows no error; text without them is found as before. A newer app with an older index finds the same pages or fewer,
-  and never loses the right one. So the release order is: the app first, and packs in the new format only after it. An
-  app that is already out cannot check a pack's format, so a new-format pack has to be kept out of its reach. From 1.1.8
+  pack whose index was not made with the spec's statement (`search.schema_differs`). The index keeps combining marks
+  inside words (Hindi and Thai vowel signs, Arabic and Hebrew vowel points), and so do the apps' searches from the first
+  release after 1.1.11 that includes this change; 1.1.11 and every earlier release split words at them. In an index made
+  after that change, an app from before it finds nothing for a word that has such marks, and shows no error; text without
+  them is found as before. A newer app with an older index finds the same pages or fewer, and never loses the right one.
+  So the release order is: the app first, and packs in the new format only after it. An app that is already out cannot
+  check a pack's format, so a new-format pack has to be kept out of its reach. From 1.1.8
   at the latest, an app keeps the address, size and SHA-256 of each pack it was built with and takes any other pack
   from the fetched `manifest-v1.json` as it is (`engine/setup/manifest.py`, `merge`); the first published code took
   every pack from the fetched copy. So a new-format pack listed in `manifest-v1.json` is offered to every app that does

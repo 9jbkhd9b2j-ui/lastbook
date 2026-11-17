@@ -322,13 +322,41 @@ def rewrite_links(records):
   if changed:path.write_text(str(s),encoding='utf-8');count+=1
  print(f'Linked {count} archived pages to local references',flush=True)
 
-def search(query,limit=25):
+def search(query,limit=25,db=None):
+ """The library's search. db is the index to read: the library's own unless another is named (search_self_test)."""
  terms=query_terms(query)
  if not terms:return []
  expression=' AND '.join('"'+t.replace('"','""')+'"' for t in terms)
- con=sqlite3.connect(DB.resolve().as_uri()+'?mode=ro',uri=True);con.row_factory=sqlite3.Row
- rows=con.execute("SELECT doc_id,title,collection,category,path,page,snippet(pages,6,'[',']',' … ',42) AS excerpt,bm25(pages,0,5,2,1,0,0,1) AS score FROM pages WHERE pages MATCH ? ORDER BY score LIMIT ?",(expression,limit)).fetchall()
- con.close();return [dict(r) for r in rows]
+ con=sqlite3.connect(Path(db or DB).resolve().as_uri()+'?mode=ro',uri=True);con.row_factory=sqlite3.Row
+ try:rows=con.execute("SELECT doc_id,title,collection,category,path,page,snippet(pages,6,'[',']',' … ',42) AS excerpt,bm25(pages,0,5,2,1,0,0,1) AS score FROM pages WHERE pages MATCH ? ORDER BY score LIMIT ?",(expression,limit)).fetchall()
+ finally:con.close()   # also when the query fails: Windows keeps an open file from being replaced or removed
+ return [dict(r) for r in rows]
+
+SELF_TEST_PAGES=[('water','पानी'),('drink','पीना')]  # water and to drink: the same consonants, different vowel signs (combining marks)
+
+def search_self_test(table=None):
+ """Can this SQLite make the library's index and search it as the app does? The packaged app's --self-test and the
+ launcher's --check both run this. It makes the real table (or table, for tests) in a new database in a temporary folder,
+ indexes two words that differ only in combining marks, searches for each with search() and checks the file as build()
+ checks a new index. No library is opened and nothing outside that folder is written. Returns what it found; raises
+ sqlite3.Error when this SQLite cannot make the table, and ValueError when it makes one that searches would get wrong. A
+ plain fts5(x) table proves only that FTS5 is there: an SQLite that does not accept the tokenizer makes no index, one that
+ reads it differently finds nothing, and neither shows as an error when someone searches."""
+ import tempfile
+ with tempfile.TemporaryDirectory(prefix='lastbook-self-test-',ignore_cleanup_errors=True) as folder:
+  db=Path(folder)/'search.sqlite'
+  con=sqlite3.connect(db)
+  try:
+   con.execute(table or PAGES_TABLE)
+   con.executemany('INSERT INTO pages VALUES(?,?,?,?,?,?,?)',[(doc,'t','c','k','p',1,word) for doc,word in SELF_TEST_PAGES])
+   con.commit()
+  finally:con.close()
+  for doc,word in SELF_TEST_PAGES:
+   found=[r['doc_id'] for r in search(word,db=db)]
+   if found!=[doc]:raise ValueError(f'a search for {word}, one word with combining marks, found {found}, not the one page that has it')
+  fault=index_fault(db,len(SELF_TEST_PAGES))
+  if fault:raise ValueError(f'build() would not use an index made here: {fault}')
+ return {'sqlite':sqlite3.sqlite_version,'fts5':True,'tokenize':TOKENIZE,'marks_stay_in_words':True}
 
 def write_index(records,summary):
  payload=json.dumps([{k:r.get(k) for k in ['id','title','collection','category','publisher','path','kind','pages','duration','bytes','notes','source_url']} for r in records]).replace('</','<\\/')
