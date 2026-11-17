@@ -1,0 +1,358 @@
+{
+  "about": "Proposed region definitions for detailed maps of Chile's 16 regions (ISO 3166-2:CL). A proposal for discussion (docs/REGIONS-CL.md); no code reads this file, and it does not ship.",
+  "status": "proposal",
+  "checked": "2026-11-17",
+  "codes": {
+    "proposal": "ISO 3166-2:CL codes CL-AP through CL-MA (16 regions, including CL-RM for Región Metropolitana de Santiago).",
+    "why": "Several two-letter suffixes (MA, AR, CO) collide with US state codes in STATE_CODES (engine/address_search.py), so the CL- prefix is kept.",
+    "verified": "CUT two-digit codes (01 to 16) and ISO 3166-2:CL codes were cross-checked from general reference and search; the ISO site was not opened."
+  },
+  "country_extract": {
+    "dataset": "Geofabrik chile-latest.osm.pbf (352,124,743 bytes on 2026-11-17); chile-261116-free.gpkg.zip (774,826,582 bytes)",
+    "url": "https://download.geofabrik.de/south-america/chile.html",
+    "poly_url": "https://download.geofabrik.de/south-america/chile.poly",
+    "poly_vertices": 132,
+    "poly_outer_box": {
+      "west": -113.2233,
+      "south": -58.4519,
+      "east": -65.5141,
+      "north": -17.4574
+    },
+    "licence": "ODbL-1.0",
+    "verified": "2026-11-17",
+    "caveat": "Geofabrik's country polygon wraps Rapa Nui (-109.35 W) with the mainland, so per-region mainland boxes should be cut from BCN / INE official boundaries."
+  },
+  "regions": [
+    {
+      "code": "CL-AP",
+      "cut": "15",
+      "name": "Arica y Parinacota",
+      "country": "Chile",
+      "level": "region",
+      "box": {
+        "west": -70.38,
+        "south": -19.23,
+        "east": -68.91,
+        "north": -17.5
+      },
+      "box_with_margin_0_15": {
+        "west": -70.53,
+        "south": -19.38,
+        "east": -68.76,
+        "north": -17.35
+      }
+    },
+    {
+      "code": "CL-TA",
+      "cut": "01",
+      "name": "Tarapacá",
+      "country": "Chile",
+      "level": "region",
+      "box": {
+        "west": -70.29,
+        "south": -21.64,
+        "east": -68.4,
+        "north": -18.94
+      },
+      "box_with_margin_0_15": {
+        "west": -70.44,
+        "south": -21.79,
+        "east": -68.25,
+        "north": -18.79
+      }
+    },
+    {
+      "code": "CL-AN",
+      "cut": "02",
+      "name": "Antofagasta",
+      "country": "Chile",
+      "level": "region",
+      "box": {
+        "west": -70.75,
+        "south": -26.06,
+        "east": -67,
+        "north": -20.93
+      },
+      "box_with_margin_0_15": {
+        "west": -70.9,
+        "south": -26.21,
+        "east": -66.85,
+        "north": -20.78
+      }
+    },
+    {
+      "code": "CL-AT",
+      "cut": "03",
+      "name": "Atacama",
+      "country": "Chile",
+      "level": "region",
+      "box": {
+        "west": -71.59,
+        "south": -29.54,
+        "east": -68.26,
+        "north": -25.29
+      },
+      "box_with_margin_0_15": {
+        "west": -71.74,
+        "south": -29.69,
+        "east": -68.11,
+        "north": -25.14
+      }
+    },
+    {
+      "code": "CL-CO",
+      "cut": "04",
+      "name": "Coquimbo",
+      "country": "Chile",
+      "level": "region",
+      "box": {
+        "west": -71.72,
+        "south": -32.28,
+        "east": -69.81,
+        "north": -29.04
+      },
+      "box_with_margin_0_15": {
+        "west": -71.87,
+        "south": -32.43,
+        "east": -69.66,
+        "north": -28.89
+      }
+    },
+    {
+      "code": "CL-VS",
+      "cut": "05",
+      "name": "Valparaíso",
+      "country": "Chile",
+      "level": "region",
+      "box": {
+        "west": -71.86,
+        "south": -33.9,
+        "east": -70,
+        "north": -32.02
+      },
+      "box_with_margin_0_15": {
+        "west": -72.01,
+        "south": -34.05,
+        "east": -69.85,
+        "north": -31.87
+      },
+      "note": "Continental mainland box; Rapa Nui (-109.46, -27.20, -109.22, -27.04) and Juan Fernández are insular parts of CL-VS."
+    },
+    {
+      "code": "CL-RM",
+      "cut": "13",
+      "name": "Metropolitana de Santiago",
+      "country": "Chile",
+      "level": "region",
+      "box": {
+        "west": -71.72,
+        "south": -34.29,
+        "east": -69.77,
+        "north": -32.92
+      },
+      "box_with_margin_0_15": {
+        "west": -71.87,
+        "south": -34.44,
+        "east": -69.62,
+        "north": -32.77
+      }
+    },
+    {
+      "code": "CL-LI",
+      "cut": "06",
+      "name": "Libertador General Bernardo O'Higgins",
+      "country": "Chile",
+      "level": "region",
+      "box": {
+        "west": -72.07,
+        "south": -35.01,
+        "east": -70.01,
+        "north": -33.85
+      },
+      "box_with_margin_0_15": {
+        "west": -72.22,
+        "south": -35.16,
+        "east": -69.86,
+        "north": -33.7
+      }
+    },
+    {
+      "code": "CL-ML",
+      "cut": "07",
+      "name": "Maule",
+      "country": "Chile",
+      "level": "region",
+      "box": {
+        "west": -72.79,
+        "south": -36.55,
+        "east": -70.32,
+        "north": -34.69
+      },
+      "box_with_margin_0_15": {
+        "west": -72.94,
+        "south": -36.7,
+        "east": -70.17,
+        "north": -34.54
+      }
+    },
+    {
+      "code": "CL-NB",
+      "cut": "16",
+      "name": "Ñuble",
+      "country": "Chile",
+      "level": "region",
+      "box": {
+        "west": -72.9,
+        "south": -37.2,
+        "east": -71,
+        "north": -36.01
+      },
+      "box_with_margin_0_15": {
+        "west": -73.05,
+        "south": -37.35,
+        "east": -70.85,
+        "north": -35.86
+      }
+    },
+    {
+      "code": "CL-BI",
+      "cut": "08",
+      "name": "Biobío",
+      "country": "Chile",
+      "level": "region",
+      "box": {
+        "west": -73.98,
+        "south": -38.49,
+        "east": -70.98,
+        "north": -36.44
+      },
+      "box_with_margin_0_15": {
+        "west": -74.13,
+        "south": -38.64,
+        "east": -70.83,
+        "north": -36.29
+      }
+    },
+    {
+      "code": "CL-AR",
+      "cut": "09",
+      "name": "La Araucanía",
+      "country": "Chile",
+      "level": "region",
+      "box": {
+        "west": -73.53,
+        "south": -39.64,
+        "east": -70.83,
+        "north": -37.59
+      },
+      "box_with_margin_0_15": {
+        "west": -73.68,
+        "south": -39.79,
+        "east": -70.68,
+        "north": -37.44
+      }
+    },
+    {
+      "code": "CL-LR",
+      "cut": "14",
+      "name": "Los Ríos",
+      "country": "Chile",
+      "level": "region",
+      "box": {
+        "west": -73.73,
+        "south": -40.68,
+        "east": -71.58,
+        "north": -39.27
+      },
+      "box_with_margin_0_15": {
+        "west": -73.88,
+        "south": -40.83,
+        "east": -71.43,
+        "north": -39.12
+      }
+    },
+    {
+      "code": "CL-LL",
+      "cut": "10",
+      "name": "Los Lagos",
+      "country": "Chile",
+      "level": "region",
+      "box": {
+        "west": -74.85,
+        "south": -44.07,
+        "east": -71.58,
+        "north": -40.23
+      },
+      "box_with_margin_0_15": {
+        "west": -75,
+        "south": -44.22,
+        "east": -71.43,
+        "north": -40.08
+      }
+    },
+    {
+      "code": "CL-AI",
+      "cut": "11",
+      "name": "Aysén del General Carlos Ibáñez del Campo",
+      "country": "Chile",
+      "level": "region",
+      "box": {
+        "west": -75.68,
+        "south": -49.16,
+        "east": -71.09,
+        "north": -43.64
+      },
+      "box_with_margin_0_15": {
+        "west": -75.83,
+        "south": -49.31,
+        "east": -70.94,
+        "north": -43.49
+      }
+    },
+    {
+      "code": "CL-MA",
+      "cut": "12",
+      "name": "Magallanes y de la Antártica Chilena",
+      "country": "Chile",
+      "level": "region",
+      "box": {
+        "west": -75.73,
+        "south": -56,
+        "east": -66.42,
+        "north": -48.6
+      },
+      "box_with_margin_0_15": {
+        "west": -75.88,
+        "south": -56.15,
+        "east": -66.27,
+        "north": -48.45
+      },
+      "note": "American sector only; excludes Antarctic claims south of 60 S."
+    }
+  ],
+  "layers": {
+    "base_map_and_poi": {
+      "dataset": "OSM extract chile-latest.osm.pbf (336 MB); gpkg.zip is 739 MB",
+      "publisher": "OpenStreetMap contributors via Geofabrik",
+      "url": "https://download.geofabrik.de/south-america/chile.html",
+      "licence": "ODbL-1.0",
+      "verified": "2026-11-17"
+    },
+    "addresses": {
+      "dataset": "Overture Maps Foundation addresses theme (CL: 4,199,023 records)",
+      "url": "https://docs.overturemaps.org/guides/addresses/",
+      "verified": "2026-11-17",
+      "parser_notes": "Chilean addresses put street name before house number (e.g. Av. Providencia 1208, Providencia) and commonly omit the 7-digit CorreosChile postal code in favour of the comuna name."
+    },
+    "terrain": {
+      "dataset": "Copernicus DEM GLO-30",
+      "licence": "Copernicus-WorldDEM-30",
+      "verified": "as in docs/regions-proposed.json"
+    },
+    "crops": {
+      "dataset": "ESA WorldCover 2021 (land cover, 10 m)",
+      "licence": "CC-BY-4.0",
+      "verified": "as in docs/regions-proposed.json"
+    }
+  }
+}
