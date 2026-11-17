@@ -30,6 +30,17 @@ ENGLISH = [
     'water.boil', 'first_aid kit', 'e.coli', 'boil:water', 'https://example.org/water',
 ]
 
+# Everyday words a guide covers, and the guide (and choice, or None) search must show first. Each found
+# nothing, or the wrong guide, until its word was added to the guide's keywords or a choice's hint.
+FIRST = {
+    'burned my hand': ['hurt', 'burn'], 'burnt': ['hurt', 'burn'],
+    'fractured arm': ['hurt', None], 'dislocated shoulder': ['hurt', None], 'poisoned': ['hurt', None],
+    'heatstroke': ['hurt', None], 'throwing up': ['hurt', None], 'dehydrated': ['hurt', None],
+    'diarrhoea': ['hurt', None], 'suicidal': ['health', None], 'depressed': ['health', None],
+    'forest fire': ['disaster', 'wildfire'], 'bushfire': ['disaster', None], 'bushfire smoke': ['disaster', 'smoke'],
+    'forest smoke': ['disaster', 'smoke'], 'power cut': ['power', 'first-hours'],
+}
+
 # Query -> words, the same with or without Intl.Segmenter (every script here uses spaces).
 WORDS_BOTH = {
     '¿Cómo purifico el agua para el niño?': ['como', 'purifico', 'agua', 'para', 'nino'],   # accents whole, then folded
@@ -74,7 +85,7 @@ RANK_OWN = [['agua', [OWN]], ['水', [OWN]], ['hervir', [OWN]]]
 
 CASES = {
     'stop': QSTOP, 'fold': list(FOLD), 'match': [m[:2] for m in MATCH], 'rank': ENGLISH, 'topics': TOPICS,
-    'rankOwn': RANK_OWN,
+    'rankOwn': RANK_OWN, 'first': list(FIRST),
     'words': list(WORDS_BOTH) + ['怎么净化水', '水をきれいにする方法',
                                  '물 끓이기', 'น้ำ'],
 }
@@ -154,6 +165,12 @@ class TopicSearch(unittest.TestCase):
     def test_rank_non_english_topic(self):
         for r in self.modes:
             self.assertEqual([ok(e) for e in r['rankOwn']], [[['own', None]]] * 3)
+
+    def test_everyday_words_find_their_guide(self):
+        for r in self.modes:
+            for q, top in zip(FIRST, r['first']):
+                with self.subTest(q=q, segmenter=r['segmenter']):
+                    self.assertEqual(ok(top), FIRST[q])
 
     def test_english_ranks_as_before(self):
         for r in self.modes:

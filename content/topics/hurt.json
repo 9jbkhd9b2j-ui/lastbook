@@ -53,7 +53,16 @@
   "poison",
   "swallowed",
   "overdose",
-  "pesticide"
+  "pesticide",
+  "burned",
+  "burnt",
+  "fractured",
+  "dislocated",
+  "poisoned",
+  "heatstroke",
+  "throwing up",
+  "dehydrated",
+  "diarrhoea"
  ],
  "choices": [
   {
@@ -145,7 +154,7 @@
   {
    "id": "burn",
    "label": "Burn or scald",
-   "hint": "Fire, hot water, cooking oil, chemicals, electricity",
+   "hint": "Burnt or burned by fire, hot water, cooking oil, chemicals, electricity",
    "read": [
     {
      "doc": "med-2e83e22162a9a006",

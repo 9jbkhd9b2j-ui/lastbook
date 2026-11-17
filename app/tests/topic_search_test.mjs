@@ -46,4 +46,5 @@ process.stdout.write(JSON.stringify({
   match: (cases.match || []).map(([text, w]) => safe(() => W.matcher(text)(w))),
   rank: (cases.rank || []).map(q => ({ q, now: safe(() => brief(W.rankTopics(q, cases.topics, stop))), before: brief(before(q, cases.topics)) })),
   rankOwn: (cases.rankOwn || []).map(([q, topics]) => safe(() => brief(W.rankTopics(q, topics, stop)))),
+  first: (cases.first || []).map(q => safe(() => { const o = W.rankTopics(q, cases.topics, stop)[0]; return o ? [o.t.id, o.c ? o.c.id : null] : null })),
 }));
