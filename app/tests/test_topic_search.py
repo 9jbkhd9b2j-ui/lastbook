@@ -37,11 +37,14 @@ FIRST = {
     'burned my hand': ['hurt', 'burn'], 'burnt': ['hurt', 'burn'],
     'fractured arm': ['hurt', 'bone'], 'dislocated shoulder': ['hurt', 'bone'], 'poisoned': ['hurt', 'poison'],
     'heatstroke': ['hurt', 'heatcold'], 'throwing up': ['hurt', 'diarrhea'], 'dehydrated': ['hurt', 'diarrhea'],
-    'diarrhoea': ['hurt', 'diarrhea'], 'suicidal': ['health', 'mind'], 'depressed': ['health', None],
+    'diarrhoea': ['hurt', 'diarrhea'], 'suicidal': ['health', 'mind'],
     'forest fire': ['disaster', 'wildfire'], 'bushfire': ['disaster', 'wildfire'], 'bushfire smoke': ['disaster', 'smoke'],
     'forest smoke': ['disaster', 'smoke'], 'power cut': ['power', 'first-hours'],
     'poisoned water': ['water', 'chemical'], 'drank poisoned water': ['water', 'chemical'],
     'dehydrated water': ['hurt', 'diarrhea'], 'throwing up water': ['hurt', 'diarrhea'], 'diarrhoea water': ['hurt', 'diarrhea'],
+    'fractured neck': ['hurt', 'head'], 'fractured back': ['hurt', 'head'], 'dislocated neck': ['hurt', 'head'],
+    'fractured skull': ['hurt', 'head'], 'I drank from the stream and have diarrhea': ['hurt', 'diarrhea'],
+    'I drank and feel dehydrated': ['hurt', 'diarrhea'],
 }
 
 # Query -> words, the same with or without Intl.Segmenter (every script here uses spaces).

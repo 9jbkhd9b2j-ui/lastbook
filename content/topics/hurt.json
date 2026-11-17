@@ -252,7 +252,7 @@
   {
    "id": "head",
    "label": "Head, neck or back injury",
-   "hint": "Fall, car crash, blow to the head, confused or numb after an accident",
+   "hint": "Fall, car crash, blow to the head, fractured or dislocated neck, back or skull, confused or numb after an accident",
    "read": [
     {
      "doc": "med-443ae5cfaa6ecc68",
@@ -333,7 +333,7 @@
   {
    "id": "poison",
    "label": "Poisoning: swallowed a chemical, medicine or pesticide",
-   "hint": "Poisoned: drank a cleaning product or fuel, too many pills (overdose), button battery, a child got into something",
+   "hint": "Poisoned by a cleaning product, too many pills (overdose), fuel, button battery, a child got into something",
    "read": [
     {
      "doc": "med-2e83e22162a9a006",
