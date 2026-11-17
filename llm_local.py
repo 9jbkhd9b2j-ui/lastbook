@@ -12,6 +12,7 @@ cannot start a turn of its own), and turns Gemma's tool calls back into the shap
 import hashlib
 import json
 import os
+import platform
 import re
 import subprocess
 import sys
@@ -408,6 +409,17 @@ class Local:
 LOCAL = Local()
 
 
+def _apple_silicon_linux(tree='/proc/device-tree'):
+    """True on Apple silicon running Linux, where the graphics share the computer's one memory as they do on a Mac: an ARM
+    processor, and the kernel's device tree names the maker ("apple,t8103"). No device tree means some other computer."""
+    if platform.machine() not in ('aarch64', 'arm64'):
+        return False
+    try:
+        return any(c.startswith(b'apple,') for c in (Path(tree) / 'compatible').read_bytes().split(b'\0'))
+    except OSError:
+        return False
+
+
 def judge(fit):
     """Does the whole of it fit this computer? llama.cpp's fit places the model on the graphics memory it finds and counts
     the rest as the computer's own memory, which it takes to be unlimited. So the computer's own memory is checked here:
@@ -415,7 +427,7 @@ def judge(fit):
     total = fit.get('ram_total') or 0
     dev, host = fit.get('device_bytes') or 0, fit.get('host_bytes') or 0
     devices = [m for m in fit.get('memory') or [] if m.get('kind') == 'device']
-    unified = sys.platform == 'darwin'
+    unified = sys.platform == 'darwin' or _apple_silicon_linux()
     # Windows: weights left in the mapped file (not on a graphics card, not repacked) are outside llama.cpp's count, yet in use
     # while answering. Measured with no GPU: the fit said 9.6 GB, the program held 16.5 to 26 GB.
     mapped = 0 if unified else max(0, SIZE - sum(m.get('model') or 0 for m in fit.get('memory') or []))
