@@ -1358,6 +1358,17 @@ class Recommend(Base):
         self.assertGreater(n, shutil.disk_usage(self.tmp).free - 10 ** 9)
         self.assertGreaterEqual(hardware.disk_of(self.tmp / 'not yet')[0], shutil.disk_usage(self.tmp).free - 10 ** 9)
 
+    def test_too_little_memory_says_the_whole_need(self):
+        """#112: "needs about 14.9 GB ... and this computer has 17.2 GB" read as a fit. Say the total, then what it is made of."""
+        import llm_local
+        fit = {'status': 'fits', 'ram_total': 16 * 2 ** 30, 'device_bytes': int(14.9e9), 'host_bytes': 0, 'memory': []}
+        with mock.patch.object(sys, 'platform', 'darwin'):
+            j = llm_local.judge(fit)
+        self.assertFalse(j['fits'])
+        self.assertEqual(j['why'], 'The local AI needs about 17.6 GB of memory: 14.9 GB for the model and 2.7 GB for everything else. '
+                                   'This computer has 17.2 GB.')
+        self.assertGreater(j['needs'], fit['ram_total'])
+
 
 class Through(Base):
     """/api/setup/* over the app's bridge, as the window asks: no socket."""
