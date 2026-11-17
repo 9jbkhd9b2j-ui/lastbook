@@ -5,8 +5,8 @@
 
 Accented words stay whole and fold (niño finds nino), short words in Chinese, Hindi, Hebrew and Arabic count,
 typed symbols never reach a RegExp, Turkish İ folds to i, and every English query in the list ranks exactly as it
-did before. Words used outside the US (torch, rubbish, 999, 108, power cut, hydro, forest fire) find the guide
-their US word finds. Needs Node on PATH; skipped without it. Never packaged."""
+did before. Words used outside the US (torch, rubbish, 999, 108, 1122, power cut, loadshedding, hydro, forest fire)
+find the guide their US word finds. Needs Node on PATH; skipped without it. Never packaged."""
 import json, re, shutil, subprocess, tempfile, unicodedata, unittest
 from pathlib import Path
 
@@ -75,6 +75,7 @@ SAME_AS = {
     'torch': 'flashlight', 'rubbish': 'garbage', 'rubbish pickup': 'trash pickup', 'tinned food': 'canned food',
     '999': '911', '112': '911', '111': '911', 'adrenaline': 'epinephrine',
     '108': '911', 'geyser': 'water heater',
+    '1122': '911', '115': '911',   # Rescue 1122 and Edhi in Pakistan
 }
 # These sit in a guide's keywords only, so they open the same guide first but pick no choice of their own.
 # In a hint, "bushfire" would also answer "bus" and "barbecue" would answer "bar" (a search word matches the
@@ -87,8 +88,11 @@ SAME_GUIDE = {
     'polar vortex': 'winter storm', 'wind chill': 'winter storm', 'arctic outflow': 'winter storm',
     'warming centre': 'winter storm', 'aqhi': 'air quality', 'AQHI': 'air quality',
     'cooling centre': 'cooling center', 'washroom': 'sanitation',
+    # Pakistan's scheduled power cuts. Written as one word in the keywords: "load shedding" as two would let
+    # "shed" open the power guide, and "load" in a hint would take "generator load" away from the generator choice.
+    'loadshedding': 'power cut', 'load shedding': 'power cut', 'load-shedding': 'power cut',
 }
-# Words used in India and Canada with no single US twin among the guides: [guide, choice] that comes first.
+# Words used in South Asia and Canada with no single US twin among the guides: [guide, choice] that comes first.
 FIRST = {
     'power cut': ['power', 'first-hours'], 'cyclone': ['disaster', 'flood'], 'monsoon': ['disaster', 'flood'],
     'borewell': ['water', 'outside'], 'tubewell': ['water', 'outside'], 'loose motions': ['hurt', 'diarrhea'],
@@ -98,6 +102,7 @@ FIRST = {
     'furnace': ['shelter', 'cold'], 'furnace is out': ['shelter', 'cold'], 'frostnip': ['hurt', 'heatcold'],
     'forest fire': ['disaster', 'wildfire'], 'forest fires': ['disaster', 'wildfire'],
     'forest fire smoke': ['disaster', 'smoke'], 'Hydro': ['power', 'first-hours'], 'Frostnip': ['hurt', 'heatcold'],
+    'smog': ['shelter', 'smoke'],   # winter smog in Lahore and Delhi; the choice cites a page on particles and ozone
 }
 # Searches the new words must not disturb: [guide, choice] that comes first.
 UNDISTURBED = {
@@ -107,6 +112,8 @@ UNDISTURBED = {
     'ice': ['water', 'inhome'], 'micro-hydro': ['energy', None], 'wind': ['disaster', 'hurricane'],
     'winter storm': ['shelter', 'cold'], 'furnace smells like gas': ['power', 'gas'], 'gas furnace': ['power', 'gas'],
     'lost in the forest': ['comms', 'signal'],
+    'shed': ['repair', None], 'generator load': ['power', 'generator'], 'air quality': ['shelter', 'smoke'],
+    'smoke': ['disaster', 'smoke'],
 }
 TOPS = sorted({*SAME_AS, *SAME_AS.values(), *SAME_GUIDE, *SAME_GUIDE.values(), *FIRST, *UNDISTURBED})
 
