@@ -391,7 +391,7 @@ def shareable(text):
     for folder, name in ((tempfile.gettempdir(), '<tmp>'), (str(Path.home()), '~')):
         if len(folder) > 3:
             for form in (folder, folder.replace('\\', '\\\\')):
-                text = re.sub(r'(?<![\w.-])' + re.escape(form) + r'(?![\w.-])', lambda m: name, text, flags=flags)   # a whole folder: not /home/ab, not /root/tmp
+                text = re.sub(r'(?<![\w.-])' + re.escape(form) + r'(?![\w.-])', lambda m: name, text, flags=flags)   # a whole folder name, not the start or end of a longer one
     return text
 
 
@@ -436,7 +436,7 @@ def self_test():
     try:
         with tempfile.TemporaryDirectory(prefix='lastbook-self-test-', ignore_cleanup_errors=True) as empty:
             # The engine fixes its library folder when first imported, and run from source it loads the library's own
-            # tools from there (engine/library.py load_remote_storage). An empty folder of its own keeps every library out.
+            # tools from there (see engine/library.py). An empty folder of its own keeps every library out.
             os.environ['LASTBOOK_DATA'] = empty
             os.environ.pop('LASTBOOK_LIBRARY', None)
             import sqlite3

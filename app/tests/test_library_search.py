@@ -635,7 +635,10 @@ def engine_swapped(lib, run):
     table and the package's own attributes are swapped: an import takes whichever it finds."""
     import engine
     stand_in = types.ModuleType('engine.paths')
-    with mock.patch.dict(sys.modules, {'engine.library': lib, 'engine.paths': stand_in}), \
+    server = types.ModuleType('server')    # main's self-test imports server.py, which needs the real engine.paths: whether it
+    server.query_groups = lambda q: ([q], [[q]])   # loads would depend on which tests ran first. The real one runs in the
+    server.fts_expr = lambda groups: ' AND '.join('(' + ' OR '.join('"' + t + '"' for t in g) + ')' for g in groups)  # process tests
+    with mock.patch.dict(sys.modules, {'engine.library': lib, 'engine.paths': stand_in, 'server': server}), \
             mock.patch.object(engine, 'library', lib, create=True), mock.patch.object(engine, 'paths', stand_in, create=True):
         return run()
 
@@ -881,6 +884,23 @@ class SelfTest(unittest.TestCase):
         report = json.loads(out.getvalue())
         self.assertFalse(report['ok'])
         self.assertEqual(report['error'], 'ValueError: nothing found')
+
+    def test_the_package_scans_pass_the_shipped_files_changed_here(self):
+        """Each build ends with its package scan, which refuses a person's folder path and the remote_storage name outside the
+        library's own loader, comments included. The first Linux build of this change failed on an example path in a comment."""
+        import ast
+        patterns = []   # read from each scanner's source: importing them needs the build tools (pefile on Windows)
+        for path in ('linux/scan_package_linux.py', 'scan_app_package.py', 'scan_package_macos.py'):
+            tree = ast.parse((ROOT / 'packaging' / path).read_text(encoding='utf-8'))
+            found = [n.value.args[0] for n in tree.body if isinstance(n, ast.Assign) and getattr(n.targets[0], 'id', '') in ('USER_PATH', 'USER_PATHS')]
+            self.assertEqual(len(found), 1, path)
+            patterns.append(re.compile(ast.literal_eval(found[0])))
+        for path in ('app/main.py', 'engine/library.py'):
+            data = (ROOT / path).read_bytes()
+            for pattern in patterns:
+                self.assertIsNone(pattern.search(data), f'{path}: {pattern.search(data)}')
+            if path != 'engine/library.py':
+                self.assertNotIn(b'remote_storage', data, path)
 
     def test_the_packages_start_main_py_and_the_builds_run_it(self):
         """The self-test is worth only as much as the path that reaches it: if a package stops starting app/main.py, the
