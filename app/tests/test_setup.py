@@ -827,6 +827,32 @@ class Switching(Base):
         self.assertEqual((cur / 'library-data' / 'catalog.json').read_text(), 'old')
         self.assertEqual(sorted(p.name for p in self.parent.iterdir()), ['LastbookData', 'LastbookData.setup'])
 
+    def test_failed_rename_keeps_carried_files(self):
+        """#74: when either rename fails, the model and address indexes stay with the library that reopens."""
+        real = os.replace
+        for failing in ('current aside', 'staged into place'):
+            with self.subTest(failing=failing):
+                shutil.rmtree(self.parent, ignore_errors=True)
+                cur = self.lib(self.parent / 'LastbookData', 'old')
+                new = self.lib(self.parent / 'LastbookData.setup' / 'unpack' / 'LastbookData', 'new')
+                (cur / 'models').mkdir()
+                (cur / 'models' / 'model.gguf').write_bytes(b'model')
+                (cur / 'derived/geo/addresses').mkdir(parents=True)
+                (cur / 'derived/geo/addresses/CA.sqlite').write_bytes(b'address index')
+                source = cur if failing == 'current aside' else new
+
+                def replace(src, dst):
+                    if Path(src) == source:
+                        raise PermissionError('in use')
+                    return real(src, dst)
+                with mock.patch.object(install.os, 'replace', replace), self.assertRaises(install.Refused):
+                    install.switch(new, cur)
+                self.assertEqual((cur / 'library-data' / 'catalog.json').read_text(), 'old')
+                self.assertEqual((cur / 'models' / 'model.gguf').read_bytes(), b'model')
+                self.assertEqual((cur / 'derived/geo/addresses/CA.sqlite').read_bytes(), b'address index')
+                self.assertFalse((new / 'models' / 'model.gguf').exists())
+                self.assertFalse((new / 'derived/geo/addresses/CA.sqlite').exists())
+
     def test_ai_only_in_manage_mode(self):
         cur = self.lib(self.parent / 'LastbookData', '{}')
         (cur / 'pack.json').write_text('{"name": "small"}')

@@ -280,21 +280,32 @@ def switch(new_lib, target):
     if not is_library(new_lib):
         raise Refused('activate', 'The new library is not complete.')
     old = None
+    carried = []
     if target.exists():
         old = old_name(target)
         if is_library(target):
-            carry_over(target, new_lib)
+            carried = carry_over(target, new_lib)
         try:
             os.replace(target, old)
         except OSError as e:
+            _carry_back(carried, new_lib, target)
             raise Refused('activate', f'Lastbook could not move the old library aside ({type(e).__name__}). Close anything using it, then try again.')
     try:
         os.replace(new_lib, target)
     except OSError as e:
         if old:
             os.replace(old, target)
+            _carry_back(carried, new_lib, target)
         raise Refused('activate', f'Lastbook could not put the new library in place ({type(e).__name__}).')
     return old
+
+
+def _carry_back(carried, new_lib, target):
+    """Undo carry_over after a failed rename, so the library that stays in place keeps its model and address indexes."""
+    for moved in carried:
+        back = target / moved.relative_to(new_lib)
+        if moved.is_file() and not back.exists():
+            os.replace(moved, back)
 
 
 # ----------------------------------------------------------------------------------------------------------- state maps --
