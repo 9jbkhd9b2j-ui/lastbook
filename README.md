@@ -180,6 +180,18 @@ before running them. Their disposable test distro is named `LastbookTest`, with 
   `packaging/scan_pack.py` check them. The published packs are on `downloads.lastbook.org`. Setup downloads the one the
   person picks and checks it against `setup/manifest-v1.json`, which `packaging/release_manifest.py` writes at build time
   (a newer copy is fetched from `downloads.lastbook.org` when setup opens and used only if it validates).
+- **The search index format** is how the index cuts text into words: `TOKENIZE` in `engine/library.py` for the app, and
+  `search_index.schema` in the pack spec for packs. A test keeps the two the same, and `packaging/scan_pack.py` fails a
+  pack whose index was not made with the spec's statement (`search.schema_differs`). The releases after macOS 1.1.10,
+  Windows 1.1.8 and Linux 1.1.9 keep combining marks inside words (Hindi and Thai vowel signs, Arabic and Hebrew vowel
+  points). In an index made after that change, an app from before it finds nothing for a word that has such marks, and
+  shows no error; text without them is found as before. A newer app with an older index finds the same pages or fewer,
+  and never loses the right one. So the release order is: the app first, and packs in the new format only after it. An
+  app that is already out cannot check a pack's format, so a new-format pack has to be kept out of its reach. From 1.1.8
+  at the latest, an app keeps the address, size and SHA-256 of each pack it was built with and takes any other pack
+  from the fetched `manifest-v1.json` as it is (`engine/setup/manifest.py`, `merge`); the first published code took
+  every pack from the fetched copy. So a new-format pack listed in `manifest-v1.json` is offered to every app that does
+  not hold that pack's own entry, and a pack file replaced in place fails the download check of every app that does.
 - **State maps** are one US state's detailed map set, built by `packaging/build_packs.py map <ST>` and published by
   `packaging/state_maps.py`, with per-state address indexes from `packaging/address_indexes.py`. A state map replaces the
   library's map set; it never merges with it. Medium already holds California and All the whole US.

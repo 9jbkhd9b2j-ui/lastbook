@@ -120,6 +120,26 @@ def open_log(data):
     return logs
 
 
+def search_index_check(table=None):
+    """The packaged SQLite must make the library's search table as the app makes it and search it as the app does. A plain
+    fts5(x) table proved only that FTS5 is there: an SQLite that does not accept the table's tokenizer makes no index, and
+    one that reads it differently finds nothing, and neither shows as an error when someone searches."""
+    import sqlite3
+    import engine.paths  # noqa: F401  (first: it names the library folder that engine.library fixes when it is imported)
+    import engine.library as library
+    c = sqlite3.connect(':memory:')
+    try:
+        c.execute(table or library.PAGES_TABLE)
+        # पानी (water) and पीना (to drink) share their consonants and differ only in vowel signs, which are combining marks
+        c.executemany('INSERT INTO pages VALUES(?,?,?,?,?,?,?)', [('water', 't', 'c', 'k', 'p', 1, 'पानी'), ('drink', 't', 'c', 'k', 'p', 1, 'पीना')])
+        found = [d for (d,) in c.execute('SELECT doc_id FROM pages WHERE pages MATCH ?', (' AND '.join(f'"{t}"' for t in library.query_terms('पानी')),))]
+    finally:
+        c.close()
+    if found != ['water']:
+        raise ValueError(f'a search for one word with combining marks found {found}, not the one page that has it')
+    return {'sqlite': sqlite3.sqlite_version, 'fts5': True, 'tokenize': library.TOKENIZE, 'marks_stay_in_words': True}
+
+
 def check(data, logs):
     """Prove every packaged library imports from the packaged folder. Loads no model and opens no window."""
     out = {'frozen': FROZEN, 'executable': sys.executable, 'python': sys.version,
@@ -161,10 +181,7 @@ def check(data, logs):
         return {'version': getattr(libzim, '__version__', None), 'file': zims[0].name, 'entries': a.entry_count, 'has_fulltext_index': a.has_fulltext_index}
 
     def sqlite_():
-        import sqlite3
-        c = sqlite3.connect(':memory:')
-        c.execute('CREATE VIRTUAL TABLE t USING fts5(x)')
-        return {'sqlite': sqlite3.sqlite_version, 'fts5': True}
+        return search_index_check()
 
     def webview_():
         import webview

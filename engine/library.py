@@ -105,6 +105,61 @@ DB=ROOT/'search.sqlite'
 # remove_diacritics stays at its default, so Latin accents still fold: creme finds crème.
 TOKENIZE="unicode61 categories 'L* N* Co M*'"
 PAGES_TABLE=f'CREATE VIRTUAL TABLE pages USING fts5(doc_id UNINDEXED,title,collection,category,path UNINDEXED,page UNINDEXED,body,tokenize="{TOKENIZE}")'
+REPLACE_TRIES,REPLACE_WAIT=20,0.25  # Windows only: how long build() waits for searches to let go of the index, 5 seconds in all
+
+def index_is_current(path):
+ """Was this index made with the table build() makes now, tokenizer included? Read-only. False for an older index, and
+ for anything that cannot be read as an index at all. SQLite keeps no record of the tokenizer but the table's own CREATE
+ statement, which it stores word for word and reads each time the file is opened. build() and the pack builder both make
+ the table with exactly this statement, so the statement itself is compared: nothing is worked out from it, and a table
+ that only looks alike does not pass."""
+ try:
+  con=sqlite3.connect(Path(path).resolve().as_uri()+'?mode=ro',uri=True)
+  try:row=con.execute("SELECT sql FROM sqlite_master WHERE type='table' AND name='pages'").fetchone()
+  finally:con.close()
+  return bool(row) and row[0]==PAGES_TABLE
+ except (sqlite3.Error,OSError,ValueError):return False
+
+def index_has_pages(path):
+ """Does this index hold at least one page? Read-only, and False for anything that cannot be read."""
+ try:
+  con=sqlite3.connect(Path(path).resolve().as_uri()+'?mode=ro',uri=True)
+  try:return con.execute('SELECT 1 FROM pages LIMIT 1').fetchone() is not None
+  finally:con.close()
+ except (sqlite3.Error,OSError,ValueError):return False
+
+def index_fault(path,rows):
+ """Why a newly built index must not take the place of the current one, or None when it may. Read from the finished file,
+ not from the connection that wrote it: SQLite's own check passes, every row that was indexed is there, and the words
+ were cut the way searches will cut them."""
+ try:
+  con=sqlite3.connect(Path(path).resolve().as_uri()+'?mode=ro',uri=True)
+  try:
+   if con.execute('PRAGMA integrity_check').fetchone()[0]!='ok':return 'it fails its integrity check'
+   found=con.execute('SELECT count(*) FROM pages').fetchone()[0]
+  finally:con.close()
+ except (sqlite3.Error,OSError,ValueError) as e:return f'it cannot be read ({type(e).__name__})'
+ if found!=rows:return f'it holds {found} rows, not the {rows} that were indexed'
+ if not index_is_current(path):return 'its table, tokenizer included, is not the one searches expect'
+ return None
+
+def replace_index(building,dest,tries=None,wait=None):
+ """Put the new index in place in one step. Windows will not replace a file that is open, and every search opens the index
+ for a moment, so there it tries again for a few seconds. Anywhere else an open file is no obstacle, a failure has another
+ cause, and one try is all."""
+ tries=tries or (REPLACE_TRIES if os.name=='nt' else 1)
+ for left in range(tries-1,-1,-1):
+  try:os.replace(building,dest);return
+  except PermissionError:
+   if not left:raise
+   time.sleep(REPLACE_WAIT if wait is None else wait)
+
+def discard_index(building):
+ """Remove an index that will not be used, with anything SQLite left beside it. packaging/build_packs.py takes a
+ *.building.sqlite file to mean a build is running, so one must not be left behind."""
+ for extra in ('','-journal','-wal','-shm'):
+  try:building.with_name(building.name+extra).unlink(missing_ok=True)
+  except OSError:pass
 
 def query_terms(text,keep='-'):
  """The words of a search: runs of letters, numbers and combining marks, as the index reads them, with '_' and the
@@ -213,19 +268,37 @@ def extract(r):
 
 def build():
  (ROOT/'text').mkdir(exist_ok=True)
- records,bad=catalog();building=DB.with_suffix('.building.sqlite');con=sqlite3.connect(building)
- con.execute('DROP TABLE IF EXISTS pages')
- con.execute(PAGES_TABLE)
- built=[];errors=[];totalpages=0
- with concurrent.futures.ThreadPoolExecutor(4) as pool:
-  for i,(r,pages,error) in enumerate(pool.map(extract,records)):
-   built.append(r)
-   if error:errors.append({'path':r['path'],'error':error})
-   for page,body in enumerate(pages,1):
-    if body.strip():con.execute('INSERT INTO pages VALUES (?,?,?,?,?,?,?)',(r['id'],r['title'],r['collection'],r['category'],r['path'],page,body))
-   totalpages+=len(pages)
-   if i%100==0:print(f'Indexed {i+1}/{len(records)} resources',flush=True)
- con.commit();con.close();building.replace(DB)
+ records,bad=catalog();building=DB.with_suffix('.building.sqlite')
+ discard_index(building)  # what an interrupted build left: the new index starts as a new file
+ # The index searches use is touched once, by the replace below, and only by a file that has passed index_fault. A build
+ # that stops for any reason before that leaves search.sqlite exactly as it was and takes its own file away.
+ built=[];errors=[];totalpages=rows=0;finished=False
+ con=sqlite3.connect(building)
+ try:
+  con.execute(PAGES_TABLE)
+  with concurrent.futures.ThreadPoolExecutor(4) as pool:
+   for i,(r,pages,error) in enumerate(pool.map(extract,records)):
+    built.append(r)
+    if error:errors.append({'path':r['path'],'error':error})
+    for page,body in enumerate(pages,1):
+     if body.strip():con.execute('INSERT INTO pages VALUES (?,?,?,?,?,?,?)',(r['id'],r['title'],r['collection'],r['category'],r['path'],page,body));rows+=1
+    totalpages+=len(pages)
+    if i%100==0:print(f'Indexed {i+1}/{len(records)} resources',flush=True)
+  con.commit();finished=True
+ finally:
+  try:con.close()
+  finally:
+   if not finished:discard_index(building)
+ why=index_fault(building,rows)
+ # No pages at all, where the index in use has some, is a library that could not be read (a disk not there, an empty
+ # manifests folder), not a library that was emptied. An empty library with an empty or no index builds as before.
+ if not why and not rows and index_has_pages(DB):why='nothing was indexed, and the index in use has pages (remove search.sqlite to start again with none)'
+ if not why:
+  try:replace_index(building,DB)
+  except OSError as e:why=f'the index in use could not be replaced ({type(e).__name__}: {e.strerror or e})'
+ if why:
+  discard_index(building)
+  raise SystemExit(f'The new search index was not put in place: {why}. The index already there is unchanged.')
  (ROOT/'catalog.json').write_text(json.dumps(built,indent=2),encoding='utf-8')
  summary={'resources':len(built),'pdfs':sum(r['kind']=='pdf' for r in built),'pdf_pages':sum(r.get('pages') or 0 for r in built),'web_pages':sum(r['kind'] in ['html','htm'] for r in built),'videos':sum(r['kind'] in ['video','mp4','webm','mkv'] for r in built),'collections':sum(r['kind']=='zim' for r in built),'document_bytes':sum(r['bytes'] for r in built),'indexed_units':totalpages,'categories':dict(collections.Counter(r['category'] for r in built)),'extraction_errors':errors,'missing_files':bad,'image_only_pdfs':[r['path'] for r in built if (r.get('searchability') or '').startswith('image-only')]}
  (ROOT/'summary.json').write_text(json.dumps(summary,indent=2),encoding='utf-8');(ROOT/'reader.css').write_text(STYLE,encoding='utf-8')
