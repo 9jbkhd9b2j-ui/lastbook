@@ -114,6 +114,8 @@ issue before any code.
 [REGIONS-GB-LONDON.md](REGIONS-GB-LONDON.md) does the same for Greater London as one region.
 [REGIONS-ES.md](REGIONS-ES.md) does the same for Spain's 17 autonomous communities and its two autonomous cities.
 [REGIONS-FR.md](REGIONS-FR.md) does the same for France's 18 regions, with figures from a trial build.
+[REGIONS-PK.md](REGIONS-PK.md) does the same for Pakistan's provinces and territories, with Islamabad and Rawalpindi
+as one map.
 
 ## Checking a map change
 
