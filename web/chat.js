@@ -50,8 +50,8 @@ const Chat = (() => {
     if (id && !cur) { swap('#/ask'); return }
     const about = q.get('about');
     aboutCtx = !cur && about ? await describe(about) : (cur && cur.about ? cur.aboutInfo : null);
-    document.title = (cur ? cur.title : 'Ask') + ' · Lastbook';
-    $('#tbTitle').textContent = cur ? cur.title : 'Ask';
+    document.title = (cur ? cur.title : 'Chat') + ' · Lastbook';
+    $('#tbTitle').textContent = cur ? cur.title : 'Chat';
     main.innerHTML = `<div class="chat">
       <aside class="chat-side" id="chatSide" aria-label="Conversations">
         <div class="cs-head"><b>Chats</b><button class="iconbtn" id="closeSide" aria-label="Close chat list">${ico('back')}</button></div>
