@@ -369,7 +369,7 @@ def say(text):
         handle = kernel32.GetStdHandle(-11)  # STD_OUTPUT_HANDLE
         if handle not in (None, 0, ctypes.c_void_p(-1).value):
             try:
-                with os.fdopen(msvcrt.open_osfhandle(handle, os.O_WRONLY), 'w', encoding='utf-8', closefd=False) as f:
+                with os.fdopen(msvcrt.open_osfhandle(handle, os.O_WRONLY | os.O_BINARY), 'w', encoding='utf-8', closefd=False) as f:
                     f.write(text)
                 return True
             except OSError:
@@ -384,10 +384,15 @@ def say(text):
 
 
 def shareable(text):
-    """Text with the person's home folder as ~, so a result can be pasted without their user name."""
+    """Text with the temporary folder as <tmp> and the person's home folder as ~, so a result can be pasted without their
+    user name. Each folder also as an error message shows it, with its backslashes doubled, and on Windows in any case."""
     import re
-    home = str(Path.home())
-    return re.sub(re.escape(home) + r'(?![\w.-])', '~', text) if len(home) > 1 else text   # /home/a, not /home/ab
+    flags = re.I if sys.platform == 'win32' else 0
+    for folder, name in ((tempfile.gettempdir(), '<tmp>'), (str(Path.home()), '~')):
+        if len(folder) > 3:
+            for form in (folder, folder.replace('\\', '\\\\')):
+                text = re.sub(r'(?<![\w.-])' + re.escape(form) + r'(?![\w.-])', lambda m: name, text, flags=flags)   # a whole folder: not /home/ab, not /root/tmp
+    return text
 
 
 def in_app(path):
@@ -402,11 +407,31 @@ def in_app(path):
         return shareable(str(path))
 
 
+def sqlite_library():
+    """On Windows, the SQLite DLL this process has loaded, as a path; None where that cannot be told. Python's _sqlite3 module
+    names only itself, and Windows can resolve a DLL name to another copy than the one beside it."""
+    if sys.platform != 'win32':
+        return None
+    import ctypes
+    from ctypes import wintypes
+    kernel32 = ctypes.windll.kernel32
+    kernel32.GetModuleHandleW.restype = wintypes.HMODULE
+    kernel32.GetModuleHandleW.argtypes = [wintypes.LPCWSTR]
+    kernel32.GetModuleFileNameW.argtypes = [wintypes.HMODULE, wintypes.LPWSTR, wintypes.DWORD]
+    module = kernel32.GetModuleHandleW('sqlite3.dll')
+    if not module:
+        return None
+    buffer = ctypes.create_unicode_buffer(32768)
+    return buffer.value if kernel32.GetModuleFileNameW(module, buffer, len(buffer)) else None
+
+
 def self_test():
     """--self-test: can this copy of Lastbook make the library's search index and search it as the app does, with the SQLite
-    it runs with (engine/library.py search_self_test)? Prints one line of JSON and returns 0 when it can, 1 when not or when
-    the result could not be written. It runs before anything else in main(): it opens no window and no library, reads and
-    writes no settings, and writes nothing outside temporary folders of its own."""
+    it runs with (engine/library.py search_self_test)? It searches as search() does and as the search box does
+    (server.py query_groups and fts_expr). Prints one line of JSON and returns 0 when it can, 1 when not or when the result
+    could not be written. A packaged Windows app also fails when its SQLite DLL came from outside the app's folder. It runs
+    before anything else in main(): it opens no window and no library, reads and writes no settings, and writes nothing
+    outside temporary folders of its own."""
     out = {'ok': False, 'frozen': FROZEN, 'python': sys.version.split()[0]}
     try:
         with tempfile.TemporaryDirectory(prefix='lastbook-self-test-', ignore_cleanup_errors=True) as empty:
@@ -417,9 +442,15 @@ def self_test():
             import sqlite3
             out['sqlite'] = sqlite3.sqlite_version
             out['sqlite_module'] = in_app(getattr(sys.modules.get('_sqlite3'), '__file__', None))
+            dll = sqlite_library()
+            if dll:
+                out['sqlite_library'] = in_app(dll)
+                if FROZEN and not out['sqlite_library'].startswith('<app>/'):
+                    raise ValueError(f'the SQLite this app loaded is not its own: {out["sqlite_library"]}')
             import engine.paths  # noqa: F401  (first: it names the library folder that engine.library fixes when imported)
             import engine.library as library
-            out['search'] = library.search_self_test()
+            import server      # the search box's way into the index: /api/find runs server.find
+            out['search'] = library.search_self_test(matchers={'server.find': lambda w: server.fts_expr(server.query_groups(w)[1])})
             out['ok'] = True
     except Exception as e:
         out['error'] = shareable(f'{type(e).__name__}: {e}')
@@ -433,9 +464,9 @@ def main():
     ap.add_argument('--ask', action='store_true', help='ask for the library folder in a dialog instead of opening setup')
     ap.add_argument('--self-test', action='store_true', help='check that this copy can build and search a library index, then exit: '
                     'prints the result as JSON, exits 0 when it can and 1 when not, and opens no window and no library')
+    if '--self-test' in sys.argv[1:]:   # before anything else, and whatever else is on the command line: an argument
+        return self_test()              # argparse refused would exit with nothing said where a packaged app has no console
     a = ap.parse_args()
-    if a.self_test:     # before anything below: the Linux single-window claim, setup's staged switch, the remembered library
-        return self_test()
     if sys.platform.startswith('linux'):
         import shell_linux
         if not shell_linux.claim(str(app_folders()[1])):     # already open: that window comes to the front instead

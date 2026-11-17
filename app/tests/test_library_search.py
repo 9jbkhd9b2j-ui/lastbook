@@ -680,7 +680,8 @@ class LauncherCheck(unittest.TestCase):
             report = json.loads((Path(d) / 'check.json').read_text(encoding='utf-8'))
         self.assertEqual(code, 1)                                              # the absent libraries
         self.assertTrue(str(report['numpy']).startswith('FAILED'))
-        self.assertEqual(report['sqlite'], {'sqlite': sqlite3.sqlite_version, 'fts5': True, 'tokenize': library.TOKENIZE, 'marks_stay_in_words': True})
+        self.assertEqual(report['sqlite'], {'sqlite': sqlite3.sqlite_version, 'fts5': True, 'tokenize': library.TOKENIZE,
+                                            'marks_stay_in_words': True, 'searches': ['library.search']})
 
     def test_it_uses_the_table_the_app_builds(self):
         report = self.check()
@@ -700,7 +701,17 @@ class LauncherCheck(unittest.TestCase):
 class SelfTest(unittest.TestCase):
     """app/main.py --self-test: the entry point every current package starts runs the search check (search_self_test), and
     touches no library, no settings, nothing in the program folder and nothing outside its own temporary folders."""
-    EXPECTED = {'sqlite': sqlite3.sqlite_version, 'fts5': True, 'tokenize': library.TOKENIZE, 'marks_stay_in_words': True}
+    EXPECTED = {'sqlite': sqlite3.sqlite_version, 'fts5': True, 'tokenize': library.TOKENIZE, 'marks_stay_in_words': True,
+                'searches': ['library.search']}
+    FROM_MAIN = dict(EXPECTED, searches=['library.search', 'server.find'])
+
+    def test_every_matcher_must_find_each_words_own_page(self):
+        """Another way into the index (the search box's, from main) is held to the same rule, word by word."""
+        self.assertEqual(library.search_self_test(matchers={'exact': lambda w: '"' + w + '"'})['searches'], ['library.search', 'exact'])
+        for name, build in [('nothing', lambda w: '"x"'), ('both', lambda w: '"पानी" OR "पीना"'),
+                            ('split', lambda w: ' AND '.join('"' + p + '"' for p in re.findall(r'\w+', w)))]:
+            with self.subTest(name), self.assertRaisesRegex(ValueError, '^' + name + ': '):
+                library.search_self_test(matchers={name: build})
 
     def test_each_word_is_searched_with_the_apps_search_and_finds_its_own_page(self):
         with mock.patch.object(library, 'search', wraps=library.search) as search:
@@ -740,7 +751,7 @@ class SelfTest(unittest.TestCase):
                 library.search_self_test(library.PAGES_TABLE.replace('unicode61', 'no_such_tokenizer'))
             self.assertEqual(os.listdir(d), [])
 
-    def run_entry_point(self, extra_env=None, python=None, stdout=subprocess.PIPE):
+    def run_entry_point(self, extra_env=None, python=None, stdout=subprocess.PIPE, args=()):
         """The real app/main.py --self-test in its own process, as a package starts it, from a sandbox of its own: a home
         folder with settings that name a library, LASTBOOK_DATA naming that library, whose tools/ holds code that would leave a
         mark if anything ran it, and the temporary folder. Returns (process, report or None, sandbox changes, program
@@ -761,7 +772,7 @@ class SelfTest(unittest.TestCase):
             env.pop('LASTBOOK_LIBRARY', None)
             program = {p: p.stat().st_mtime_ns for top in ('app', 'engine') for p in (ROOT / top).rglob('*')}
             before = snapshot(d)
-            r = subprocess.run([python or sys.executable, '-B', str(ROOT / 'app' / 'main.py'), '--self-test'], env=env, cwd=d,
+            r = subprocess.run([python or sys.executable, '-B', str(ROOT / 'app' / 'main.py'), '--self-test', *args], env=env, cwd=d,
                                stdin=subprocess.DEVNULL, stdout=stdout, stderr=subprocess.PIPE, timeout=120)
             after = snapshot(d)
             changed = {k for k in before.keys() | after.keys() if before.get(k) != after.get(k)}
@@ -774,7 +785,15 @@ class SelfTest(unittest.TestCase):
         r, report, changed, moved = self.run_entry_point()
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertTrue(report['ok'])
-        self.assertEqual(report['search'], self.EXPECTED)
+        self.assertEqual(report['search'], self.FROM_MAIN)       # the search box's way into the index too
+        self.assertEqual(changed, set())
+        self.assertEqual(moved, set())
+
+    def test_other_arguments_do_not_stop_it(self):
+        """Something argparse would refuse (a Mac's -psn_..., a typo) must not exit 2 with nothing said."""
+        r, report, changed, moved = self.run_entry_point(args=('-psn_0_12345', '--no-such-flag'))
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertTrue(report['ok'])
         self.assertEqual(changed, set())
         self.assertEqual(moved, set())
 
@@ -809,10 +828,41 @@ class SelfTest(unittest.TestCase):
         home = str(Path.home())
         self.assertEqual(main.shareable(f'PermissionError: {home}{os.sep}tmp{os.sep}x'), f'PermissionError: ~{os.sep}tmp{os.sep}x')
         self.assertEqual(main.shareable(home + 'b' + os.sep + 'x'), home + 'b' + os.sep + 'x')   # another user's folder
+        self.assertEqual(main.shareable('x' + tempfile.gettempdir()), 'x' + tempfile.gettempdir())   # not the end of a longer one
+        tmp = tempfile.gettempdir()
+        error = str(PermissionError(13, 'Permission denied', os.path.join(tmp, 'lastbook-self-test-1', 'search.sqlite')))
+        self.assertNotIn(tmp.replace('\\', '\\\\'), main.shareable(error))           # as an OSError shows a path: a repr
+        self.assertIn('<tmp>', main.shareable(error))
+        if sys.platform == 'win32':
+            self.assertEqual(main.shareable(home.upper() + '\\x'), '~\\x')          # Windows paths are any case
         with mock.patch.dict(os.environ), mock.patch.object(library, 'search_self_test', side_effect=PermissionError(f'{home}{os.sep}t')), \
                 mock.patch.object(main, 'say', return_value=True) as say:
             engine_swapped(library, main.self_test)
         self.assertNotIn(home + os.sep, say.call_args.args[0].replace('\\\\', '\\'))
+
+    @unittest.skipUnless(sys.platform == 'win32', 'Windows')
+    def test_with_no_python_stream_it_writes_one_line_to_the_handle_it_was_given(self):
+        """The packaged Windows app's case: sys.stdout is None, the output is a pipe. One line, ended once (\\r\\n)."""
+        script = ('import importlib.util, sys; sys.stdout = None\n'
+                  f'spec = importlib.util.spec_from_file_location("m", {str(ROOT / "app" / "main.py")!r})\n'
+                  'm = importlib.util.module_from_spec(spec); spec.loader.exec_module(m)\n'
+                  'sys.exit(0 if m.say("{\\"ok\\": true}") else 3)\n')
+        r = subprocess.run([sys.executable, '-B', '-c', script], capture_output=True, timeout=60)
+        self.assertEqual((r.returncode, r.stdout), (0, b'{"ok": true}\r\n'), r.stderr)
+
+    @unittest.skipUnless(sys.platform == 'win32', 'Windows')
+    def test_it_names_the_sqlite_dll_this_process_loaded(self):
+        main = load_file('main_under_test', ROOT / 'app' / 'main.py')
+        self.assertTrue(main.sqlite_library().lower().endswith('sqlite3.dll'))
+
+    def test_a_packaged_app_fails_on_an_sqlite_from_outside_it(self):
+        main = load_file('main_under_test', ROOT / 'app' / 'main.py')
+        with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as app, mock.patch.dict(os.environ), \
+                mock.patch.object(main, 'FROZEN', True), mock.patch.object(sys, '_MEIPASS', app, create=True), \
+                mock.patch.object(main, 'sqlite_library', return_value=str(Path(app).parent / 'elsewhere' / 'sqlite3.dll')), \
+                mock.patch.object(main, 'say', return_value=True) as say:
+            self.assertEqual(engine_swapped(library, main.self_test), 1)
+        self.assertIn('is not its own', json.loads(say.call_args.args[0])['error'])
 
     def test_unwritable_output_is_a_failure(self):
         main = load_file('main_under_test', ROOT / 'app' / 'main.py')
@@ -844,6 +894,7 @@ class SelfTest(unittest.TestCase):
             self.assertRegex(live(path), re.compile(entry, re.M), f'{path} no longer starts app/main.py')
         for path, app in [('packaging/build_app_macos.sh', '"$BUNDLE/Contents/MacOS/Lastbook"'),
                           ('packaging/build_app_windows.sh', '"$(cygpath -u "$DIST")/Lastbook.exe"'),
+                          ('packaging/build_setup_windows.sh', '"$(cygpath -u "$DIST")/Lastbook.exe"'),   # the folder the installer packs
                           ('packaging/linux/build_app_linux.sh', '/usr/bin/python3 -I -B "$OPT/lastbook.py"')]:
             text = live(path)
             self.assertRegex(text, re.compile(r'^set -euo pipefail$', re.M), path)

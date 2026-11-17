@@ -140,14 +140,16 @@ python3 -B app/main.py --self-test                     # from source
 ```
 
 It makes the real search table in a new database in a temporary folder, indexes पानी (water) and पीना (to drink), which
-differ only in their vowel signs, searches for each with the app's own search code and checks the file as a rebuild does.
+differ only in their vowel signs, and searches for each both ways the app does: as the search box does (`server.py`
+`query_groups` and `fts_expr`) and with `engine/library.py` `search()`. Each must find only its own page. Then it checks
+the file as a rebuild does. A packaged Windows app also fails if the SQLite DLL it loaded is not the one in its folder.
 It opens no window and no library (not even one named by `LASTBOOK_DATA`), reads no settings and writes nothing outside
 its temporary folders. It prints one line of JSON (`"ok": true` and the SQLite version) and exits 0, or prints
 `"ok": false` with the reason and exits 1; it also exits 1 if it could not write its result. On Windows the app has no
 console of its own, so its output is piped (`| cat` in Git Bash, `| Out-String` in PowerShell); that also makes the shell
 wait for the result and keep its exit code. The builds run it on the finished app (on Linux, on the staged files with
-`/usr/bin/python3`, as the installed package runs, before they are packed); a failed self-test fails the build, and the
-result is kept beside the package as `self-test.json`.
+`/usr/bin/python3`, as the installed package runs, before they are packed), and the Windows installer build runs it on the
+app folder it packs; a failed self-test fails the build, and the result is kept beside the package as `self-test.json`.
 
 **macOS (Apple Silicon, needs [uv](https://github.com/astral-sh/uv)):**
 

@@ -334,14 +334,16 @@ def search(query,limit=25,db=None):
 
 SELF_TEST_PAGES=[('water','पानी'),('drink','पीना')]  # water and to drink: the same consonants, different vowel signs (combining marks)
 
-def search_self_test(table=None):
+def search_self_test(table=None,matchers=None):
  """Can this SQLite make the library's index and search it as the app does? The packaged app's --self-test and the
  launcher's --check both run this. It makes the real table (or table, for tests) in a new database in a temporary folder,
- indexes two words that differ only in combining marks, searches for each with search() and checks the file as build()
- checks a new index. No library is opened and nothing outside that folder is written. Returns what it found; raises
- sqlite3.Error when this SQLite cannot make the table, and ValueError when it makes one that searches would get wrong. A
- plain fts5(x) table proves only that FTS5 is there: an SQLite that does not accept the tokenizer makes no index, one that
- reads it differently finds nothing, and neither shows as an error when someone searches."""
+ indexes two words that differ only in combining marks, searches for each with search() and with each of matchers (name:
+ a function from a word to the MATCH expression another way into the index builds, as the app's search box does in
+ server.py), and checks the file as build() checks a new index. No library is opened and nothing outside that folder is
+ written. Returns what it found; raises sqlite3.Error when this SQLite cannot make the table, and ValueError when it makes
+ one that searches would get wrong. A plain fts5(x) table proves only that FTS5 is there: an SQLite that does not accept the
+ tokenizer makes no index, one that reads it differently finds nothing, and neither shows as an error when someone searches."""
+ matchers=dict(matchers or {})
  import tempfile
  with tempfile.TemporaryDirectory(prefix='lastbook-self-test-',ignore_cleanup_errors=True) as folder:
   db=Path(folder)/'search.sqlite'
@@ -354,9 +356,14 @@ def search_self_test(table=None):
   for doc,word in SELF_TEST_PAGES:
    found=[r['doc_id'] for r in search(word,db=db)]
    if found!=[doc]:raise ValueError(f'a search for {word}, one word with combining marks, found {found}, not the one page that has it')
+   for name,expression in matchers.items():
+    con=sqlite3.connect(Path(db).resolve().as_uri()+'?mode=ro',uri=True)
+    try:found=[d for (d,) in con.execute('SELECT doc_id FROM pages WHERE pages MATCH ?',(expression(word),))]
+    finally:con.close()
+    if found!=[doc]:raise ValueError(f'{name}: a search for {word}, one word with combining marks, found {found}, not the one page that has it')
   fault=index_fault(db,len(SELF_TEST_PAGES))
   if fault:raise ValueError(f'build() would not use an index made here: {fault}')
- return {'sqlite':sqlite3.sqlite_version,'fts5':True,'tokenize':TOKENIZE,'marks_stay_in_words':True}
+ return {'sqlite':sqlite3.sqlite_version,'fts5':True,'tokenize':TOKENIZE,'marks_stay_in_words':True,'searches':['library.search',*matchers]}
 
 def write_index(records,summary):
  payload=json.dumps([{k:r.get(k) for k in ['id','title','collection','category','publisher','path','kind','pages','duration','bytes','notes','source_url']} for r in records]).replace('</','<\\/')
