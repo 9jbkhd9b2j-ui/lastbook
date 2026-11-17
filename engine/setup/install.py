@@ -246,10 +246,11 @@ def stage_switch(pend, new_lib, target, model_file=None, kind=None, model_sha256
     return d
 
 
-def carry_over(old, new):
-    """What belongs to the person, not the pack, goes with them: the model file, address indexes, and the AI's on/off setting."""
+def carry_over(old, new, moved=None):
+    """What belongs to the person, not the pack, goes with them: the model file, address indexes, and the AI's on/off setting.
+    Each move is added to `moved` as it happens, so a caller still knows what moved when a later move raises."""
     old, new = Path(old), Path(new)
-    moved = []
+    moved = [] if moved is None else moved
     src = old / 'models'
     if src.is_dir():
         (new / 'models').mkdir(parents=True, exist_ok=True)
@@ -284,28 +285,37 @@ def switch(new_lib, target):
     if target.exists():
         old = old_name(target)
         if is_library(target):
-            carried = carry_over(target, new_lib)
+            try:
+                carry_over(target, new_lib, carried)
+            except OSError as e:
+                _refuse_carried_back(carried, new_lib, target, f'Lastbook could not move your files into the new library ({type(e).__name__}). Close anything using them, then try again.')
         try:
             os.replace(target, old)
         except OSError as e:
-            _carry_back(carried, new_lib, target)
-            raise Refused('activate', f'Lastbook could not move the old library aside ({type(e).__name__}). Close anything using it, then try again.')
+            _refuse_carried_back(carried, new_lib, target, f'Lastbook could not move the old library aside ({type(e).__name__}). Close anything using it, then try again.')
     try:
         os.replace(new_lib, target)
     except OSError as e:
         if old:
             os.replace(old, target)
-            _carry_back(carried, new_lib, target)
-        raise Refused('activate', f'Lastbook could not put the new library in place ({type(e).__name__}).')
+        _refuse_carried_back(carried, new_lib, target, f'Lastbook could not put the new library in place ({type(e).__name__}).')
     return old
 
 
-def _carry_back(carried, new_lib, target):
-    """Undo carry_over after a failed rename, so the library that stays in place keeps its model and address indexes."""
+def _refuse_carried_back(carried, new_lib, target, message):
+    """Undo carry_over after a failed step, so the library that stays in place keeps its model and address indexes.
+    A file that cannot go back stays where it is, and the message says where."""
+    stuck = []
     for moved in carried:
         back = target / moved.relative_to(new_lib)
-        if moved.is_file() and not back.exists():
-            os.replace(moved, back)
+        try:
+            if moved.is_file() and not back.exists():
+                os.replace(moved, back)
+        except OSError:
+            stuck.append(str(moved))
+    if stuck:
+        message += ' These files could not be moved back and are still here: ' + ', '.join(stuck)
+    raise Refused('activate', message)
 
 
 # ----------------------------------------------------------------------------------------------------------- state maps --
