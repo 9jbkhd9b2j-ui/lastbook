@@ -61,7 +61,11 @@
   "poison",
   "swallowed",
   "overdose",
-  "pesticide"
+  "pesticide",
+  "bites",
+  "stings",
+  "snakebite",
+  "rabies"
  ],
  "choices": [
   {
@@ -337,6 +341,69 @@
    ]
   },
   {
+   "id": "snakebite",
+   "label": "Snakebite",
+   "hint": "Bitten by a snake, rattlesnake, fang marks, venomous or harmless",
+   "read": [
+    {
+     "doc": "med-2e83e22162a9a006",
+     "page": 340,
+     "label": "IFRC: keep the person as still as possible",
+     "note": "IFRC 2025 key action and steps: a sling for an arm, no walking on a bitten leg, the bite at or below heart level, and removing jewellery before it swells."
+    },
+    {
+     "doc": "med-2e83e22162a9a006",
+     "page": 342,
+     "label": "No tourniquet, sucking, cold compress, rubbing or cutting",
+     "note": "IFRC 2025 caution: these may cause further harm. Also washing the wound and carrying the person when help is far away, and telling medical staff the type of snake."
+    }
+   ]
+  },
+  {
+   "id": "animal-bite",
+   "label": "Animal or human bite",
+   "hint": "Dog, cat, bat or monkey bite, bitten by a person, rabies worry",
+   "read": [
+    {
+     "doc": "med-2e83e22162a9a006",
+     "page": 323,
+     "label": "IFRC: rinse the bite with clean water",
+     "note": "IFRC 2025 key action: cleaning the bite as quickly as possible with clean water and soap, why bites get infected, and the risk of rabies."
+    },
+    {
+     "doc": "med-2e83e22162a9a006",
+     "page": 324,
+     "label": "When to get medical care after a bite",
+     "note": "IFRC 2025: stopping any bleeding first, and getting care if the wound needs closing, for tetanus, for a wild animal bite where rabies is common, or signs of infection."
+    }
+   ]
+  },
+  {
+   "id": "sting",
+   "label": "Insect sting, tick, spider or jellyfish",
+   "hint": "Bee or wasp sting, ticks, mosquito or spider bite, scorpion, jellyfish or stinging fish",
+   "read": [
+    {
+     "doc": "med-2e83e22162a9a006",
+     "page": 328,
+     "label": "IFRC: removing a tick or a bee stinger",
+     "note": "IFRC 2025 steps: a tick pulled out with tweezers close to the skin, a stinger scraped out with a flat object such as a bank card, then cleaning and cooling the area."
+    },
+    {
+     "doc": "med-2e83e22162a9a006",
+     "page": 334,
+     "label": "Jellyfish and stinging fish",
+     "note": "IFRC 2025: rinsing with seawater, heated water for pain, removing stinging cells and tentacles without getting stung, and not rubbing."
+    },
+    {
+     "doc": "med-443ae5cfaa6ecc68",
+     "page": 54,
+     "label": "Spider bites and scorpion stings",
+     "note": "Hesperian: most spider bites and scorpion stings do not cause serious or lasting harm, keeping the part still, cold for pain, and signs that need medical help."
+    }
+   ]
+  },
+  {
    "id": "poison",
    "label": "Poisoning: swallowed a chemical, medicine or pesticide",
    "hint": "Cleaning product, too many pills (overdose), fuel, button battery, a child got into something",
@@ -450,6 +517,21 @@
   }
  ],
  "limits": [
+  {
+   "text": "Do not apply a tourniquet, suck out the venom, apply a cold compress, rub the bite or cut the wound after a snakebite; these may cause further harm.",
+   "doc": "med-2e83e22162a9a006",
+   "page": 342
+  },
+  {
+   "text": "Get emergency help at once if someone is bitten or stung in the mouth or on the throat; any swelling could block their airway.",
+   "doc": "med-2e83e22162a9a006",
+   "page": 328
+  },
+  {
+   "text": "If the bite came from a wild animal, rabies is common in the area and the person has not been vaccinated against it, seek further medical care.",
+   "doc": "med-2e83e22162a9a006",
+   "page": 324
+  },
   {
    "text": "If someone has heavy blood loss, cannot be woken, has great difficulty breathing, cannot drink for a day or more, or other listed danger signs, they are probably too sick to treat at home; seek skilled medical help as soon as possible.",
    "doc": "clinical-fe3d008bfe1dd1a2",
