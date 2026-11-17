@@ -5,7 +5,8 @@
 
 Accented words stay whole and fold (niño finds nino), short words in Chinese, Hindi, Hebrew and Arabic count,
 typed symbols never reach a RegExp, Turkish İ folds to i, and every English query in the list ranks exactly as it
-did before. Needs Node on PATH; skipped without it. Never packaged."""
+did before. Words used outside the US (torch, rubbish, 999, 108, power cut) find the guide their US word finds.
+Needs Node on PATH; skipped without it. Never packaged."""
 import json, re, shutil, subprocess, tempfile, unicodedata, unittest
 from pathlib import Path
 
@@ -33,12 +34,12 @@ ENGLISH = [
 # Everyday words a guide covers, and the guide and choice search must show first, with and without Intl.Segmenter.
 # Most found nothing or the wrong guide until the word was added to the hint of the choice that covers it. A word only
 # in a topic's keywords is not enough: another word then picks the choice ("poisoned water" went to burns, for "hot water").
-FIRST = {
+EVERYDAY = {
     'burned my hand': ['hurt', 'burn'], 'burnt': ['hurt', 'burn'],
     'fractured arm': ['hurt', 'bone'], 'dislocated shoulder': ['hurt', 'bone'], 'poisoned': ['hurt', 'poison'],
     'heatstroke': ['hurt', 'heatcold'], 'throwing up': ['hurt', 'diarrhea'], 'dehydrated': ['hurt', 'diarrhea'],
     'diarrhoea': ['hurt', 'diarrhea'], 'suicidal': ['health', 'mind'],
-    'bushfire smoke': ['disaster', 'smoke'], 'no bus': ['disaster', 'no-car'], 'power cut': ['power', 'first-hours'],
+    'bushfire smoke': ['disaster', 'smoke'],
     'poisoned water': ['water', 'chemical'], 'drank poisoned water': ['water', 'chemical'],
     'dehydrated water': ['hurt', 'diarrhea'], 'throwing up water': ['hurt', 'diarrhea'], 'diarrhoea water': ['hurt', 'diarrhea'],
     'fractured neck': ['hurt', 'head'], 'fractured back': ['hurt', 'head'], 'dislocated neck': ['hurt', 'head'],
@@ -86,15 +87,44 @@ MATCH = [  # text, word, expected
     ['İstanbul', 'istanbul', True], ['72-hour kit', 'hour', True], ['Water: purify, boil', 'purif', True],
 ]
 
+# Words used outside the US, each with the US word the guides already had. A search for the first must give
+# the same guides and choices, in the same order, as a search for the second.
+SAME_AS = {
+    'torch': 'flashlight', 'rubbish': 'garbage', 'rubbish pickup': 'trash pickup', 'tinned food': 'canned food',
+    '999': '911', '112': '911', '111': '911', 'adrenaline': 'epinephrine',
+    '108': '911', 'geyser': 'water heater',
+}
+# These sit in a guide's keywords only, so they open the same guide first but pick no choice of their own.
+# In a hint, "bushfire" would also answer "bus" and "barbecue" would answer "bar" (a search word matches the
+# start of a word), and "heatwave" or "sanitiser" beside the US spelling would read oddly.
+SAME_GUIDE = {
+    'bushfire': 'wildfire', 'bushfire smoke': 'wildfire smoke', 'heatwave': 'heat wave', 'barbecue': 'grill',
+    'bbq': 'grill', 'sanitiser': 'sanitizer', 'hand sanitiser': 'hand sanitizer',
+    'heatstroke': 'heat stroke',
+}
+# Words used in India with no single US twin among the guides: [guide, choice] that comes first.
+FIRST = {
+    'power cut': ['power', 'first-hours'], 'cyclone': ['disaster', 'flood'], 'monsoon': ['disaster', 'flood'],
+    'borewell': ['water', 'outside'], 'tubewell': ['water', 'outside'], 'loose motions': ['hurt', 'diarrhea'],
+}
+# Searches the new words must not disturb: [guide, choice] that comes first.
+UNDISTURBED = {
+    'bus': ['disaster', 'no-car'], 'no bus': ['disaster', 'no-car'], 'bar soap': ['sanitation', 'hands'],
+    'heat wave': ['shelter', 'heat'], 'grill': ['food', 'cook'], 'canned food': ['food', 'cook'],
+    'cut': ['hurt', 'bleeding'], 'well': ['land', 'water-source'], 'storm': ['disaster', 'flood'],
+}
+TOPS = sorted({*SAME_AS, *SAME_AS.values(), *SAME_GUIDE, *SAME_GUIDE.values(), *FIRST, *UNDISTURBED, *EVERYDAY})
+
 # A made-up topic in Spanish and Chinese: found by Spanish words and by a single Han character.
 OWN = {'id': 'own', 'title': 'Agua potable', 'short': 'Hervir el agua', 'keywords': ['水'], 'choices': []}
 RANK_OWN = [['agua', [OWN]], ['水', [OWN]], ['hervir', [OWN]]]
 
 CASES = {
     'stop': QSTOP, 'fold': list(FOLD), 'match': [m[:2] for m in MATCH], 'rank': ENGLISH, 'topics': TOPICS,
-    'rankOwn': RANK_OWN, 'first': list(FIRST),
+    'rankOwn': RANK_OWN,
     'words': list(WORDS_BOTH) + ['怎么净化水', '水をきれいにする方法',
                                  '물 끓이기', 'น้ำ'],
+    'tops': TOPS,
 }
 
 
@@ -175,9 +205,10 @@ class TopicSearch(unittest.TestCase):
 
     def test_everyday_words_find_their_guide(self):
         for r in self.modes:
-            for q, top in zip(FIRST, r['first']):
+            top = dict(zip(TOPS, (ok(e) for e in r['tops'])))
+            for q, first in EVERYDAY.items():
                 with self.subTest(q=q, segmenter=r['segmenter']):
-                    self.assertEqual(ok(top), FIRST[q])
+                    self.assertEqual(top[q][0] if top[q] else None, first)
 
     def test_english_ranks_as_before(self):
         for r in self.modes:
@@ -185,6 +216,21 @@ class TopicSearch(unittest.TestCase):
                 with self.subTest(q=case['q'], segmenter=r['segmenter']):
                     self.assertEqual(ok(case['now']), case['before'])
         self.assertGreater(sum(1 for c in self.seg['rank'] if c['before']), 30)   # the list does reach the guides
+
+    def test_words_used_outside_the_us(self):
+        for r in self.modes:
+            top = dict(zip(TOPS, (ok(e) for e in r['tops'])))
+            for q, us in SAME_AS.items():
+                with self.subTest(q=q, us=us, segmenter=r['segmenter']):
+                    self.assertTrue(top[us])                       # the US word does find a guide
+                    self.assertEqual(top[q], top[us])
+            for q, us in SAME_GUIDE.items():
+                with self.subTest(q=q, us=us, segmenter=r['segmenter']):
+                    self.assertTrue(top[q])
+                    self.assertEqual(top[q][0][0], top[us][0][0])
+            for q, first in [*FIRST.items(), *UNDISTURBED.items()]:
+                with self.subTest(q=q, segmenter=r['segmenter']):
+                    self.assertEqual(top[q][0], first)
 
 
 if __name__ == '__main__':

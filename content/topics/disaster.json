@@ -13,6 +13,7 @@
   "evacuate",
   "high ground",
   "wildfire",
+  "bushfire",
   "smoke",
   "N95",
   "air quality",
@@ -21,6 +22,8 @@
   "escape plan",
   "flood",
   "floodwater",
+  "cyclone",
+  "monsoon",
   "chemical",
   "shelter in place",
   "radiation",
@@ -219,7 +222,7 @@
   {
    "id": "flood",
    "label": "Flooding or a flood warning",
-   "hint": "Rising water, flooded roads, storm",
+   "hint": "Rising water, flooded roads, storm, cyclone or monsoon",
    "read": [
     {
      "doc": "d0fbb2e051cd46",
