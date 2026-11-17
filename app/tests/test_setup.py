@@ -977,6 +977,65 @@ class Maps(Base):
         self.assertFalse((self.parent / 'LastbookData.setup').exists())
         self.assertEqual(self.setup('manage', current=lib, manifest=mf).start(None, False, map_id='CA')['code'], 'nothing')
 
+    def library_with_state_map(self):
+        """#75: a Small library as setup installs it (with its pack-manifest.tsv), then the California map set in place of its own."""
+        files = {'library-data/catalog.json': b'{"records": []}', 'pack.json': b'{"name": "small", "map": "base"}',
+                 'library-data/big.bin': os.urandom(MiB), 'derived/geo/map.sqlite': b'base map'}
+        rows = ['path\tbytes\tsha256\thow\tchanges'] + [f'{k}\t{len(v)}\t{sha(v)}\tclone\t' for k, v in files.items()]
+        files['pack-manifest.tsv'] = ('\n'.join(rows) + '\n').encode()
+        zpath = self.tmp / 'Lastbook-Small.zip'
+        self.installed = make_pack(zpath, files)
+        self.zip = zpath.read_bytes()
+        self.files.data['Lastbook-Small.zip'] = self.zip
+        lib = install.unpack(zpath, self.parent, self.installed, Control(), lambda d, t: None)
+        zpath.unlink()
+        mf, map_files = self.map_manifest()
+        unpacked = install.unpack(self.tmp / 'Lastbook-Map-CA.zip', self.tmp / 'map', None, Control(), lambda d, t: None, allowed=install.map_member)
+        install.replace_map_in(lib, unpacked)
+        self.assertEqual(install.map_name(lib), 'CA')
+        return lib, mf, map_files
+
+    def test_repair_of_another_file_keeps_the_state_map(self):
+        lib, mf, map_files = self.library_with_state_map()
+        (lib / 'library-data' / 'big.bin').unlink()
+        s = self.setup('manage', current=lib, manifest=mf)
+        s.start(repair=True)
+        self.assertEqual(self.wait(s)['state'], 'done')
+        new, _ = api.startup(self.settings)
+        self.assertTrue((new / 'library-data' / 'big.bin').is_file())
+        self.assertEqual(install.map_name(new), 'CA')
+        self.assertEqual((new / 'derived/geo/map.sqlite').read_bytes(), map_files['derived/geo/map.sqlite'])
+
+    def test_repair_fetches_a_missing_state_map_file(self):
+        lib, mf, map_files = self.library_with_state_map()
+        (lib / 'derived/geo/terrain.sqlite').unlink()
+        s = self.setup('manage', current=lib, manifest=mf)
+        j = s.start(repair=True)
+        self.assertEqual([i['kind'] for i in j['items']], ['pack', 'map'])
+        self.assertEqual(self.wait(s)['state'], 'done')
+        self.assertIn('Lastbook-Map-CA.zip', [n for n, _, _ in self.files.log])
+        new, note = api.startup(self.settings)
+        self.assertIsNone(note.get('error'))
+        self.assertEqual(install.map_name(new), 'CA')
+        self.assertEqual((new / 'derived/geo/terrain.sqlite').read_bytes(), map_files['derived/geo/terrain.sqlite'])
+
+    def test_repair_says_when_a_damaged_state_map_cannot_be_fetched(self):
+        lib, mf, _ = self.library_with_state_map()
+        (lib / 'derived/geo/terrain.sqlite').unlink()
+        mf.current['maps'][0]['available'] = False
+        j = self.setup('manage', current=lib, manifest=mf).start(repair=True)
+        self.assertEqual(j.get('code'), 'unavailable', j)
+
+    def test_repair_leaves_the_packs_own_map_set_to_the_pack(self):
+        """All's whole-US map comes with the pack, not as a separate download: a damaged file there is not 'unavailable'."""
+        lib, mf, _ = self.library_with_state_map()
+        (lib / 'pack.json').write_text('{"name": "small", "map": "CA"}')
+        (lib / 'derived/geo/terrain.sqlite').unlink()
+        mf.current['maps'] = []
+        j = self.setup('manage', current=lib, manifest=mf).start(repair=True)
+        self.assertIsNone(j.get('code'), j)
+        self.assertEqual([i['kind'] for i in j['items']], ['pack'])
+
     def test_map_into_a_library_with_another_name(self):
         """Windows 1.1.4 test: a library opened with --data from a folder not called LastbookData got the map in a nested
         LastbookData. The job must target the open library as it is."""
