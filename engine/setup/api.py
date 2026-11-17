@@ -561,15 +561,13 @@ class Setup:
                 items.append({'id': model['id'], 'kind': 'model', 'title': model['title'], 'state': 'waiting', 'bytes_done': 0,
                               'bytes_total': model['size'], 'rate_bps': 0, 'eta_s': None, 'error': None})
             mp = None
-            if cur.get('map') not in (None, 'base') and install.map_set(target):
+            if _separate_map(target):
                 try:                 # a state map's files come from its own download, not the pack's: the pack check skips them
                     install.check_map(target)
                 except install.Refused as e:
                     print('setup: repair:', e.message, flush=True)
                     mp = self.manifest.map(cur['map'])
-                    if (not mp or not mp['available']) and cur['map'] == _own_map(target):
-                        mp = None    # the pack's own map set (All's whole US), not a separate download: as before
-                    elif not mp or not mp['available']:
+                    if not mp or not mp['available']:
                         return {'error': f'The {cur["map"]} map in this library is damaged, and this version does not offer it to download again. '
                                          'Choose a map again.', 'code': 'unavailable'}
                     if mp:
@@ -596,7 +594,7 @@ class Setup:
             rows = [(r[0], int(r[1]), r[2]) for r in rows]
         except (OSError, ValueError, IndexError):
             return ['pack-manifest.tsv']
-        if install.map_set(lib):      # a state map replaced the pack's own: _start_repair checks it against map-set.json instead
+        if _separate_map(lib):        # a state map replaced the pack's own: _start_repair checks it against map-set.json instead
             rows = [r for r in rows if not install.map_member(r[0])]
         total = sum(r[1] for r in rows) or 1
         tracker, done, bad = _Item(it), 0, []
@@ -971,7 +969,7 @@ class Setup:
                 raise install.Refused('unpack', 'The library content version does not match this download.')
         current = self.current_info() or {}
         if (not plan.get('map') and Path(plan['target']) == self.current and current.get('pack') == pack['id']
-                and current.get('map') not in (None, 'base')):
+                and _separate_map(self.current)):          # kept only when Repair found it whole, or it would have its own item
             install.copy_map(self.current, lib)
         install._write_json(lib / 'setup-pack.json', {'pack': pack['id'], 'installed': _now(), 'files': [f['name'] for f in pack['files']]})
         for path, ours in got:
@@ -1136,12 +1134,22 @@ def _tree_size(p):
     return n
 
 
-def _own_map(lib):
-    """The map set the pack itself ships, from its pack.json ('base', 'us' or a state), or None."""
+def _separate_map(lib):
+    """Does the library hold a map set installed apart from its pack (a state map), rather than the pack's own (All's whole US)?
+    The pack's own set is the one whose map-set.json is listed, with the same sha256, in pack-manifest.tsv: its files are in that
+    list too, so they are checked and fetched with the pack."""
+    lib = Path(lib)
+    if not install.map_set(lib):
+        return False
     try:
-        return json.loads((Path(lib) / 'pack.json').read_text(encoding='utf-8')).get('map')
-    except (OSError, ValueError, AttributeError):
-        return None
+        for line in (lib / 'pack-manifest.tsv').read_text(encoding='utf-8').splitlines()[1:]:
+            cols = line.split('\t')
+            if cols[0] == 'map-set.json':
+                with open(lib / 'map-set.json', 'rb') as f:
+                    return hashlib.sha256(f.read()).hexdigest() != cols[2]
+    except (OSError, IndexError):
+        pass
+    return True
 
 
 # ------------------------------------------------------------------------------------------------ startup and the app --

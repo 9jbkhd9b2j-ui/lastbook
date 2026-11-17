@@ -1026,15 +1026,36 @@ class Maps(Base):
         j = self.setup('manage', current=lib, manifest=mf).start(repair=True)
         self.assertEqual(j.get('code'), 'unavailable', j)
 
-    def test_repair_leaves_the_packs_own_map_set_to_the_pack(self):
-        """All's whole-US map comes with the pack, not as a separate download: a damaged file there is not 'unavailable'."""
-        lib, mf, _ = self.library_with_state_map()
-        (lib / 'pack.json').write_text('{"name": "small", "map": "CA"}')
+    def library_with_own_map(self):
+        """#88 review: a library like All, whose pack ships its own map set (the whole US) with map-set.json, as setup installs it."""
+        terrain = os.urandom(MiB)
+        files = {'library-data/catalog.json': b'{"records": []}', 'pack.json': b'{"name": "small", "map": "us"}',
+                 'library-data/big.bin': os.urandom(MiB), 'derived/geo/map.sqlite': b'us map', 'derived/geo/terrain.sqlite': terrain}
+        files['map-set.json'] = json.dumps({'name': 'us', 'files': {'derived/geo/map.sqlite': 6, 'derived/geo/terrain.sqlite': MiB}}).encode()
+        rows = ['path\tbytes\tsha256\thow\tchanges'] + [f'{k}\t{len(v)}\t{sha(v)}\tclone\t' for k, v in files.items()]
+        files['pack-manifest.tsv'] = ('\n'.join(rows) + '\n').encode()
+        zpath = self.tmp / 'Lastbook-Small.zip'
+        self.installed = make_pack(zpath, files)
+        self.zip = zpath.read_bytes()
+        self.files.data['Lastbook-Small.zip'] = self.zip
+        lib = install.unpack(zpath, self.parent, self.installed, Control(), lambda d, t: None)
+        zpath.unlink()
+        self.assertEqual(install.map_name(lib), 'us')
+        return lib, terrain
+
+    def test_repair_restores_a_file_of_the_packs_own_map(self):
+        """All's whole-US map comes with the pack, not as a separate download: Repair checks it and fetches it with the pack."""
+        lib, terrain = self.library_with_own_map()
         (lib / 'derived/geo/terrain.sqlite').unlink()
-        mf.current['maps'] = []
-        j = self.setup('manage', current=lib, manifest=mf).start(repair=True)
+        s = self.setup('manage', current=lib, manifest=self.manifest())
+        j = s.start(repair=True)
         self.assertIsNone(j.get('code'), j)
         self.assertEqual([i['kind'] for i in j['items']], ['pack'])
+        self.assertEqual(self.wait(s)['state'], 'done')
+        new, note = api.startup(self.settings)
+        self.assertIsNone(note.get('error'))
+        self.assertEqual(install.map_name(new), 'us')
+        self.assertEqual((new / 'derived/geo/terrain.sqlite').read_bytes(), terrain)
 
     def test_map_into_a_library_with_another_name(self):
         """Windows 1.1.4 test: a library opened with --data from a folder not called LastbookData got the map in a nested
