@@ -136,7 +136,99 @@
         "east": -69.85,
         "north": -31.87
       },
-      "note": "Continental mainland box; Rapa Nui (-109.46, -27.20, -109.22, -27.04) and Juan Fernández are insular parts of CL-VS."
+      "note": "Continental mainland box only. All offshore cuts are listed in island_boxes; their broad bounds surround reference positions, not official boundary polygons.",
+      "island_boxes": [
+        {
+          "name": "Rapa Nui",
+          "box": {
+            "west": -109.5,
+            "south": -27.25,
+            "east": -109.2,
+            "north": -27.0
+          },
+          "box_with_margin_0_15": {
+            "west": -109.65,
+            "south": -27.4,
+            "east": -109.05,
+            "north": -26.85
+          },
+          "source_url": "https://en.wikipedia.org/wiki/Easter_Island",
+          "checked": "2026-11-17",
+          "caveat": "Provisional broad box around published island positions; not boundary-derived. Recompute from official regional polygons before building."
+        },
+        {
+          "name": "Sala y Gómez",
+          "box": {
+            "west": -105.39,
+            "south": -26.5,
+            "east": -105.33,
+            "north": -26.44
+          },
+          "box_with_margin_0_15": {
+            "west": -105.54,
+            "south": -26.65,
+            "east": -105.18,
+            "north": -26.29
+          },
+          "source_url": "https://en.wikipedia.org/wiki/Salas_y_G%C3%B3mez",
+          "checked": "2026-11-17",
+          "caveat": "Provisional broad box around published island positions; not boundary-derived. Recompute from official regional polygons before building."
+        },
+        {
+          "name": "Robinson Crusoe and Santa Clara",
+          "box": {
+            "west": -79.08,
+            "south": -33.78,
+            "east": -78.72,
+            "north": -33.56
+          },
+          "box_with_margin_0_15": {
+            "west": -79.23,
+            "south": -33.93,
+            "east": -78.57,
+            "north": -33.41
+          },
+          "source_url": "https://en.wikipedia.org/wiki/Juan_Fern%C3%A1ndez_Islands",
+          "checked": "2026-11-17",
+          "caveat": "Provisional broad box around published island positions; not boundary-derived. Recompute from official regional polygons before building."
+        },
+        {
+          "name": "Alejandro Selkirk",
+          "box": {
+            "west": -80.87,
+            "south": -33.86,
+            "east": -80.7,
+            "north": -33.69
+          },
+          "box_with_margin_0_15": {
+            "west": -81.02,
+            "south": -34.01,
+            "east": -80.55,
+            "north": -33.54
+          },
+          "source_url": "https://en.wikipedia.org/wiki/Juan_Fern%C3%A1ndez_Islands",
+          "checked": "2026-11-17",
+          "caveat": "Provisional broad box around published island positions; not boundary-derived. Recompute from official regional polygons before building."
+        },
+        {
+          "name": "Desventuradas",
+          "box": {
+            "west": -80.18,
+            "south": -26.4,
+            "east": -79.84,
+            "north": -26.22
+          },
+          "box_with_margin_0_15": {
+            "west": -80.33,
+            "south": -26.55,
+            "east": -79.69,
+            "north": -26.07
+          },
+          "source_url": "https://en.wikipedia.org/wiki/Desventuradas_Islands",
+          "checked": "2026-11-17",
+          "caveat": "Provisional broad box around published island positions; not boundary-derived. Recompute from official regional polygons before building."
+        }
+      ]
     },
     {
       "code": "CL-RM",
@@ -317,22 +409,23 @@
       "level": "region",
       "box": {
         "west": -75.73,
-        "south": -56,
+        "south": -56.6,
         "east": -66.42,
         "north": -48.6
       },
       "box_with_margin_0_15": {
         "west": -75.88,
-        "south": -56.15,
+        "south": -56.75,
         "east": -66.27,
         "north": -48.45
       },
-      "note": "American sector only; excludes Antarctic claims south of 60 S."
+      "note": "American sector only, including Diego Ramírez and Águila Islet (about 56.54 S); excludes Antarctic claims south of 60 S. Southern bound is provisional, not boundary-derived.",
+      "southern_extent_source_url": "https://en.wikipedia.org/wiki/Diego_Ram%C3%ADrez_Islands"
     }
   ],
   "layers": {
     "base_map_and_poi": {
-      "dataset": "OSM extract chile-latest.osm.pbf (336 MB); gpkg.zip is 739 MB",
+      "dataset": "OSM extract chile-261116.osm.pbf: 352,124,743 bytes (352 MB / 336 MiB); chile-261116-free.gpkg.zip: 774,826,582 bytes (775 MB / 739 MiB)",
       "publisher": "OpenStreetMap contributors via Geofabrik",
       "url": "https://download.geofabrik.de/south-america/chile.html",
       "licence": "ODbL-1.0",
@@ -342,7 +435,8 @@
       "dataset": "Overture Maps Foundation addresses theme (CL: 4,199,023 records)",
       "url": "https://docs.overturemaps.org/guides/addresses/",
       "verified": "2026-11-17",
-      "parser_notes": "Chilean addresses put street name before house number (e.g. Av. Providencia 1208, Providencia) and commonly omit the 7-digit CorreosChile postal code in favour of the comuna name."
+      "parser_notes": "Proposal only: parse the first comma-separated street part using its last number, keeping numeric street names, and accept S/N separately. Treat all remaining parts as place hints and rank street/number candidates by comuna or locality matches rather than assuming the final part is a comuna. Preserve seven-digit postcodes when supplied.",
+      "builder_notes": "Current tools/build_addresses.py keeps country = 'US', truncates postcodes with left(postcode, 5), strips region codes with state.upper()[:2], and uses ASCII-only normalization. Chile needs country selection, full postcodes and full CL-XX codes, plus a checked mapping of actual address_levels and postal_city fields; those Chilean fields have not been inspected. No builder or parser change is made here."
     },
     "terrain": {
       "dataset": "Copernicus DEM GLO-30",
@@ -354,5 +448,6 @@
       "licence": "CC-BY-4.0",
       "verified": "as in docs/regions-proposed.json"
     }
-  }
+  },
+  "boxes_note": "All region boxes are approximate and not checked against official boundary polygons. CL-VS.box is mainland only; island_boxes hold separate provisional offshore cuts. A future build must include both, after checking official bounds."
 }

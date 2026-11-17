@@ -43,26 +43,27 @@ Regional y Administrativo* (SUBDERE) and the *Instituto Nacional de Estadística
 
 - A bare `CL` is not in `STATE_CODES` (`engine/address_search.py`; California is `CA` and Colorado is `CO`), and
   hyphenated `CL-XX` codes never collide with a two-letter US state code.
-- However, several two-letter suffixes on their own (`MA` Magallanes, `AR` La Araucanía, `CO` Coquimbo, `AN` Antofagasta
-  vs `AS`/`AL`) collide with US state codes (`MA` Massachusetts, `AR` Arkansas, `CO` Colorado), so the `CL-` prefix must
-  stay part of the code everywhere.
+- Three two-letter suffixes on their own collide with US state codes: `MA` (Magallanes / Massachusetts), `AR`
+  (La Araucanía / Arkansas) and `CO` (Coquimbo / Colorado). The `CL-` prefix must stay part of the code everywhere.
 
 ### Boxes
 
-Geofabrik publishes Chile as a single country extract (`chile-latest.osm.pbf`, 336 MB; `chile-261116.osm.pbf` is
-352,124,743 bytes, and `chile-261116-free.gpkg.zip` is 774,826,582 bytes, opened on 17 November 2026) with no
+Geofabrik publishes Chile as a single country extract (`chile-261116.osm.pbf` is 352,124,743 bytes, about 352 MB or
+336 MiB; `chile-261116-free.gpkg.zip` is 774,826,582 bytes, about 775 MB or 739 MiB, opened on 17 November 2026) with no
 sub-region extracts on Geofabrik. Its clipping polygon (`chile.poly`, 132 vertices, opened) has outer bounds
 `west = -113.2233, south = -58.4519, east = -65.5141, north = -17.4574` because it wraps Rapa Nui and Sala y Gómez in the
 same polygon as the mainland.
 
-The per-region land boxes below cover the 16 regions from north to south. For `CL-VS` (Valparaíso), the box shown is the
-**continental mainland plus Robinson Crusoe / Juan Fernández**, while Rapa Nui (Easter Island) is noted separately so the
-Valparaíso box does not stretch across 3,700 km of open ocean. These regional boxes should be recomputed directly from
-BCN (*Biblioteca del Congreso Nacional de Chile*) or IDE Chile / INE 2024 cartography polygons before a build tool cuts
-packs from them.
+The per-region boxes below are approximate, not checked against boundary polygons. For `CL-VS` (Valparaíso), the box
+shown is **continental mainland only**. The offshore islands have separate provisional boxes below and in the JSON's
+`CL-VS.island_boxes`; they are not inside the mainland box. For `CL-MA`, the south edge is widened to `-56.60°` to
+include the Diego Ramírez group, whose southernmost islet reaches about `-56.54°`.
 
-| Code | CUT | Name | Approximate mainland box (west, south, east, north) | Box with 0.15° margin |
-|---|---|---|---|---|
+All boxes must be recomputed from BCN (*Biblioteca del Congreso Nacional de Chile*) or IDE Chile / INE regional
+boundary polygons before a build tool cuts packs. Checking reference points is not a check of every coastline.
+
+| Code | CUT | Name | Approximate region box, mainland only for CL-VS (west, south, east, north) | Box with 0.15° margin |
+| --- | --- | --- | --- | --- |
 | `CL-AP` | 15 | Arica y Parinacota | -70.38, -19.23, -68.91, -17.50 | -70.53, -19.38, -68.76, -17.35 |
 | `CL-TA` | 01 | Tarapacá | -70.29, -21.64, -68.40, -18.94 | -70.44, -21.79, -68.25, -18.79 |
 | `CL-AN` | 02 | Antofagasta | -70.75, -26.06, -67.00, -20.93 | -70.90, -26.21, -66.85, -20.78 |
@@ -78,15 +79,33 @@ packs from them.
 | `CL-LR` | 14 | Los Ríos | -73.73, -40.68, -71.58, -39.27 | -73.88, -40.83, -71.43, -39.12 |
 | `CL-LL` | 10 | Los Lagos | -74.85, -44.07, -71.58, -40.23 | -75.00, -44.22, -71.43, -40.08 |
 | `CL-AI` | 11 | Aysén del General Carlos Ibáñez del Campo | -75.68, -49.16, -71.09, -43.64 | -75.83, -49.31, -70.94, -43.49 |
-| `CL-MA` | 12 | Magallanes y de la Antártica Chilena (American sector) | -75.73, -56.00, -66.42, -48.60 | -75.88, -56.15, -66.27, -48.45 |
+| `CL-MA` | 12 | Magallanes y de la Antártica Chilena (American sector, including Diego Ramírez) | -75.73, -56.60, -66.42, -48.60 | -75.88, -56.75, -66.27, -48.45 |
+
+### Provisional offshore boxes for `CL-VS`
+
+These broad boxes surround published island positions; they are not official bounds. The source pages were opened
+on 17 November 2026. A future multi-box cut must include both the mainland `box` and every `island_boxes` entry,
+not just the 16 top-level region boxes. No current build reads this proposal.
+
+| Island or group | Provisional box (west, south, east, north) | Box with 0.15° margin | Position source |
+| --- | --- | --- | --- |
+| Rapa Nui | -109.50, -27.25, -109.20, -27.00 | -109.65, -27.40, -109.05, -26.85 | [Easter Island](https://en.wikipedia.org/wiki/Easter_Island) |
+| Sala y Gómez | -105.39, -26.50, -105.33, -26.44 | -105.54, -26.65, -105.18, -26.29 | [Salas y Gómez](https://en.wikipedia.org/wiki/Salas_y_G%C3%B3mez) |
+| Robinson Crusoe and Santa Clara | -79.08, -33.78, -78.72, -33.56 | -79.23, -33.93, -78.57, -33.41 | [Juan Fernández Islands](https://en.wikipedia.org/wiki/Juan_Fern%C3%A1ndez_Islands) |
+| Alejandro Selkirk | -80.87, -33.86, -80.70, -33.69 | -81.02, -34.01, -80.55, -33.54 | [Juan Fernández Islands](https://en.wikipedia.org/wiki/Juan_Fern%C3%A1ndez_Islands) |
+| Desventuradas | -80.18, -26.40, -79.84, -26.22 | -80.33, -26.55, -79.69, -26.07 | [Desventuradas Islands](https://en.wikipedia.org/wiki/Desventuradas_Islands) |
+
+The Desventuradas box includes the reference positions of San Félix, San Ambrosio, Islote González and Roca Catedral.
+The [Diego Ramírez Islands](https://en.wikipedia.org/wiki/Diego_Ram%C3%ADrez_Islands) are in `CL-MA`, not `CL-VS`;
+the widened southern region box includes their reference position and Águila Islet at `56°32′15″ S`.
 
 Three decisions are tied to the boxes:
 
 - **`CL-RM` inside `CL-VS` and `CL-LI`.** The Santiago Metropolitan Region is landlocked between Valparaíso and
   O'Higgins, so their rectangular boxes overlap significantly around Santiago and Valparaíso.
-- **Insular Chile (`CL-VS`).** Rapa Nui (`-109.46, -27.20, -109.22, -27.04`), Sala y Gómez, the Juan Fernández islands
-  and the Desventuradas belong administratively to the Valparaíso region (`CL-VS`). Keeping them as separate island
-  polygons or a multi-box cut avoids pulling 3,700 km of the South Pacific into `CL-VS`.
+- **Offshore islands (`CL-VS`).** Rapa Nui, Sala y Gómez, the Juan Fernández islands and the Desventuradas belong
+  administratively to Valparaíso (`CL-VS`). Keeping their boxes separate avoids pulling the ocean between them and
+  the mainland into one rectangle. Whether they ship in one pack or as add-ons still needs a decision.
 - **Southern Patagonian Ice Field and Antarctic claims.** As noted in [REGIONS-AR.md](REGIONS-AR.md), a short section of
   the Southern Patagonian Ice Field border between `CL-AI`/`CL-MA` and `AR-Z` (Santa Cruz) is not fully demarcated, and
   `CL-MA` excludes Antarctic territorial claims south of 60° S, matching `AR-V` in [REGIONS-AR.md](REGIONS-AR.md).
@@ -94,8 +113,8 @@ Three decisions are tied to the boxes:
 ## Sources, layer by layer
 
 | Layer (file) | US source today | Proposed for Chile | Publisher | Licence | Mark |
-|---|---|---|---|---|---|
-| Roads, water, land (base map) | OSM extract | OSM extract, `chile-latest.osm.pbf` (336 MB; `.gpkg.zip` is 739 MB) | OSM contributors via Geofabrik | ODbL 1.0 | opened |
+| --- | --- | --- | --- | --- | --- |
+| Roads, water, land (base map) | OSM extract | OSM extract, `chile-latest.osm.pbf` (352 MB / 336 MiB; `.gpkg.zip` is 775 MB / 739 MiB) | OSM contributors via Geofabrik | ODbL 1.0 | opened |
 | Points of interest (`poi`) | OSM | OSM | OSM contributors | ODbL 1.0 | opened |
 | Addresses (`addresses/<code>.sqlite`) | Overture addresses | **Overture addresses (`CL`, 4,199,023 records)** | Overture Maps Foundation | per Overture attribution | opened |
 | Places (`places.sqlite`) | GNIS, Census, OSM | OSM named places; BCN / IDE Chile / INE administrative names (regiones, provincias, comunas, localidades) | OSM contributors; BCN / IDE Chile / INE | ODbL 1.0; CC BY 4.0 on BCN cartography (search only) | search only |
@@ -116,45 +135,68 @@ Notes:
 
 ## How addresses are written
 
-Chilean street addresses put the **street name before the house number**, followed by optional apartment/unit, the
-*comuna* (municipality), and the city or region:
+Chilean street addresses put the **street name before the house number**, followed by optional unit, barrio, villa,
+población or sector, the *comuna* (municipality), and sometimes the city. Names alone do not identify these roles.
+These examples are made up, not household addresses:
 
 ```
-Av. Libertador Bernardo O'Higgins 1371, Santiago
-Calle Condell 1490, Valparaíso
-Camino Internacional Km 12, Pucón
+Los Castaños 742, El Bosque, La Florida, Santiago
+10 de Julio 1234, Comuna Ejemplo
+Pasaje 3 1234, Comuna Ejemplo
+Calle Ejemplo S/N, Sector Ejemplo, Comuna Ejemplo
 ```
 
-How this affects `engine/address_search.py` and `tools/build_addresses.py`:
+In the first example, El Bosque is a villa in La Florida, but is also a comuna name elsewhere. Santiago can mean the
+comuna, city, province or region; choosing the rightmost known comuna would wrongly select Santiago here.
 
-1. **Number after street name.** Like Argentina ([REGIONS-AR.md](REGIONS-AR.md)) and Germany ([REGIONS-DE.md](REGIONS-DE.md)),
-   the house number comes at the end of the street part (`Av. Providencia 1208`), whereas `engine/address_search.py`
-   expects the number first (`1208 Main St`).
-2. **Spanish prefixes and abbreviations.** Street names begin with *Calle*, *Avenida* (*Av.* or *Avda.*), *Pasaje*
-   (*Pje.*), *Camino*, *Paseo* or *Ruta*, and often include `de`, `del`, `la`, `los` and accented letters (`Ñuñoa`,
-   `Curicó`, `Chiloé`, `O'Higgins`).
-3. **Seven-digit postal codes (CorreosChile).** Chile has 7-digit numeric postal codes (for example `8320000` for
-   Santiago Centro), but in everyday life people rarely write the postal code and identify places by *comuna* instead
-   (such as *Providencia*, *Las Condes*, *Maipú*, *Viña del Mar*). Address search for Chile therefore needs to match
-   the *comuna* name at the end of a query even when no postal code is given.
+Proposed search rules, to discuss before changing `engine/address_search.py`:
+
+1. **Street and number first.** Use the first comma-separated part, with its **last number** as the house number:
+   `10 de Julio 1234` and `Pasaje 3 1234` must retain the numbers in the street name. Accept `S/N` (*sin número*,
+   no number) as a separate case; it must not become a made-up house number. The current parser expects a number first.
+2. **Match place hints; do not classify them.** Treat the remaining parts as place hints, not as fixed barrio, comuna
+   or city slots. Find candidates by street and number, then rank by how many hints match each record's comuna or
+   locality. An unmatched villa name or trailing city must not force a different comuna. Where candidates still tie,
+   keep the choice visible rather than guessing.
+3. **Spanish street words.** Names use *Calle*, *Avenida* (*Av.* or *Avda.*), *Pasaje* (*Pje.*), *Camino*, *Paseo* or
+   *Ruta*, plus words such as `de`, `del`, `la`, `los` and accents. The builder's ASCII-only `norm()` needs checking too.
+4. **Seven-digit postal codes.** Chile uses 7-digit codes (for example `8320000`), often omitted in everyday addresses.
+   Preserve all seven digits when given; do not require a code or assume the final place hint is the comuna.
+
+### Address-builder limits
+
+`tools/build_addresses.py` is US-only today; the Overture row count is not evidence that it can build a Chilean index:
+
+- Its `country = 'US'` filter remains in place even with `--bbox`. Chile needs a country filter change.
+- `left(postcode, 5)` would turn `8320000` into `83200`. Keep Chile's full postal code.
+- `state.upper()[:2]` cannot preserve a `CL-XX` code or map a region name to one. Inspect actual Chilean Overture
+  `address_levels` and `postal_city` values first, then map them to the full region code and comuna/locality fields.
+  Those Chilean fields have **not been checked**; do not assume the US array positions have the same meaning.
+
+These are requirements for a later design and builder change, not changes made by this documentation proposal.
 
 ## Still undecided
 
 1. **Codes and names in setup.** As in [REGIONS.md](REGIONS.md) item 1, with `CL-AP` to `CL-MA`.
-2. **Insular Chile in `CL-VS`.** Whether Rapa Nui and Juan Fernández are cut as separate island boxes inside the
-   `CL-VS` pack or offered as an island add-on so the Valparaíso bounding box stays tight around the mainland.
+2. **Offshore islands in `CL-VS`.** Whether all five provisional island/group boxes are included in the `CL-VS` pack
+   or offered as add-ons, and how a build represents multiple cuts without dropping islands.
 3. **Tight region polygons.** Recomputing exact land boxes from BCN / IDE Chile official regional boundaries (with the
    0.15° margin rule) and deciding how to handle the overlap between `CL-RM` and `CL-VS`/`CL-LI`.
-4. **Address parser order.** Supporting `<street> <number>, <comuna>` in `engine/address_search.py` alongside the
-   4,199,023 Chilean address rows already in Overture.
+4. **Address search and builder.** Street-first parsing (including numeric street names and `S/N`), place-hint ranking,
+   seven-digit postal codes, and mapping actual Chilean Overture fields to full region codes and comuna/locality fields.
 5. **SENAPRED tsunami and emergency points.** Checking whether SENAPRED / IDE Chile evacuation points and safe zones
    carry a redistributable open licence.
 
 ## What was checked
 
-- Opened: Geofabrik's Chile page (`chile-261116.osm.pbf` 352 MB, `chile-261116-free.gpkg.zip` 775 MB, ODbL, data up to
-  16 November 2026), Geofabrik's `chile.poly` (132 vertices, outer box `-113.2233, -58.4519, -65.5141, -17.4574`), and
+- Opened: Geofabrik's Chile page (`chile-261116.osm.pbf` 352 MB / 336 MiB, `chile-261116-free.gpkg.zip`
+  775 MB / 739 MiB, ODbL, data up to 16 November 2026), Geofabrik's `chile.poly` (132 vertices, outer box
+  `-113.2233, -58.4519, -65.5141, -17.4574`), and
   Overture Maps' address guide (`CL`: 4,199,023 addresses).
+- Opened for the review follow-up: the Wikipedia island pages linked above, for reference positions and the southern
+  extent of Diego Ramírez. The provisional boxes surround those points; no official regional boundary file was opened.
+- Read: `tools/build_addresses.py`, confirming the US country filter, five-character postcode cut and two-character
+  state cut. Chilean Overture address records and their administrative fields were not inspected.
 - Search only: SUBDERE / INE CUT codes, BCN (*Biblioteca del Congreso Nacional*) cartography licensing, IDE Chile and
   SENAPRED geoportals.
 - Not opened: DGA, DOH, CIREN/ODEPA, SENAPRED and CorreosChile terms pages, and the ISO 3166-2:CL page.
