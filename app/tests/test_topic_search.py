@@ -38,7 +38,7 @@ FIRST = {
     'fractured arm': ['hurt', 'bone'], 'dislocated shoulder': ['hurt', 'bone'], 'poisoned': ['hurt', 'poison'],
     'heatstroke': ['hurt', 'heatcold'], 'throwing up': ['hurt', 'diarrhea'], 'dehydrated': ['hurt', 'diarrhea'],
     'diarrhoea': ['hurt', 'diarrhea'], 'suicidal': ['health', 'mind'],
-    'bushfire': ['disaster', 'wildfire'], 'bushfire smoke': ['disaster', 'smoke'], 'power cut': ['power', 'first-hours'],
+    'bushfire smoke': ['disaster', 'smoke'], 'no bus': ['disaster', 'no-car'], 'power cut': ['power', 'first-hours'],
     'poisoned water': ['water', 'chemical'], 'drank poisoned water': ['water', 'chemical'],
     'dehydrated water': ['hurt', 'diarrhea'], 'throwing up water': ['hurt', 'diarrhea'], 'diarrhoea water': ['hurt', 'diarrhea'],
     'fractured neck': ['hurt', 'head'], 'fractured back': ['hurt', 'head'], 'dislocated neck': ['hurt', 'head'],

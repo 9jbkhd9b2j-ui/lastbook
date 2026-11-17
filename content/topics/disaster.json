@@ -123,7 +123,7 @@
   {
    "id": "wildfire",
    "label": "A wildfire is near — evacuate or trapped",
-   "hint": "Bushfire, evacuation order, fire approaching, trapped at home or in a car",
+   "hint": "Evacuation order, fire approaching, trapped at home or in a car",
    "read": [
     {
      "doc": "2848f4bffb8109",
@@ -148,7 +148,7 @@
   {
    "id": "smoke",
    "label": "Wildfire smoke is making the air bad",
-   "hint": "Bushfire smoke, smoky air, not ordered to evacuate",
+   "hint": "Smoky air, not ordered to evacuate",
    "read": [
     {
      "doc": "a90ff7e6f3cf01",
