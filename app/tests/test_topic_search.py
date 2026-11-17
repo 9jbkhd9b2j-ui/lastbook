@@ -30,15 +30,18 @@ ENGLISH = [
     'water.boil', 'first_aid kit', 'e.coli', 'boil:water', 'https://example.org/water',
 ]
 
-# Everyday words a guide covers, and the guide (and choice, or None) search must show first. Each found
-# nothing, or the wrong guide, until its word was added to the guide's keywords or a choice's hint.
+# Everyday words a guide covers, and the guide and choice search must show first, with and without Intl.Segmenter.
+# Most found nothing or the wrong guide until the word was added to the hint of the choice that covers it. A word only
+# in a topic's keywords is not enough: another word then picks the choice ("poisoned water" went to burns, for "hot water").
 FIRST = {
     'burned my hand': ['hurt', 'burn'], 'burnt': ['hurt', 'burn'],
-    'fractured arm': ['hurt', None], 'dislocated shoulder': ['hurt', None], 'poisoned': ['hurt', None],
-    'heatstroke': ['hurt', None], 'throwing up': ['hurt', None], 'dehydrated': ['hurt', None],
-    'diarrhoea': ['hurt', None], 'suicidal': ['health', None], 'depressed': ['health', None],
-    'forest fire': ['disaster', 'wildfire'], 'bushfire': ['disaster', None], 'bushfire smoke': ['disaster', 'smoke'],
+    'fractured arm': ['hurt', 'bone'], 'dislocated shoulder': ['hurt', 'bone'], 'poisoned': ['hurt', 'poison'],
+    'heatstroke': ['hurt', 'heatcold'], 'throwing up': ['hurt', 'diarrhea'], 'dehydrated': ['hurt', 'diarrhea'],
+    'diarrhoea': ['hurt', 'diarrhea'], 'suicidal': ['health', 'mind'], 'depressed': ['health', None],
+    'forest fire': ['disaster', 'wildfire'], 'bushfire': ['disaster', 'wildfire'], 'bushfire smoke': ['disaster', 'smoke'],
     'forest smoke': ['disaster', 'smoke'], 'power cut': ['power', 'first-hours'],
+    'poisoned water': ['water', 'chemical'], 'drank poisoned water': ['water', 'chemical'],
+    'dehydrated water': ['hurt', 'diarrhea'], 'throwing up water': ['hurt', 'diarrhea'], 'diarrhoea water': ['hurt', 'diarrhea'],
 }
 
 # Query -> words, the same with or without Intl.Segmenter (every script here uses spaces).

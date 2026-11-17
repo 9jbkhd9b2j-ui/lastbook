@@ -55,14 +55,7 @@
   "overdose",
   "pesticide",
   "burned",
-  "burnt",
-  "fractured",
-  "dislocated",
-  "poisoned",
-  "heatstroke",
-  "throwing up",
-  "dehydrated",
-  "diarrhoea"
+  "burnt"
  ],
  "choices": [
   {
@@ -179,7 +172,7 @@
   {
    "id": "bone",
    "label": "Broken bone, dislocation or sprain",
-   "hint": "Fall, twisted ankle, limb looks bent or can't be moved",
+   "hint": "Fall, twisted ankle, fractured or dislocated limb, looks bent or can't be moved",
    "read": [
     {
      "doc": "med-443ae5cfaa6ecc68",
@@ -290,7 +283,7 @@
   {
    "id": "heatcold",
    "label": "Too hot or too cold (heat stroke, hypothermia, frostbite)",
-   "hint": "Heat wave, no AC, confused and hot, shivering, numb white fingers",
+   "hint": "Heatstroke or heat wave, no AC, confused and hot, shivering, numb white fingers",
    "read": [
     {
      "doc": "med-2e83e22162a9a006",
@@ -340,7 +333,7 @@
   {
    "id": "poison",
    "label": "Poisoning: swallowed a chemical, medicine or pesticide",
-   "hint": "Cleaning product, too many pills (overdose), fuel, button battery, a child got into something",
+   "hint": "Poisoned: drank a cleaning product or fuel, too many pills (overdose), button battery, a child got into something",
    "read": [
     {
      "doc": "med-2e83e22162a9a006",
@@ -359,7 +352,7 @@
   {
    "id": "diarrhea",
    "label": "Diarrhea, vomiting or dehydration",
-   "hint": "Stomach bug, bad water, baby or older person drying out",
+   "hint": "Diarrhoea, throwing up, stomach bug, bad water, baby or older person dehydrated or drying out",
    "read": [
     {
      "doc": "med-8bd4770a63b99cc6",

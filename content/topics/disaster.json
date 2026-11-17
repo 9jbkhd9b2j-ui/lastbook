@@ -13,7 +13,6 @@
   "evacuate",
   "high ground",
   "wildfire",
-  "bushfire",
   "smoke",
   "N95",
   "air quality",
@@ -124,7 +123,7 @@
   {
    "id": "wildfire",
    "label": "A wildfire is near — evacuate or trapped",
-   "hint": "Forest fire, evacuation order, fire approaching, trapped at home or in a car",
+   "hint": "Forest fire or bushfire, evacuation order, fire approaching, trapped at home or in a car",
    "read": [
     {
      "doc": "2848f4bffb8109",
@@ -149,7 +148,7 @@
   {
    "id": "smoke",
    "label": "Wildfire smoke is making the air bad",
-   "hint": "Forest smoke, smoky air, not ordered to evacuate",
+   "hint": "Forest or bushfire smoke, smoky air, not ordered to evacuate",
    "read": [
     {
      "doc": "a90ff7e6f3cf01",
