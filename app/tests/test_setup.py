@@ -1285,6 +1285,7 @@ class Recommend(Base):
         tree = Path(self.parent) / 'device-tree'
         tree.mkdir(parents=True)
         (tree / 'compatible').write_bytes(b'apple,j293\0apple,arm\0')
+        (tree / 'model').write_bytes(b'Apple MacBook Pro\0')
         with mock.patch.object(llm_local.sys, 'platform', 'linux'), \
              mock.patch('platform.machine', return_value='aarch64'), \
              mock.patch.object(llm_local, '_apple_silicon_linux', lambda: detect(str(tree)), create=True):
@@ -1294,6 +1295,24 @@ class Recommend(Base):
              mock.patch('platform.machine', return_value='aarch64'), \
              mock.patch.object(llm_local, '_apple_silicon_linux', lambda: detect(str(tree)), create=True):
             self.assertFalse(llm_local.judge(dict(fit))['fits'])          # no device tree, so not unified
+
+    def test_apple_silicon_linux_shares_the_setup_check(self):
+        """The runner's check delegates to engine/setup/hardware.py's own device-tree reader, with a local fallback if the
+        engine cannot be imported."""
+        import llm_local
+        import platform as platform_mod
+        tree = Path(self.parent) / 'device-tree-share'
+        tree.mkdir(parents=True)
+        (tree / 'compatible').write_bytes(b'apple,t8103\0apple,arm\0')
+        (tree / 'model').write_bytes(b'Apple MacBook Pro\0')
+        with mock.patch('platform.machine', return_value='aarch64'):
+            self.assertTrue(llm_local._apple_silicon_linux(str(tree)))
+        (tree / 'compatible').write_bytes(b'raspberrypi,5-model-b\0broadcom,bcm2712\0')
+        with mock.patch('platform.machine', return_value='aarch64'):
+            self.assertFalse(llm_local._apple_silicon_linux(str(tree)))
+        with mock.patch('platform.machine', return_value='x86_64'):
+            self.assertFalse(llm_local._apple_silicon_linux(str(tree)))
+        (tree / 'compatible').unlink()
 
     def test_pack_and_ai_by_space(self):
         s = self.setup()

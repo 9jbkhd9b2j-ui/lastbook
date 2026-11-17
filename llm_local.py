@@ -411,13 +411,19 @@ LOCAL = Local()
 
 def _apple_silicon_linux(tree='/proc/device-tree'):
     """True on Apple silicon running Linux, where the graphics share the computer's one memory as they do on a Mac: an ARM
-    processor, and the kernel's device tree names the maker ("apple,t8103"). No device tree means some other computer."""
+    processor, and the kernel's device tree names the maker ("apple,t8103"). No device tree means some other computer. The
+    check itself lives in engine/setup/hardware.py (setup reads the model name from the same tree), read here so the AI
+    runner's fit and setup's hardware picture answer this one question identically."""
     if platform.machine() not in ('aarch64', 'arm64'):
         return False
     try:
-        return any(c.startswith(b'apple,') for c in (Path(tree) / 'compatible').read_bytes().split(b'\0'))
-    except OSError:
-        return False
+        from engine.setup import hardware
+        return hardware._apple_silicon_linux(tree) is not None
+    except Exception:
+        try:
+            return any(c.startswith(b'apple,') for c in (Path(tree) / 'compatible').read_bytes().split(b'\0'))
+        except OSError:
+            return False
 
 
 def judge(fit):
