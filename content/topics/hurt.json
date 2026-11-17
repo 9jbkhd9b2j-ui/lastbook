@@ -252,7 +252,7 @@
   {
    "id": "head",
    "label": "Head, neck or back injury",
-   "hint": "Fall, car crash, blow to the head, fractured or dislocated neck, back or skull, confused or numb after an accident",
+   "hint": "Fall, car crash, blow to the head, spinal injury, fractured skull or spine, dislocated neck, confused or numb after an accident",
    "read": [
     {
      "doc": "med-443ae5cfaa6ecc68",
