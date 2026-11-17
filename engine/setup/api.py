@@ -1125,14 +1125,6 @@ def _margin(total):
     return max(RECOMMEND_MARGIN, min(int((total or 0) * 0.05), RECOMMEND_MARGIN_MAX))
 
 
-def _own_map(lib):
-    """The map set the pack itself ships, from its pack.json ('base', 'us' or a state), or None."""
-    try:
-        return json.loads((Path(lib) / 'pack.json').read_text(encoding='utf-8')).get('map')
-    except (OSError, ValueError, AttributeError):
-        return None
-
-
 def _tree_size(p):
     n = 0
     for root, _, files in os.walk(p):
@@ -1142,6 +1134,14 @@ def _tree_size(p):
             except OSError:
                 pass
     return n
+
+
+def _own_map(lib):
+    """The map set the pack itself ships, from its pack.json ('base', 'us' or a state), or None."""
+    try:
+        return json.loads((Path(lib) / 'pack.json').read_text(encoding='utf-8')).get('map')
+    except (OSError, ValueError, AttributeError):
+        return None
 
 
 # ------------------------------------------------------------------------------------------------ startup and the app --
