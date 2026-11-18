@@ -98,5 +98,132 @@ class AddressSearchTests(unittest.TestCase):
             lookup.assert_called_once_with('18003 nine mile', self.geo.parent / 'derived' / 'geo', limit=8, near=None)
 
 
+class OntarioAddressTests(unittest.TestCase):
+    """Invented Ontario addresses, as written by people in Ontario.
+
+    Every street name and house number is made up, and so is the postal code. Exampleton is an invented town; Sault
+    Ste. Marie and St. Catharines are real cities, used only for how their names are written, with invented streets.
+
+    The index follows the layout proposed in #143: its own `CA-ON.sqlite`, `CA-ON` as the region and postal codes
+    stored without the space. Main has no Ontario index yet, so the format is a guess; the cases are the point. A US
+    index with the same street is installed too, so a case that finds the Ohio row instead is caught.
+
+    Cases marked `expectedFailure` are wanted but fail today by finding nothing, not by an error. Remove the marker
+    when a change makes one pass.
+    """
+
+    POSTAL = 'M0M 0M0'      # made up
+
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory()
+        self.geo = Path(self.temp.name)
+        (self.geo / 'addresses').mkdir()
+        self.write_index('CA-ON', [
+            ('120', 'Exemplar Street East', 'Exampleton', 'CA-ON', self.POSTAL.replace(' ', ''), 44.10, -79.10),
+            ('4410', 'Highway 7', 'Exampleton', 'CA-ON', '', 44.11, -79.11),
+            ('5521', '10th Line', 'Exampleton', 'CA-ON', '', 44.12, -79.12),
+            ('3100', 'Concession Road 6', 'Exampleton', 'CA-ON', '', 44.13, -79.13),
+            ('2210', 'County Road 2', 'Exampleton', 'CA-ON', '', 44.14, -79.14),
+            ('45', 'Exemplar Road', 'Sault Ste. Marie', 'CA-ON', '', 46.50, -84.30),
+            ('46', 'Exemplar Road', 'St. Catharines', 'CA-ON', '', 43.15, -79.24),
+        ])
+        self.write_index('OH', [
+            ('120', 'Exemplar Street East', 'Exampleton', 'OH', '44000', 40.00, -82.00),
+        ])
+
+    def tearDown(self):
+        self.temp.cleanup()
+
+    def write_index(self, name, rows):
+        db = sqlite3.connect(self.geo / 'addresses' / f'{name}.sqlite')
+        try:
+            db.execute('CREATE TABLE addr(num TEXT,street TEXT,norm TEXT,city TEXT,state TEXT,zip TEXT,lat REAL,lon REAL)')
+            db.execute('CREATE INDEX addr_num_norm ON addr(num,norm)')
+            db.executemany('INSERT INTO addr VALUES(?,?,?,?,?,?,?,?)',
+                           [(num, street, normalize(street), city, region, code, lat, lon)
+                            for num, street, city, region, code, lat, lon in rows])
+            db.commit()
+        finally:
+            db.close()      # as in AddressSearchTests.write_state
+
+    def assertFinds(self, query, name, lat):
+        result = find_addresses(query, self.geo)
+        self.assertTrue(result, f'{query!r} found nothing')
+        self.assertEqual(result[0]['name'], name)
+        self.assertEqual(result[0]['lat'], lat)
+
+    def assertOntarioOnly(self, query):
+        result = find_addresses(query, self.geo)
+        self.assertEqual([r['lat'] for r in result], [44.10], f'{query!r}: {result}')
+
+    # Pass today: regression guards.
+
+    def test_direction_after_the_street(self):
+        """Ontario writes the direction after the street ("King St E"), not before it as in "W Nine Mile Road"."""
+        for query in ('120 Exemplar Street East', '120 Exemplar St E', '120 exemplar st. e.', '120 Exemplar St E Exampleton'):
+            with self.subTest(query=query):
+                self.assertFinds(query, '120 Exemplar Street East', 44.10)
+
+    def test_highway_and_county_road(self):
+        for query in ('4410 Highway 7', '4410 Hwy 7', '4410 Hwy. 7'):
+            with self.subTest(query=query):
+                self.assertFinds(query, '4410 Highway 7', 44.11)
+        for query in ('2210 County Road 2', '2210 County Rd 2'):
+            with self.subTest(query=query):
+                self.assertFinds(query, '2210 County Road 2', 44.14)
+
+    def test_numbered_line(self):
+        """Rural townships number their roads: "10th Line", also written "Tenth Line"."""
+        for query in ('5521 10th Line', '5521 Tenth Line'):
+            with self.subTest(query=query):
+                self.assertFinds(query, '5521 10th Line', 44.12)
+
+    def test_concession_road(self):
+        for query in ('3100 Concession Road 6', '3100 Concession Rd 6'):
+            with self.subTest(query=query):
+                self.assertFinds(query, '3100 Concession Road 6', 44.13)
+
+    # Wanted: fail today.
+
+    @unittest.expectedFailure
+    def test_province_abbreviation(self):
+        """"ON" is not read as a province, so it stays in the city: the city "exampleton on" matches nothing."""
+        self.assertOntarioOnly('120 Exemplar St E Exampleton ON')
+
+    @unittest.expectedFailure
+    def test_province_name(self):
+        self.assertOntarioOnly('120 Exemplar St E Exampleton Ontario')
+
+    @unittest.expectedFailure
+    def test_postal_code_with_space(self):
+        """A postal code is letter-digit-letter digit-letter-digit; only a five-digit ZIP is read as a code today."""
+        self.assertOntarioOnly(f'120 Exemplar St E, Exampleton, ON {self.POSTAL}')
+
+    @unittest.expectedFailure
+    def test_postal_code_without_space_or_capitals(self):
+        for code in (self.POSTAL.replace(' ', ''), self.POSTAL.lower()):
+            with self.subTest(code=code):
+                self.assertOntarioOnly(f'120 Exemplar St E {code}')
+
+    @unittest.expectedFailure
+    def test_unit_before_the_house_number(self):
+        """Canada writes unit 4 at number 120 as "4-120"; today "4-120" is read as the house number."""
+        self.assertFinds('4-120 Exemplar St E', '120 Exemplar Street East', 44.10)
+
+    @unittest.expectedFailure
+    def test_city_with_ste(self):
+        """The query's city is normalized ("ste marie"), the stored one is not ("ste. marie"). #196 compares both
+        normalized."""
+        for query in ('45 Exemplar Rd Sault Ste Marie', '45 Exemplar Rd Sault Ste. Marie'):
+            with self.subTest(query=query):
+                self.assertFinds(query, '45 Exemplar Road', 46.50)
+
+    @unittest.expectedFailure
+    def test_city_with_st(self):
+        for query in ('46 Exemplar Rd St Catharines', '46 Exemplar Rd St. Catharines', '46 Exemplar Rd Saint Catharines'):
+            with self.subTest(query=query):
+                self.assertFinds(query, '46 Exemplar Road', 43.15)
+
+
 if __name__ == '__main__':
     unittest.main()
