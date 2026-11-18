@@ -90,8 +90,8 @@ As Lastbook expands internationally, handling disputed or sensitive internationa
 
 ### Context & Primary Sources
 In India, the depiction of external national boundaries (particularly in Jammu & Kashmir, Ladakh, and Arunachal Pradesh) is subject to specific statutory guidelines:
-* **The Criminal Law Amendment Act, 1961 (Act No. 23 of 1961):** [Primary text via Indian Kanoon](https://indiankanoon.org/doc/1446733/) (Section 2: Questioning territorial integrity or frontiers). Its current statutory status, subsequent amendment history, and practical enforcement scope regarding offline international software distributions have not been independently confirmed; it is cited here as reference context rather than an established technical requirement.
-* **National Geospatial Policy (2022):** [Department of Science and Technology (DST) Notification PDF](https://dst.gov.in/sites/default/files/National%20Geospatial%20Policy.pdf), Government of India.
+* **The Criminal Law Amendment Act, 1961 (Act No. 23 of 1961):** [Primary text via India Code](https://www.indiacode.nic.in/bitstream/123456789/6798/1/criminal_law_amendment_act_1961.pdf) (Section 2: Questioning territorial integrity or frontiers). Its current statutory status, subsequent amendment history, and practical enforcement scope regarding offline international software distributions have not been independently confirmed; it is cited here as reference context rather than an established technical requirement.
+* **National Geospatial Policy (2022):** [DST Notification PDF hosted by Survey of India](https://surveyofindia.gov.in/UserFiles/files/National%20Geospatial%20Policy.pdf), Government of India.
 * **Survey of India Boundary Guidelines & Official Maps:** [Survey of India Portal](https://surveyofindia.gov.in).
 
 ### Open Decision for Maintainers
@@ -107,5 +107,5 @@ In India, the depiction of external national boundaries (particularly in Jammu &
 Redistribution within Lastbook requires adding attribution notices in [THIRD_PARTY_NOTICES.md](../THIRD_PARTY_NOTICES.md) and the app's *Sources & Permissions* screen:
 * **OpenStreetMap Data:** `© OpenStreetMap contributors, ODbL 1.0` (https://opendatacommons.org/licenses/odbl/1-0/)
 * **Copernicus DEM GLO-30:** `Produced using Copernicus WorldDEM-30 © DLR e.V. 2010–2014 and © Airbus Defence and Space GmbH 2014–2018 provided under COPERNICUS by the European Union and ESA.`
-* **Microsoft Global ML Footprints:** `Microsoft Open Data, licensed under CDLA Permissive 2.0 / ODbL.`
+* **Microsoft Global ML Footprints:** `Microsoft Open Data, licensed under CDLA Permissive 2.0.`
 * **Government Open Data (GODL India / Data.gov.in):** `National Data Sharing and Accessibility Policy (NDSAP) - Government of India.`
