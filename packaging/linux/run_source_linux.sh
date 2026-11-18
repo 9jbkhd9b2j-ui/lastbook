@@ -50,13 +50,15 @@ export WEBKIT_GST_ALLOWED_URI_PROTOCOLS=lastbook   # WebKit's player refuses any
 # The decoders, by the element WebKit's player will look for. A warning only: the app still runs, those videos do not.
 if command -v gst-inspect-1.0 >/dev/null; then
   gst-inspect-1.0 --exists lastbooksrc || { echo "GStreamer does not load $SO (gst-inspect-1.0 $SO says why)" >&2; exit 1; }
-  while read -r el what arch ubuntu; do
-    gst-inspect-1.0 --exists "$el" || echo "warning: no $what decoder ($el): install $arch (Arch) or $ubuntu (Ubuntu)" >&2
+  while read -r els what arch ubuntu; do   # els: any one of these elements will do
+    found=
+    for el in ${els//|/ }; do gst-inspect-1.0 --exists "$el" && { found=1; break; }; done
+    [ -n "$found" ] || echo "warning: no $what decoder (${els//|/ or }): install $arch (Arch) or $ubuntu (Ubuntu)" >&2
   done <<'EOF'
 qtdemux MP4 gst-plugins-good gstreamer1.0-plugins-good
 avdec_h264 H.264 gst-libav gstreamer1.0-libav
 avdec_aac AAC gst-libav gstreamer1.0-libav
-dav1ddec AV1 gst-plugin-dav1d gstreamer1.0-plugins-bad
+dav1ddec|av1dec AV1 gst-plugin-dav1d gstreamer1.0-plugins-bad
 EOF
 else
   echo "warning: gst-inspect-1.0 not found (Arch: gstreamer, Ubuntu: gstreamer1.0-tools); decoders not checked" >&2
@@ -82,7 +84,8 @@ fi
 fail=0
 for rel in "$@"; do
   uri="lastbook://app/$("$PY" -c 'import sys, urllib.parse; print(urllib.parse.quote(sys.argv[1]))' "$rel")"
-  codec="$(gst-discoverer-1.0 "$LASTBOOK_LIBRARY/$rel" 2>/dev/null | sed -n 's/^ *video #[0-9]*: //p' | head -1)"
+  # The codec name is only a label (gst-discoverer-1.0: Arch gstreamer, Ubuntu gstreamer1.0-plugins-base-apps); the decode below is the check.
+  codec="$(gst-discoverer-1.0 "$LASTBOOK_LIBRARY/$rel" 2>/dev/null | sed -n 's/^ *video #[0-9]*: //p' | head -1 || true)"
   if out="$(timeout 60 gst-launch-1.0 -q uridecodebin uri="$uri" caps="video/x-raw(ANY)" name=d d. ! fakesink num-buffers=48 2>&1)"; then
     echo "ok    ${codec:-?}  $rel"
   else
