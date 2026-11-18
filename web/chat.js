@@ -11,7 +11,7 @@ const Chat = (() => {
     ['grow', 'What vegetables can I plant this month?'],
     ['repair', 'How do I change the oil on a Honda EU2200i generator?'],
   ];
-  // The Ask page's first screen: one card per urgent guide, each asking its guide's starter question, then a few learning guides.
+  // The Chat page's first screen: one card per urgent guide, each asking its guide's starter question, then a few learning guides.
   // The ink drawings are the website's own (website-next/img/ink/), copied flat into web/ because builds ship web/ without folders.
   const HOME = [['water', 'water'], ['hurt', 'aid'], ['food', 'food'], ['power', 'power'], ['comms', 'radio'], ['grow', 'garden']];
   const LEARN = [['grow', 'garden'], ['health', 'carer'], ['energy', 'lantern']];
@@ -207,7 +207,7 @@ const Chat = (() => {
       const st = ABOUT_STARTERS[aboutCtx.kind] || [];
       log.innerHTML = `<div class="chat-empty">
         <div class="ce-mark">${ico('ask')}</div>
-        <h1>Ask</h1>
+        <h1>Chat</h1>
         <p class="lead">Answers are built only from the manuals, guides and video transcripts on this computer — with the exact page or video moment for each point.</p>
         <div class="starters">${st.map(t => ['ask', t]).map(([i, t]) => `<button class="starter" ${tcStyle(i)} data-start="${esc(t)}"><span class="ico">${ico(i)}</span><span>${esc(t)}</span></button>`).join('')}</div>
         <p class="small muted" style="margin-top:18px">It reads text only: it can’t see inside videos without captions, scanned pages without text, or raw map files. It tells you when the library has nothing on a question.</p></div>`;
