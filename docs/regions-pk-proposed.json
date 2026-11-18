@@ -4,7 +4,7 @@
   "checked": "2026-11-17",
   "codes": {
     "proposal": "ISO 3166-2:PK codes: PK-BA, PK-GB, PK-IS, PK-JK, PK-KP, PK-PB, PK-SD.",
-    "why": "Hyphenated codes collide with no US code in STATE_CODES (engine/address_search.py). COD-AB p-codes PK1 to PK7 are kept beside them.",
+    "why": "Hyphenated codes collide with no US code in STATE_CODES (engine/address_search.py). The suffix alone is not safe: SD (Sindh) is also South Dakota. tools/build_addresses.py uses state.upper()[:2], so PK-SD would become PK if passed directly; stripping the prefix first would instead produce the colliding SD. The full PK- code must be preserved and the [A-Z]{2} address-index name rule (engine/setup/manifest.py, engine/setup/install.py) updated before implementation. COD-AB p-codes PK1 to PK7 are kept beside them.",
     "verified": "Read from the shapeISO field of geoBoundaries' province file and from Wikipedia's copy of the ISO list. ISO's own site asks visitors to accept its terms first and was not read.",
     "iso_categories": {
       "PK-BA": "province",

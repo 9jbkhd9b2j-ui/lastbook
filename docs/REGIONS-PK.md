@@ -49,8 +49,14 @@ accept its terms of use first.
   territory", and the other four "province". `PK-TA`, for the former Federally Administered Tribal Areas, was deleted
   in 2019; those areas are now part of Khyber Pakhtunkhwa.
 - COD-AB has its own codes, `PK1` to `PK7`. They are listed in the JSON beside the ISO codes.
-- No bare two-letter code is proposed, so nothing collides with a US state in `STATE_CODES`
-  (`engine/address_search.py`). A bare `PK` would not collide either, if the maintainers prefer one region for the whole
+- No bare two-letter code is proposed, and the full hyphenated codes collide with nothing in `STATE_CODES`
+  (`engine/address_search.py`). The part after the hyphen is not safe on its own: `SD` (Sindh) is also South Dakota.
+  The other six (`BA`, `GB`, `IS`, `JK`, `KP`, `PB`) are not US codes. The current builder keeps only the first two
+  characters of a region (`state.upper()[:2]` in `tools/build_addresses.py`): passing `PK-SD` directly would produce
+  `PK`, not `SD`. Stripping the country prefix first is not a solution either, because `SD` would collide with
+  South Dakota. An address index is accepted only under a two-letter name (`[A-Z]{2}` in
+  `engine/setup/manifest.py` and `engine/setup/install.py`). The full `PK-` code needs to be preserved throughout,
+  and those two-letter restrictions updated before Pakistani address indexes can be built or installed. A bare `PK` would not collide, if the maintainers prefer one region for the whole
   country, as REGIONS-LK.md proposes for Sri Lanka.
 - PR #35 names its Islamabad city map `pk-isl`, in lower case and with a three-letter city part. That is a city box of
   OSM data, not a region, so the two schemes can live side by side. How setup lists both is a question for the
