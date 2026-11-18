@@ -878,15 +878,23 @@ class PackCompare(unittest.TestCase):
         self.assertEqual(d['unsafe'], ['../outside', '/etc/hosts', 'library-data/../../up'])     # never kept, never fetched
         self.assertEqual((d['removed'], d['unchanged'], d['added'], d['fetch_bytes'], d['reuse_bytes']), (['pack.json'], [], [], 0, 0))
 
+    def test_windows_paths_are_unsafe_on_every_system(self):
+        bad = ['\\Windows\\b.dll', '/Windows/d.dll', 'C:c.dll', 'C:\\Windows\\a.dll', '..\\up.txt', 'ok\\fine.pdf', '.']
+        d = install.compare_pack_manifests([], [(rel, 1, sha(b'x')) for rel in bad] + [('library-data/ok.pdf', 2, sha(b'y'))])
+        self.assertEqual(d['unsafe'], sorted(bad))
+        self.assertEqual((d['added'], d['fetch_bytes']), (['library-data/ok.pdf'], 2))
+
     def test_reading(self):
         p = self.write('m.tsv', self.HEADER + f'pack.json\t5\t{sha(b"x")}\tgenerated\t\n\n  \nlibrary-data/a.pdf\t7\t{sha(b"a")}\r\n')
         self.assertEqual(install.read_pack_manifest(p), [('pack.json', 5, sha(b'x')), ('library-data/a.pdf', 7, sha(b'a'))])
-        self.assertEqual(install.read_pack_manifest(self.write('header.tsv', self.HEADER)), [])
-        self.assertEqual(install.read_pack_manifest(self.write('empty.tsv', '')), [])
-        # The first line is always the header, as repair reads it, even when it looks like a row.
-        self.assertEqual(install.read_pack_manifest(self.write('nohead.tsv', 'pack.json\t5\tabc\n')), [])
-        for name, row in (('short', 'pack.json\t5\n'), ('size', 'pack.json\tfive\tabc\n'), ('negative', 'pack.json\t-1\tabc\n'),
-                          ('nopath', '\t5\tabc\n'), ('twice', 'pack.json\t5\tabc\npack.json\t6\tdef\n')):
+        # A list that lost its header or its rows must not read as "every installed file was removed".
+        x = sha(b'x')
+        for name, text in (('empty', ''), ('header', self.HEADER), ('nohead', f'pack.json\t5\t{x}\nother.pdf\t5\t{x}\n')):
+            with self.subTest(name), self.assertRaises(ValueError):
+                install.read_pack_manifest(self.write(name + '.tsv', text))
+        for name, row in (('short', 'pack.json\t5\n'), ('size', f'pack.json\tfive\t{x}\n'), ('negative', f'pack.json\t-1\t{x}\n'),
+                          ('nopath', f'\t5\t{x}\n'), ('twice', f'pack.json\t5\t{x}\npack.json\t6\t{x}\n'),
+                          ('nosha', 'pack.json\t5\t\n'), ('shortsha', 'pack.json\t5\tabc\n'), ('uppersha', f'pack.json\t5\t{x.upper()}\n')):
             with self.subTest(name), self.assertRaises(ValueError):
                 install.read_pack_manifest(self.write(name + '.tsv', self.HEADER + row))
         with self.assertRaises(OSError):
@@ -903,6 +911,10 @@ class PackCompare(unittest.TestCase):
         self.assertIn('To fetch: 2.0 KB (added and changed). Already here: 5 bytes.', r.stdout)
         self.assertIn('added:\n  fresh.pdf', r.stdout)
         self.assertIn('removed:\n  old.pdf', r.stdout)
+        odd = self.write('odd.tsv', self.HEADER + f'schr\u251c\u2562dingers.pdf\t5\t{sha(b"x")}\t\t\n')
+        r = subprocess.run([sys.executable, '-B', str(tool), str(new), str(odd), '--list'], capture_output=True, text=True,
+                           env={**os.environ, 'PYTHONIOENCODING': 'cp1252'})
+        self.assertEqual(r.returncode, 0, r.stderr)     # a Windows file or pipe cannot hold these letters
         bad = self.write('bad.tsv', self.HEADER + 'pack.json\tfive\tabc\n')
         r = subprocess.run([sys.executable, '-B', str(tool), str(new), str(bad)], capture_output=True, text=True)
         self.assertNotEqual(r.returncode, 0)

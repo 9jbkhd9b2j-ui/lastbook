@@ -219,11 +219,14 @@ def need_bytes(pack, model, have_files=()):
 # ------------------------------------------------------------------------------------------------- comparing packs --
 def read_pack_manifest(path):
     """[(path, bytes, sha256)] from a pack-manifest.tsv, read the way repair reads it: the first line is the header, blank
-    lines are skipped, and the columns after sha256 (how, changes) are not needed. A row that is too short, a size that is
-    not a whole number of bytes, an empty path or a path listed twice raises ValueError naming the line, because a list
-    we cannot trust is no basis for keeping files."""
+    lines are skipped, and the columns after sha256 (how, changes) are not needed. A missing header, a list with no files,
+    a row that is too short, a size that is not a whole number of bytes, a SHA-256 that is not 64 hex digits, an empty path
+    or a path listed twice raises ValueError, because a list we cannot trust is no basis for keeping files."""
+    lines = Path(path).read_text(encoding='utf-8').splitlines()
+    if not lines or lines[0].split('\t')[:3] != ['path', 'bytes', 'sha256']:
+        raise ValueError(f'{path} does not start with the header path, bytes, sha256')
     rows, seen = [], set()
-    for n, line in enumerate(Path(path).read_text(encoding='utf-8').splitlines()[1:], 2):
+    for n, line in enumerate(lines[1:], 2):
         if not line.strip():
             continue
         r = line.split('\t')
@@ -231,12 +234,14 @@ def read_pack_manifest(path):
             rel, size, digest = r[0], int(r[1]), r[2]
         except (ValueError, IndexError):
             raise ValueError(f'line {n} of {path} is not path, bytes, sha256') from None
-        if not rel or size < 0:
+        if not rel or size < 0 or not re.fullmatch(r'[0-9a-f]{64}', digest):
             raise ValueError(f'line {n} of {path} is not path, bytes, sha256')
         if rel in seen:
             raise ValueError(f'line {n} of {path} lists {rel} a second time')
         seen.add(rel)
         rows.append((rel, size, digest))
+    if not rows:
+        raise ValueError(f'{path} lists no files')
     return rows
 
 
@@ -245,12 +250,14 @@ def compare_pack_manifests(installed, new):
     disk and downloads nothing. Nothing in setup calls it yet (issue #144).
 
     installed and new are lists of (path, bytes, sha256), as read_pack_manifest returns them. A path in both is unchanged
-    when its size and SHA-256 are both the same, otherwise changed. A path that would leave the library ('..', or a drive
-    or root) is never kept, as repair never keeps one: it goes in unsafe, apart from the rest, and counts toward no total.
+    when its size and SHA-256 are both the same, otherwise changed. A path that would leave the library ('..', a drive, a
+    root or a backslash, on every system, as in _member_parts) is never kept: it goes in unsafe, apart from the rest, and
+    counts toward no total.
     Lists are sorted by path. fetch_bytes (added plus changed, at their new size) is what would have to come in;
     reuse_bytes (unchanged) is what is already here."""
     def safe(rel):
-        return '..' not in Path(rel).parts and not Path(rel).is_absolute()
+        parts = PurePosixPath(rel).parts
+        return bool(parts) and '..' not in parts and ':' not in parts[0] and not rel.startswith('/') and not set('\\\x00') & set(rel)
     old = {rel: (size, digest) for rel, size, digest in installed}
     out = {'added': [], 'removed': [], 'changed': [], 'unchanged': [], 'unsafe': []}
     size_of = {}

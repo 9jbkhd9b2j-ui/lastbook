@@ -58,4 +58,5 @@ def main(args):
 
 
 if __name__ == '__main__':
+    sys.stdout.reconfigure(errors='backslashreplace')     # a console or file that cannot show a path's letters must not stop the list
     main(sys.argv[1:])
