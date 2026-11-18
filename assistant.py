@@ -7,6 +7,7 @@ gazetteer) and nothing else: no file paths, URLs or shell input are accepted fro
 import base64, json, re, socket, sqlite3, threading, time, urllib.error, urllib.request
 import retrieval
 from engine.paths import ro_uri
+from engine import page_tables
 
 import os
 LOOPBACK = re.compile(r'http://(127\.0\.0\.1|\[::1\]):\d+(/[^\s]*)?')
@@ -231,6 +232,14 @@ class Session:
         return k
 
 
+def page_body(text, cap):
+    """A library page as the model reads it, at most cap characters: tables one row per line (engine/page_tables.py), the
+    rest squashed as before. LASTBOOK_AI_TABLES=0 squashes the whole page, as Chat did before."""
+    if os.environ.get('LASTBOOK_AI_TABLES') == '0':
+        return re.sub(r'[ \t]{2,}', ' ', text).strip()[:cap]
+    return page_tables.page_text(text, cap)
+
+
 def _src_block(key, d, body):
     where = f"page {d['page']}" if d.get('page') else (f"at {int(d['t'] // 60)}:{int(d['t'] % 60):02d}" if d.get('t') is not None else '')
     ids = f" | doc_id={d['doc_id']}" if d.get('doc_id') else ''
@@ -267,7 +276,7 @@ def run_tool(name, args, sess, extra_msgs):
             if not 1 <= p <= max(1, len(texts)):
                 out.append(f'(page {p} does not exist; the document has {len(texts)} pages)')
                 continue
-            body = re.sub(r'[ \t]{2,}', ' ', texts[p - 1]).strip()[:3500] or '(no text on this page — it may be a picture; use view_page)'
+            body = page_body(texts[p - 1], 3500) or '(no text on this page — it may be a picture; use view_page)'
             src = {'doc_id': d, 'title': pub['title'], 'publisher': pub['publisher'], 'year': pub['year'], 'kind': r['kind'], 'trust': pub['trust'],
                    'pages': pub['pages'], 'page': p if r['kind'] == 'pdf' else None, 't': None, 'excerpt': re.sub(r'\s+', ' ', body)[:600], 'notes': (r.get('notes') or '')[:300]}
             out.append(_src_block(sess.add(src), src, body))
@@ -352,7 +361,7 @@ def context_for(about, sess):
             return None
         texts, pub = S.page_texts(r), S.public(r)
         p = int(p or 1)
-        body = re.sub(r'[ \t]{2,}', ' ', texts[p - 1]).strip()[:4000] if 0 < p <= len(texts) else ''
+        body = page_body(texts[p - 1], 4000) if 0 < p <= len(texts) else ''
         src = {'doc_id': d, 'title': pub['title'], 'publisher': pub['publisher'], 'year': pub['year'], 'kind': r['kind'], 'trust': pub['trust'],
                'pages': pub['pages'], 'page': p if r['kind'] == 'pdf' else None, 't': None, 'excerpt': re.sub(r'\s+', ' ', body)[:600], 'notes': (r.get('notes') or '')[:300]}
         k = sess.add(src)
@@ -508,7 +517,7 @@ def chat(messages, about, emit, cancelled):
                     r = S.catalog()['by_id'][h['doc_id']]
                     ps = S.page_texts(r)
                     if 0 < h['page'] <= len(ps):
-                        body = re.sub(r'[ \t]{2,}', ' ', ps[h['page'] - 1]).strip()[:3200]
+                        body = page_body(ps[h['page'] - 1], 3200)
                 blocks.append(_src_block(sess.add(h), h, body))
             msgs.append({'role': 'system', 'content': 'Initial library search results for the latest question (already retrieved — search again only if these are not enough; use read_pages to check exact wording):\n\n' + '\n\n'.join(blocks)})
         else:
