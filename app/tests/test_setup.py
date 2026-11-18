@@ -124,8 +124,9 @@ class Handler(http.server.BaseHTTPRequestHandler):
         self.end_headers()
         cut = hold = None
         with F.lock:
-            if F.cut_after.get(name) and answer != 'whole':
-                cut = F.cut_after[name].pop(0)
+            cuts = F.cut_after.get(name)
+            if cuts and answer != 'whole':
+                cut = cuts.pop(start, None) if isinstance(cuts, dict) else cuts.pop(0)
             if name in F.hold and start <= F.hold[name].at < end:
                 hold = F.hold.pop(name)
         sent = start
@@ -591,7 +592,8 @@ class ParallelDownloads(Base):
         self.assertEqual(self.ranges(), [None])
 
     def test_cut_pieces_try_again(self):
-        self.files.cut_after['big.bin'] = [200_000] * 3     # the first three answers cut: mid piece for the first, at once for later ones
+        # Bind the faults to piece offsets, not thread arrival order. Piece zero must carry the mid-piece cut.
+        self.files.cut_after['big.bin'] = {0: 200_000, 256 * 1024: 200_000, 512 * 1024: 200_000}
         with pieces(), fast_backoff():
             p = self.dl().run()
         self.assertEqual(Path(p).read_bytes(), self.big)

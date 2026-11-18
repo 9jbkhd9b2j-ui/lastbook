@@ -29,6 +29,7 @@ import ssl
 import sys
 import threading
 import time
+import weakref
 import urllib.parse
 from pathlib import Path
 
@@ -213,6 +214,36 @@ class _StoppableConnection(http.client.HTTPSConnection):
             raise
 
 
+def _cancellable_body(conn, response, stopping, timeout):
+    """Keep TLS body reads cancellable without timing out the buffered reader on every poll."""
+    raw = getattr(response.fp, 'raw', None)
+    sock = conn.sock or getattr(raw, '_sock', None)  # HTTP/1.0 can transfer ownership to the response.
+    if sock is None:
+        return
+    receive = type(sock).recv_into
+    socket_ref = weakref.ref(sock)
+    sock.setblocking(False)
+
+    def recv_into(*args, **kwargs):
+        deadline = time.monotonic() + timeout
+        while True:
+            if stopping.is_set():
+                raise Stopped('paused')
+            current = socket_ref()
+            if current is None:
+                raise OSError('download connection closed')
+            try:
+                return receive(current, *args, **kwargs)  # Drain decrypted TLS bytes before selecting.
+            except (ssl.SSLWantReadError, ssl.SSLWantWriteError) as error:
+                remaining = deadline - time.monotonic()
+                if remaining <= 0:
+                    raise TimeoutError('timed out')
+                write = isinstance(error, ssl.SSLWantWriteError)
+                select.select([] if write else [current], [current] if write else [], [current], min(.1, remaining))
+
+    sock.recv_into = recv_into
+
+
 def _open(url, start, etag, allowed, context, timeout, end=None, opened=None, stopping=None):
     """(connection, response, final url) for a GET from byte `start` (to byte `end`, included, when given), after following
     allowed redirects. `opened(conn)`, when given, hears of each connection, so another thread can close it. With `stopping`
@@ -238,6 +269,8 @@ def _open(url, start, etag, allowed, context, timeout, end=None, opened=None, st
                 headers['If-Range'] = etag
         conn.request('GET', (u.path or '/') + ('?' + u.query if u.query else ''), headers=headers)
         r = conn.getresponse()
+        if stopping is not None:
+            _cancellable_body(conn, r, stopping, timeout)
         if r.status in (301, 302, 303, 307, 308):
             loc = r.getheader('Location')
             r.close()
