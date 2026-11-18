@@ -7,7 +7,9 @@ stays correct, and never sends anything anywhere.
 
 1. Clone the repository and make a virtual environment with Python 3.11 or later.
 2. Install the requirements for your platform: `packaging/requirements_macos.txt` (Mac) or
-   `packaging/requirements_app.txt` (Windows).
+   `packaging/requirements_app.txt` (Windows). On Linux, use `packaging/linux/requirements_linux.txt` in a virtual
+   environment made with `--system-site-packages`, and start the app with `packaging/linux/run_source_linux.sh` so videos
+   play. The README's "Run from source" section lists the packages it needs.
 3. Get a data folder: run `python app/main.py` and let setup download the Small pack, or unzip a pack from lastbook.org.
    Point the app at it with `--data` or `LASTBOOK_DATA`.
 
