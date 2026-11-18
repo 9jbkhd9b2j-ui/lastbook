@@ -290,6 +290,23 @@ def _content_range(v):
         return None
 
 
+class _DiskWriteError(OSError):
+    """A write failed after possibly changing the partial file."""
+
+
+def _write_all(f, data):
+    """Write every byte, including short raw writes (#122); preserve disk errors."""
+    view = memoryview(data)
+    try:
+        while view:
+            n = f.write(view)
+            if not n:
+                raise OSError(errno.EIO, 'the disk took no bytes')
+            view = view[n:]
+    except OSError as e:
+        raise _DiskWriteError(e.errno, e.strerror) from e
+
+
 class Download:
     """One file: <dest>.part grows, with <dest>.part.json beside it (url, size, sha256, bytes done, ETag, and "parallel": true
     while pieces may lie past bytes done). run() returns once the whole file is there and its SHA-256 matches, renamed to <dest>.
@@ -406,7 +423,10 @@ class Download:
             except (OSError, http.client.HTTPException, ValueError) as e:
                 if disk_full(e):
                     raise Failed('no_space', 'The disk filled up while downloading. Free some space, then try again.')
-                now = self.done_bytes()     # h already holds every byte written: it is updated just after each write
+                now = self.done_bytes()
+                if isinstance(e, _DiskWriteError):
+                    # The OS may have written a prefix before raising. Rebuild the hash from those actual bytes.
+                    h, now = self._rehash(now)
                 if now > start:
                     tries = busy = waited = 0
                     ignored_once = False
@@ -453,14 +473,14 @@ class Download:
             meta = {'url': self.url, 'size': self.size, 'sha256': self.sha256, 'etag': etag, 'bytes_done': start}
             _save_meta(self.meta, meta)
             saved = time.time()
-            with open(self.part, 'r+b') as f:
+            with open(self.part, 'r+b', buffering=0) as f:
                 f.seek(start)
                 while start < self.size:
                     self.control.check()
                     b = r.read1(min(CHUNK, self.size - start))    # what has arrived, up to CHUNK: progress and pause stay quick on a slow line
                     if not b:
                         raise ConnectionError('the connection closed early')
-                    f.write(b)
+                    _write_all(f, b)
                     h.update(b)
                     start += len(b)
                     self.progress(start, self.size, 'downloading')
@@ -576,7 +596,7 @@ class Download:
     def _worker(self, st, ctx):
         """Takes pieces in order and fetches each, trying again where a connection broke. Hands any error to the coordinator."""
         try:
-            with open(self.part, 'r+b') as f:
+            with open(self.part, 'r+b', buffering=0) as f:
                 while True:
                     i = st.take()
                     if i is None:
@@ -624,7 +644,7 @@ class Download:
                         chunk = r.read1(min(CHUNK, b - pos))
                         if not chunk:
                             raise ConnectionError('the connection closed early')
-                        f.write(chunk)
+                        _write_all(f, chunk)
                         f.flush()
                         pos += len(chunk)
                         tries = 0
