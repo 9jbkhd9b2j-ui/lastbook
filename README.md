@@ -110,6 +110,35 @@ python3 -m venv .venv
 .venv/bin/python app/main.py --data /path/to/LastbookData
 ```
 
+On Linux, start it through `packaging/linux/run_source_linux.sh` instead, or videos will not play. The window comes
+from the system (WebKitGTK 4.1 and PyGObject), so make the virtual environment with `--system-site-packages` and install
+`packaging/linux/requirements_linux.txt`:
+
+```bash
+python3 -m venv --system-site-packages .venv
+.venv/bin/pip install -r packaging/linux/requirements_linux.txt
+bash packaging/linux/run_source_linux.sh --data /path/to/LastbookData
+```
+
+The packaged app plays library videos through `lastbooksrc`, its own GStreamer source for `lastbook://` addresses
+(`packaging/linux/gst/lastbooksrc.c`). A source run has no copy of it. The script builds it into `derived/gst/`,
+points GStreamer and WebKit at it for that launch only, and warns about any missing decoders. It needs these packages:
+
+| | Arch | Ubuntu |
+|---|---|---|
+| Build the plugin | `gcc pkg-config gstreamer` | `gcc pkg-config libgstreamer1.0-dev` |
+| Window | `webkit2gtk-4.1 python-gobject` | `gir1.2-webkit2-4.1 python3-gi` |
+| MP4, H.264, AAC | `gst-plugins-base gst-plugins-good gst-libav` | `gstreamer1.0-plugins-good gstreamer1.0-libav` |
+| AV1 (many of the library's videos) | `gst-plugin-dav1d` | `gstreamer1.0-plugins-bad` |
+
+Without an AV1 decoder, those videos fail or play with sound and a black picture. To check video without opening the
+window, decode a few library videos through `lastbooksrc`. Name an AV1 video to cover that decoder too:
+
+```bash
+bash packaging/linux/run_source_linux.sh --check /path/to/LastbookData
+bash packaging/linux/run_source_linux.sh --check /path/to/LastbookData "videos/<folder>/<file>.mp4"
+```
+
 Without `--data`, the app checks `LASTBOOK_DATA`, the folder chosen last time, and its own data folder.
 Existing libraries elsewhere are accessed when the person chooses them. If no library is available, it opens setup.
 The full order is in `app/main.py`.
