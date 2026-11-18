@@ -8,7 +8,7 @@ The test server lives only in this file: it serves a small fake pack and model o
 for the run, and can cut the connection mid-file, send wrong bytes, change the file's ETag, ignore Range, or redirect anywhere.
 The product's allowlist is not touched: tests pass their own `allowed` and TLS context to the downloader. Never packaged.
 """
-import hashlib, http.server, importlib.util, io, json, os, shutil, signal, socketserver, ssl, subprocess, sys, threading, time, unittest, zipfile
+import hashlib, http.server, importlib.util, io, json, os, shutil, signal, socket, socketserver, ssl, subprocess, sys, threading, time, unittest, zipfile
 from pathlib import Path
 from unittest import mock
 
@@ -54,7 +54,16 @@ class Files:
         self.answers = {}         # name -> answers to give in turn: (status, Retry-After or None), 'whole' (a 200 with the whole
                                   # file, even to a Range, that leaves cut_after for the next) or None (served as usual)
         self.pace = 0             # seconds to sleep per 64 KiB
+        self.hold = {}            # name -> Hold: the next answer that covers its byte stops there until the test lets it go
         self.lock = threading.Lock()
+
+
+class Hold:
+    """Holds one answer open at byte `at`, so a test can pause or cancel mid-transfer without guessing at timings.
+    .reached is set once the bytes before `at` are sent; the answer then waits for .release (or 30 s) before sending the rest."""
+
+    def __init__(self, at):
+        self.at, self.reached, self.release = at, threading.Event(), threading.Event()
 
 
 class Handler(http.server.BaseHTTPRequestHandler):
@@ -99,24 +108,38 @@ class Handler(http.server.BaseHTTPRequestHandler):
             if rng and not once and F.ignore_once.get(name):
                 F.ignore_once[name] -= 1
                 once = True
+        end = len(body)                                         # past the last byte sent
         if rng and name not in F.ignore_range and not once:     # like R2: If-Range is ignored
-            start = int(rng.split('=')[1].split('-')[0])
+            a, _, b = rng.split('=')[1].partition('-')
+            start = int(a)
+            if b:
+                end = min(int(b) + 1, len(body))
             self.send_response(206)
-            self.send_header('Content-Range', f'bytes {start}-{len(body) - 1}/{len(body)}')
+            self.send_header('Content-Range', f'bytes {start}-{end - 1}/{len(body)}')
         else:
             self.send_response(200)
-        self.send_header('Content-Length', str(len(body) - start))
+        self.send_header('Content-Length', str(end - start))
         self.send_header('ETag', F.etag.get(name, '"e1"'))
         self.send_header('Accept-Ranges', 'bytes')
         self.end_headers()
-        cut = None
+        cut = hold = None
         with F.lock:
             if F.cut_after.get(name) and answer != 'whole':
                 cut = F.cut_after[name].pop(0)
+            if name in F.hold and start <= F.hold[name].at < end:
+                hold = F.hold.pop(name)
         sent = start
         try:
-            while sent < len(body):
-                n = min(64 * 1024, len(body) - sent)
+            while sent < end:
+                if hold is not None and hold.at < sent + 64 * 1024:
+                    self.wfile.write(body[sent:hold.at])
+                    self.wfile.flush()
+                    sent = hold.at
+                    hold.reached.set()
+                    hold.release.wait(30)
+                    hold = None
+                    continue
+                n = min(64 * 1024, end - sent)
                 if cut is not None and sent + n > cut:
                     self.wfile.write(body[sent:cut])
                     self.wfile.flush()
@@ -182,11 +205,13 @@ class Base(unittest.TestCase):
     @classmethod
     def tearDownClass(cls):
         cls.srv.shutdown()
+        cls.srv.server_close()       # shutdown stops serving; close the fixture listener as well
         shutil.rmtree(cls.tmp_class, ignore_errors=True)
 
     def setUp(self):
         F = self.files
         F.data.clear(); F.etag.clear(); F.log.clear(); F.cut_after.clear(); F.corrupt.clear(); F.ignore_range.clear(); F.ignore_once.clear(); F.redirect.clear(); F.answers.clear()
+        F.hold.clear()
         F.pace = 0
         self.tmp = shorttemp.mkdtemp('lastbook-setup-')
         self.home = self.tmp / 'home'
@@ -516,6 +541,430 @@ class Downloads(Base):
         self.files.pace = 0
         d.control = download.Control()
         self.assertEqual(Path(d.run()).read_bytes(), self.model)
+
+
+def pieces(n=4, piece=256 * 1024):
+    """Several connections for a test-sized file: anything of 1 MiB or more, in pieces of `piece`."""
+    return mock.patch.multiple(download, CONNECTIONS=n, PARALLEL_MIN=MiB, PIECE=piece, AHEAD=2 * n)
+
+
+class ParallelDownloads(Base):
+    def setUp(self):
+        super().setUp()
+        self.big = os.urandom(3 * MiB + 4321)
+        self.files.data['big.bin'] = self.big
+
+    def dl(self, sha256=None, size=None, control=None, connections=None):
+        return download.Download(f'{self.base}/big.bin', self.tmp / 'dl' / 'big.bin', size or len(self.big), sha256 or sha(self.big),
+                                 control or download.Control(), allowed=ALLOWED, context=self.ctx, connections=connections)
+
+    def ranges(self):
+        return [r for n, r, _ in self.files.log if n == 'big.bin']
+
+    def test_pieces(self):
+        seen = []
+        d = self.dl()
+        d.progress = lambda done, total, phase: seen.append(done)
+        with pieces():
+            p = d.run()
+        self.assertEqual(Path(p).read_bytes(), self.big)
+        self.assertFalse(Path(d.part).exists() or Path(d.meta).exists())
+        r = self.ranges()
+        self.assertEqual(len(r), 13)                                       # 3 MiB + a bit in 256 KiB pieces
+        self.assertTrue(all(x and x.startswith('bytes=') and not x.endswith('-') for x in r), r)   # every one closed: bytes=a-b
+        self.assertEqual(sorted(int(x[6:].split('-')[0]) for x in r), [i * 256 * 1024 for i in range(13)])
+        self.assertEqual(seen[-1], len(self.big))
+        self.assertTrue(all(b >= a for a, b in zip(seen, seen[1:])), 'progress went back')
+
+    def test_small_file_one_connection(self):
+        with pieces():
+            p = download.Download(f'{self.base}/model.gguf', self.tmp / 'm', 1000, sha(self.model[:1000]), download.Control(),
+                                  allowed=ALLOWED, context=self.ctx)
+            self.files.data['model.gguf'] = self.model[:1000]
+            p.run()
+        self.assertEqual([r for n, r, _ in self.files.log if n == 'model.gguf'], [None])
+
+    def test_one_connection_asked_for(self):
+        with pieces():
+            self.dl(connections=1).run()
+        self.assertEqual(self.ranges(), [None])
+
+    def test_cut_pieces_try_again(self):
+        self.files.cut_after['big.bin'] = [200_000] * 3     # the first three answers cut: mid piece for the first, at once for later ones
+        with pieces(), fast_backoff():
+            p = self.dl().run()
+        self.assertEqual(Path(p).read_bytes(), self.big)
+        self.assertEqual(len(self.ranges()), 16)
+        self.assertIn('bytes=200000-262143', self.ranges())            # the cut piece carried on from where it broke
+
+    def test_pause_and_resume(self):
+        """Pause while one piece is held open by the server: every connection stops, nothing is written after run() returns,
+        and the resume finishes from the hashed run. The server's hold, not a timer, decides when the pause lands."""
+        hold = self.files.hold['big.bin'] = Hold(600_000)                # inside the third 256 KiB piece
+        self.addCleanup(hold.release.set)
+        c = download.Control()
+        d = self.dl(control=c)
+        out = []
+        with pieces():
+            t = threading.Thread(target=lambda: out.append(self.outcome(d.run)), name='test-run')
+            t.start()
+            self.assertTrue(hold.reached.wait(10), 'the held piece was never asked for')
+            c.stop('paused')
+            t.join(15)
+        self.assertFalse(t.is_alive(), 'run() did not return after pause')
+        self.assertIsInstance(out[0], download.Stopped)
+        self.assertEqual(self.download_threads(), [], 'a download connection outlived the pause')
+        before = self.snapshot(d.part)
+        hold.release.set()                                               # the held answer sends the rest of its piece now
+        time.sleep(0.5)
+        self.assertEqual(self.snapshot(d.part), before, 'the partial file changed after pause returned')
+        meta = json.loads(Path(d.meta).read_text())
+        self.assertTrue(meta['parallel'])
+        self.assertEqual(meta['bytes_done'] % (256 * 1024), 0)           # a whole number of pieces, hashed
+        self.assertEqual(d.done_bytes(), meta['bytes_done'])
+        self.assertLessEqual(meta['bytes_done'], os.path.getsize(d.part))
+        self.assertLessEqual(meta['bytes_done'], 512 * 1024)              # the held piece was never in the hashed run
+        self.files.log.clear()
+        d.control = download.Control()
+        with pieces():
+            p = d.run()
+        self.assertEqual(sha(Path(p).read_bytes()), sha(self.big))
+        self.assertTrue(all(int(x[6:].split('-')[0]) >= meta['bytes_done'] for x in self.ranges()))   # nothing hashed is fetched again
+        self.assertEqual(self.download_threads(), [])
+
+    @staticmethod
+    def outcome(fn):
+        try:
+            return fn()
+        except BaseException as e:      # noqa: B036 -- handed back to the test thread to assert on
+            return e
+
+    @staticmethod
+    def download_threads():
+        return [t.name for t in threading.enumerate() if t.name.startswith('download-') and t.is_alive()]
+
+    @staticmethod
+    def snapshot(path):
+        p = Path(path)
+        return (p.stat().st_size, p.stat().st_mtime_ns, sha(p.read_bytes())) if p.exists() else None
+
+    def test_pause_during_stalled_handshake(self):
+        """A server that takes the connection but never answers the TLS handshake: pause ends the run and every worker within a
+        couple of seconds, not at the 30 s network timeout."""
+        lsn = socket.socket()
+        lsn.bind(('127.0.0.1', 0))
+        lsn.listen(8)
+        held, accepted = [], threading.Semaphore(0)
+
+        def accept():
+            while True:
+                try:
+                    s, _ = lsn.accept()
+                except OSError:
+                    return
+                held.append(s)
+                accepted.release()
+        listener = threading.Thread(target=accept, daemon=True)
+        listener.start()
+        self.files.redirect['big.bin'] = f'https://127.0.0.1:{lsn.getsockname()[1]}/big.bin'
+        c = download.Control()
+        d = self.dl(control=c, connections=2)
+        err = []
+
+        def run():
+            try:
+                with pieces():
+                    d.run()
+            except BaseException as e:      # noqa: B036
+                err.append(e)
+        runner = threading.Thread(target=run, daemon=True)
+        try:
+            runner.start()
+            for _ in range(2):
+                self.assertTrue(accepted.acquire(timeout=10), 'the workers never connected')
+            time.sleep(0.3)                 # both are in the handshake now, waiting for a ServerHello that never comes
+            t0 = time.monotonic()
+            c.stop('paused')
+            runner.join(10)
+            took = time.monotonic() - t0
+            self.assertFalse(runner.is_alive(), 'run() was still going 10 s after the pause')
+            self.assertEqual(len(err), 1)
+            self.assertIsInstance(err[0], download.Stopped)
+            self.assertLess(took, 2)
+            self.assertEqual([t.name for t in threading.enumerate() if t.name.startswith('download-')], [])
+        finally:
+            try:
+                lsn.shutdown(socket.SHUT_RDWR)   # wake accept() before closing the fixture listener
+            except OSError:
+                pass
+            lsn.close()
+            listener.join(1)
+            for s in held:
+                s.close()
+
+    def test_resume_after_kill_ignores_unhashed_bytes(self):
+        """Bytes past bytes_done may be holes or half a piece: a resume trusts only the hashed run."""
+        d = self.dl()
+        os.makedirs(os.path.dirname(d.part), exist_ok=True)
+        Path(d.part).write_bytes(self.big[:512 * 1024] + b'\0' * (1024 * 1024))
+        Path(d.meta).write_text(json.dumps({'url': d.url, 'size': d.size, 'sha256': d.sha256, 'etag': '"e1"', 'bytes_done': 512 * 1024, 'parallel': True}))
+        with pieces():
+            self.assertEqual(Path(d.run()).read_bytes(), self.big)
+        self.assertEqual(min(int(x[6:].split('-')[0]) for x in self.ranges()), 512 * 1024)
+
+    def test_resume_from_one_connection_file(self):
+        """A .part left by one connection (no "parallel" in its .json) carries on in pieces from its length."""
+        d = self.dl()
+        os.makedirs(os.path.dirname(d.part), exist_ok=True)
+        Path(d.part).write_bytes(self.big[:700_000])
+        Path(d.meta).write_text(json.dumps({'url': d.url, 'size': d.size, 'sha256': d.sha256, 'etag': '"e1"', 'bytes_done': 600_000}))
+        with pieces():
+            self.assertEqual(Path(d.run()).read_bytes(), self.big)
+        self.assertEqual(min(int(x[6:].split('-')[0]) for x in self.ranges()), 700_000)
+
+    def test_etag_changed_starts_over(self):
+        d = self.dl()
+        os.makedirs(os.path.dirname(d.part), exist_ok=True)
+        Path(d.part).write_bytes(b'x' * 512 * 1024)
+        Path(d.meta).write_text(json.dumps({'url': d.url, 'size': d.size, 'sha256': d.sha256, 'etag': '"old"', 'bytes_done': 512 * 1024, 'parallel': True}))
+        self.files.etag['big.bin'] = '"new"'
+        with pieces():
+            self.assertEqual(Path(d.run()).read_bytes(), self.big)
+        self.assertIn('bytes=0-262143', self.ranges())
+
+    def test_server_ignores_range_goes_to_one_connection(self):
+        self.files.ignore_range.add('big.bin')
+        with pieces(), fast_backoff():
+            p = self.dl().run()
+        self.assertEqual(Path(p).read_bytes(), self.big)
+        self.assertEqual(self.ranges()[-1], None)                          # finished as one plain GET
+        self.assertNotIn('parallel', json.dumps(self.files.log))
+
+    def test_one_stray_200_keeps_pieces(self):
+        self.files.ignore_once['big.bin'] = 1
+        with pieces():
+            p = self.dl().run()
+        self.assertEqual(Path(p).read_bytes(), self.big)
+        self.assertEqual(len(self.ranges()), 14)                           # 13 pieces, one asked for twice
+        self.assertNotIn(None, self.ranges())                              # never went back to one plain GET
+
+    def test_wrong_checksum(self):
+        d = self.dl(sha256='0' * 64)
+        with pieces(), self.assertRaises(download.BadChecksum):
+            d.run()
+        self.assertFalse(Path(d.part).exists())
+
+    def test_wrong_size_on_server(self):
+        d = self.dl(size=len(self.big) + 10)
+        with pieces(), self.assertRaises(download.BadChecksum):
+            d.run()
+
+    def test_redirect_to_unknown_host_refused(self):
+        self.files.redirect['big.bin'] = 'https://evil.example/big.bin'
+        with pieces(), self.assertRaises(download.Failed) as e:
+            self.dl().run()
+        self.assertEqual(e.exception.code, 'network')
+
+    # -------------------------------------------------------------- a busy server, over several connections (with #149) --
+    def test_busy_pieces_wait_it_out(self):
+        """30 answers of 503 or 429 are a busy server, not 30 broken connections: the pieces wait (and say so), then finish.
+        Over one connection each piece would give up after NETWORK_TRIES."""
+        self.files.answers['big.bin'] = [(503, None), (429, None)] * 15
+        d, waits = self.dl(), []
+        d.waiting = waits.append
+        with pieces(n=2), fast_backoff():
+            p = d.run()
+        self.assertEqual(sha(Path(p).read_bytes()), sha(self.big))
+        self.assertTrue(waits and all(w == 0.05 for w in waits), waits)
+
+    def test_busy_pieces_share_one_budget(self):
+        """The connections share one wait and one budget: four of them waiting together count the time once, and the download
+        stops as 'server' (not 'network') once BUSY_LIMIT has been waited with no progress."""
+        self.files.answers['big.bin'] = [(503, None)] * 400
+        d, waits = self.dl(), []
+        d.waiting = waits.append
+        t0 = time.monotonic()
+        with pieces(n=4), fast_backoff(), mock.patch.object(download, 'BUSY_LIMIT', 0.3), self.assertRaises(download.Failed) as e:
+            d.run()
+        self.assertEqual(e.exception.code, 'server')
+        self.assertLessEqual(sum(waits), 0.3 + 1e-9)
+        self.assertLessEqual(len(waits), 6)                                   # 0.3 s in waits of 0.05 s, not one set per connection
+        self.assertLess(time.monotonic() - t0, 5)
+        self.assertGreater(len(self.ranges()), len(waits))                    # several connections joined each wait
+
+    def busy_clock(self, limit=20):
+        """A _Pieces on a clock the test moves by hand (now[0], seconds): no sleeping, no server. BUSY_BACKOFF 10 s."""
+        now = [0.0]
+        for p in (mock.patch.object(download.time, 'monotonic', lambda: now[0]),
+                  mock.patch.object(download, 'BUSY_BACKOFF', (10,) * 6), mock.patch.object(download, 'BUSY_LIMIT', limit)):
+            p.start()
+            self.addCleanup(p.stop)
+        return now, download._Pieces(0, 10 * download.PIECE, None)
+
+    def test_busy_budget_and_wait_rules(self):
+        """The shared rules on a moved clock: one announced wait that others join without charging it again, Retry-After
+        as a floor within what is left of the budget, the budget used up with no progress, and a byte renewing it."""
+        now, st = self.busy_clock()
+        self.assertEqual(st.busy_wait(download._Busy(503, None)), (10, True))
+        now[0] = 4
+        self.assertEqual(st.busy_wait(download._Busy(503, None)), (6, False))       # another connection joins: 6 s left
+        self.assertEqual(st.waited, 10)                                          # counted once, not twice
+        now[0] = 10                                                              # that wait is over
+        self.assertEqual(st.busy_wait(download._Busy(503, '15')), (10, True))    # Retry-After 15, but only 10 s of 20 left
+        now[0] = 20
+        with self.assertRaises(download.Failed) as e:
+            st.busy_wait(download._Busy(503, None))
+        self.assertEqual(e.exception.code, 'server')
+        st.progress(0, 1)                                                        # one byte arrived, no wait on: all 20 s again
+        self.assertEqual(st.busy_wait(download._Busy(503, None)), (10, True))
+
+    def test_joining_answer_with_a_longer_retry_after_extends_the_wait(self):
+        """A connection told "Retry-After: 15" one second into a 10 s wait must not try again before 16 s: the shared wait is
+        extended to 16, only the 6 s extension is charged, and the countdown hears the new wait. Within the budget only."""
+        now, st = self.busy_clock()
+        self.assertEqual(st.busy_wait(download._Busy(503, None)), (10, True))
+        now[0] = 1
+        self.assertEqual(st.busy_wait(download._Busy(429, '15')), (15, True))    # announced again: the wait got longer
+        self.assertEqual((st.resume_at, st.waited, st.announce), (16, 16, 15))
+        now[0] = 2
+        self.assertEqual(st.busy_wait(download._Busy(503, None)), (14, False))   # a shorter one just joins
+        self.assertEqual(st.waited, 16)
+        now, st = self.busy_clock(limit=12)                                       # only 2 s of budget left for the extension
+        st.busy_wait(download._Busy(503, None))
+        now[0] = 1
+        self.assertEqual(st.busy_wait(download._Busy(429, '15')), (11, True))
+        self.assertEqual((st.resume_at, st.waited), (12, 12))
+        now[0] = 12
+        with self.assertRaises(download.Failed):
+            st.busy_wait(download._Busy(503, None))
+
+    def test_busy_pieces_wait_for_the_longest_retry_after(self):
+        """Over the test server: one connection hears 503 (a 0.05 s wait), the other "Retry-After: 1". No connection asks
+        again until that second has passed, including the one already asleep on the short wait; then the file completes."""
+        self.files.answers['big.bin'] = [(503, None), (503, 1)]
+        times, real_open = [], download._open
+
+        def timed_open(*a, **k):
+            times.append(time.monotonic())
+            return real_open(*a, **k)
+        with pieces(n=2), fast_backoff(), mock.patch.object(download, '_open', timed_open):
+            p = self.dl().run()
+        self.assertEqual(sha(Path(p).read_bytes()), sha(self.big))
+        later = [t - times[1] for t in times[2:]]
+        self.assertTrue(later and min(later) >= 0.9, [round(x, 2) for x in later[:4]])
+
+    def test_progress_during_a_wait_does_not_forgive_the_rest_of_it(self):
+        """Bytes on another piece one second into a 10 s wait renew the budget, but the 9 s still to wait come after that
+        progress and count: with a 20 s budget the download gives up 20 s after the progress, not 29."""
+        now, st = self.busy_clock()
+        st.busy_wait(download._Busy(503, None))
+        now[0] = 1
+        st.progress(0, 1)
+        self.assertEqual((st.busy, st.waited), (0, 9))
+        now[0] = 10
+        self.assertEqual(st.busy_wait(download._Busy(503, None)), (10, True))
+        now[0] = 20
+        self.assertEqual(st.busy_wait(download._Busy(503, None)), (1, True))     # 19 of 20 s used since the progress
+        now[0] = 21
+        with self.assertRaises(download.Failed) as e:
+            st.busy_wait(download._Busy(503, None))
+        self.assertEqual(e.exception.code, 'server')
+        self.assertLessEqual(now[0] - 1, download.BUSY_LIMIT)
+
+    def test_pause_ends_a_busy_wait_and_a_stalled_handshake_together(self):
+        """#125 with #149: one connection asleep in a busy wait (Retry-After 300), the other stuck in a TLS handshake that never
+        answers. Pause ends both within about 2 s, raises Stopped, and leaves no download-* thread."""
+        lsn = socket.socket()
+        lsn.bind(('127.0.0.1', 0))
+        lsn.listen(8)
+        held, accepted = [], threading.Event()
+
+        def accept():
+            while True:
+                try:
+                    s, _ = lsn.accept()
+                except OSError:
+                    return
+                held.append(s)
+                accepted.set()
+        listener = threading.Thread(target=accept, daemon=True)
+        listener.start()
+        stall = f'https://127.0.0.1:{lsn.getsockname()[1]}/big.bin'
+        self.files.answers['big.bin'] = [(503, 300)]
+        calls, real_open, lock = [], download._open, threading.Lock()
+
+        def split_open(url, *a, **k):
+            with lock:
+                calls.append(url)
+                n = len(calls)
+            return real_open(stall if n == 2 else url, *a, **k)     # the second connection goes to the silent listener
+        c = download.Control()
+        d, waits, err = self.dl(control=c, connections=2), [], []
+        d.waiting = waits.append
+
+        def run():
+            try:
+                with pieces(n=2), mock.patch.object(download, '_open', split_open):
+                    d.run()
+            except BaseException as e:      # noqa: B036
+                err.append(e)
+        runner = threading.Thread(target=run, daemon=True)
+        try:
+            runner.start()
+            self.assertTrue(accepted.wait(10), 'no connection reached the silent listener')
+            t0 = time.monotonic()
+            while not waits and time.monotonic() - t0 < 10:
+                time.sleep(0.02)
+            self.assertEqual(waits[:1], [300])                              # the busy wait is on, and announced
+            time.sleep(0.3)
+            t0 = time.monotonic()
+            c.stop('paused')
+            runner.join(10)
+            took = time.monotonic() - t0
+            self.assertFalse(runner.is_alive(), 'run() was still going 10 s after the pause')
+            self.assertEqual(len(err), 1)
+            self.assertIsInstance(err[0], download.Stopped)
+            self.assertLess(took, 2)
+            self.assertEqual([t.name for t in threading.enumerate() if t.name.startswith('download-')], [])
+        finally:
+            try:
+                lsn.shutdown(socket.SHUT_RDWR)   # wake accept() before closing the fixture listener
+            except OSError:
+                pass
+            lsn.close()
+            listener.join(1)
+            for s in held:
+                s.close()
+
+    def test_job_countdown_while_pieces_wait_then_pause_and_resume(self):
+        """Through api.Setup: while every connection waits on a busy server the item shows one countdown, which the coordinator's
+        polling does not wipe; Pause during that wait returns at once; resume finishes."""
+        self.files.answers['Lastbook-Small.zip'] = [(503, 300)] * 50
+        with pieces():
+            s = self.setup()
+            s.start('small', False)
+            t0, seen = time.time(), []
+            while time.time() - t0 < 10 and not seen:
+                it = s.public_job()['items'][0]
+                if it.get('retry_in_s'):
+                    seen.append(it['retry_in_s'])
+                time.sleep(0.02)
+            self.assertTrue(seen, 'no countdown shown')
+            self.assertTrue(295 <= seen[0] <= 300, seen)
+            time.sleep(1.5)                                                # three coordinator polls later, still counting down
+            it = s.public_job()['items'][0]
+            self.assertIn('retry_in_s', it)
+            self.assertTrue(293 <= it['retry_in_s'] < seen[0], (it, seen))
+            self.assertEqual((it['rate_bps'], it['eta_s']), (0, None))
+            t1 = time.monotonic()
+            j = s.pause()
+            self.assertLess(time.monotonic() - t1, 3)
+            self.assertEqual(j['state'], 'paused')
+            self.assertNotIn('retry_in_s', j['items'][0])
+            self.assertEqual([t.name for t in threading.enumerate() if t.name.startswith('download-')], [])
+            self.files.answers.clear()
+            s.resume()
+            self.assertEqual(self.wait(s)['state'], 'done')
 
 
 class Unpacking(Base):
@@ -1733,7 +2182,7 @@ class Recommend(Base):
 
     def test_hardware_here(self):
         hw = hardware.detect([self.parent])
-        self.assertIn(hw['os'], ('macos', 'windows'))
+        self.assertIn(hw['os'], ('macos', 'windows', 'linux'))
         self.assertGreater(hw['ram_bytes'], 2 ** 30)
         self.assertTrue(hw['disks'] and hw['disks'][0]['free_bytes'] > 0)
 
