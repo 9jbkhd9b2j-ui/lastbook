@@ -234,11 +234,13 @@ Coverage of the five overseas regions differs by dataset (second check; opened u
 | Copernicus GLO-30 | sample tiles | sample tile | sample tile | sample tiles | sample tile | sample tile |
 | BD TOPAGE 2026, INPE 2023 | yes | yes | yes | **no** (INPE), **no file listed** (TOPAGE) | yes | yes |
 | OSO (crops) | yes, Corsica included | no | no | no | no | no |
-| CORINE Land Cover | 2018 | 2018 | 2018 | 2018 | 2018 | 2018 |
+| CORINE Land Cover | 2018 | 2018 | 2018 | 2018, coastal and border-river strip only | 2018 | 2018 |
 | GeoNames postcode files | `FR.zip`, without 971 to 976 | `GP.zip` | `MQ.zip` | `GF.zip` | `RE.zip` | `YT.zip` |
 
 TOPAGE's absence in Guyane rests on Sandre's 2026 folder, which lists files for FXX, GLP, MTQ, MYT and REU and none for
-Guyane (one listing, not a statement by the publisher); INPE's record says Guyane is "in progress".
+Guyane (one listing, not a statement by the publisher); INPE's record says Guyane is "in progress". The ministry's
+[CORINE page](https://www.statistiques.developpement-durable.gouv.fr/corine-land-cover-0) limits Guyane to a 20 km strip
+along the coast and the lower reaches of the border rivers (second check).
 
 Notes:
 

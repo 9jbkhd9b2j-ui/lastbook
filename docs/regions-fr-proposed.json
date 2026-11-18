@@ -1438,7 +1438,7 @@
         "url": "https://geo.api.gouv.fr/regions/03",
         "verified": "2026-11-17; IGN and BAN files seen in the download feeds and by HEAD only, not tried",
         "overture_addresses_licence": "Licence-Ouverte-2.0: Overture files these rows under FR, with no rows under GP, MQ, GF, RE or YT (second check, measured)",
-        "notes": "The box covers parts of Suriname and Brazil (Natural Earth 1:110m test). Coverage: MNT LiDAR HD excludes Guyane; INPE 2023 has no Guyane file (its record says \"in progress\"); BD TOPAGE 2026 not found for Guyane: Sandre's 2026 folder lists files for FXX, GLP, MTQ, MYT and REU and none for Guyane (one listing, not a statement by the publisher); no OSO; CORINE Land Cover 2018 (second check)."
+        "notes": "The box covers parts of Suriname and Brazil (Natural Earth 1:110m test). Coverage: MNT LiDAR HD excludes Guyane; INPE 2023 has no Guyane file (its record says \"in progress\"); BD TOPAGE 2026 not found for Guyane: Sandre's 2026 folder lists files for FXX, GLP, MTQ, MYT and REU and none for Guyane (one listing, not a statement by the publisher); no OSO; CORINE Land Cover 2018, only for a 20 km strip along the coast and the lower reaches of the border rivers, as the ministry's CORINE page says (second check)."
       }
     },
     {
