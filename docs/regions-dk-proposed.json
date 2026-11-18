@@ -385,5 +385,167 @@
     },
     "outline": "denmark.poly, one ring of 80 points, 7.70 to 15.65° E, 54.44 to 58.06° N. Christiansø is inside; Malmö, Helsingborg, Ystad, Flensburg and Kiel are outside.",
     "verified": "2026-11-17"
-  }
+  },
+  "changes_in_2026": {
+    "dawa_closed": "DAWA, the free address and boundary API that most open Danish tooling used (api.dataforsyningen.dk, dawa.aws.dk), closed on 1 October 2026; its endpoints now answer HTTP 410 Gone (opened). The replacements are Adressevælger for address lookup and Datafordeler for everything else.",
+    "dawa_announcement": "https://www.klimadatastyrelsen.dk/om-klimadatastyrelsen/nyheder/nyhedsarkiv/2026/jul/dawa-lukker-d-1-oktober-2026",
+    "datafordeler_key": "Datafordeler's DAGI WFS and GraphQL answer 401 without a key (opened). A key is free with a login and is valid for 2 years (search only). Downloads of the elevation model, GeoDanmark and place names are listed as needing a key too (opened for DHM).",
+    "agency_name": "SDFI became Klimadatastyrelsen on 14 August 2024, and Klimadatastyrelsen merges with DMI on 1 December 2026 into 'DMI, Kort og Grunddata' (opened). Credits will need the new name.",
+    "agency_merger_url": "https://www.kefm.dk/aktuelt/nyheder/2026/sep/dmi-og-klimadatastyrelsen-sammenlaegges-til-ny-styrelse"
+  },
+  "layer_keys": {
+    "terrain": "terrain.sqlite",
+    "water": "water.sqlite",
+    "dams": "water.sqlite (nid part today)",
+    "crops": "crops.sqlite",
+    "buildings": "buildings.sqlite",
+    "places": "places.sqlite",
+    "addresses": "derived/geo/addresses/<code>.sqlite",
+    "pois": "poi rows in national.sqlite"
+  },
+  "licences": {
+    "CC-BY-4.0-KDS": {
+      "name": "Creative Commons Attribution 4.0, for Klimadatastyrelsen's free geographic data and the free basic data on Datafordeler",
+      "url": "https://datafordeler.dk/vejledning/brugervilkaar/kds-geografiske-data/",
+      "since": "2024-05-16, replacing the 2022 'Vilkår for brug af frie geografiske data'",
+      "change_notice": "https://www.klimadatastyrelsen.dk/om-klimadatastyrelsen/nyheder/nyhedsarkiv/2024/maj/vilkaar-for-brug-af-sdfis-frie-geografiske-data-aendres",
+      "attribution": "'Du skal kreditere Klimadatastyrelsen på et passende sted' (credit Klimadatastyrelsen in a suitable place). No fixed wording. The superseded 2022 text fixed one: 'Indeholder data fra Styrelsen for Dataforsyning og Infrastruktur, [dataset], [month year]'.",
+      "covers": "DAGI, DHM, Danske Stednavne, GeoDanmark, DAR and others",
+      "share_alike": false,
+      "verified": "2026-11-17 (both pages opened)"
+    },
+    "ODbL-1.0": {
+      "name": "Open Database License 1.0",
+      "url": "https://opendatacommons.org/licenses/odbl/1-0/",
+      "attribution": "© OpenStreetMap contributors",
+      "share_alike": true
+    },
+    "EuroGeographics-GISCO": {
+      "name": "Eurostat GISCO terms for administrative boundaries",
+      "attribution": "© EuroGeographics for the administrative boundaries",
+      "verified": "search only",
+      "use_here": "The region boxes only; not proposed for any layer."
+    }
+  },
+  "country_layers": {
+    "terrain": [
+      {
+        "dataset": "Danmarks Højdemodel, DHM/Terræn, 0.4 m grid",
+        "publisher": "Klimadatastyrelsen",
+        "url": "https://datafordeler.dk/dataoversigt/danmarks-hoejdemodel-dhm/dhm-fildownload-raster/",
+        "licence": "CC-BY-4.0-KDS",
+        "format": "GeoTIFF in 10 x 10 km tiles; about a fifth of the country is flown again each year",
+        "access": "Datafordeler key",
+        "verified": "2026-11-17",
+        "role": "primary",
+        "notes": "0.4 m is far finer than zoom 12, the deepest zoom tools/build_terrain.py writes; it would be resampled. The file size for the whole country was not obtained (Dataforsyningen's pages need JavaScript)."
+      }
+    ],
+    "water": [
+      {
+        "dataset": "GeoDanmark Vektor: Sø (lakes) and Vandløbsmidte (watercourse centre lines, width classes 0-2.5, 2.5-12 and over 12 m)",
+        "publisher": "Klimadatastyrelsen and the municipalities",
+        "url": "https://datafordeler.dk/vejledning/brugervilkaar/kds-geografiske-data/",
+        "licence": "CC-BY-4.0-KDS",
+        "access": "Datafordeler key; JSON, GeoPackage, GML or CSV",
+        "verified": "licence opened 2026-11-17; object type pages search only",
+        "role": "primary"
+      }
+    ],
+    "dams_and_dikes": [
+      {
+        "dataset": "Kystbeskyttelsesanlæg (coastal protection works, including type 'Dige', dike)",
+        "publisher": "Kystdirektoratet",
+        "url": "https://geodata-info.dk/srv/api/records/2492ff69-1d6a-4234-9017-a7ca0bd597be",
+        "licence": "CC BY 4.0 (metadata record)",
+        "verified": "2026-11-17 (metadata opened; the WFS answered HTTP 500 that day)",
+        "notes": "Added to quarterly and described as 'not dimension-true'. Denmark has no dam register like the NID: the risk is storm surge and coastal flooding, so dikes are the nearer equivalent. No kind for a dike exists in water.sqlite today."
+      }
+    ],
+    "storm_surge": [
+      {
+        "dataset": "Flood-directive risk areas and a 40 cm watercourse-flood grid",
+        "publisher": "Kystdirektoratet",
+        "url": "https://oversvommelse.kyst.dk/webgis-og-data/hent-og-vis-data",
+        "licence": "not checked",
+        "verified": "search only"
+      }
+    ],
+    "crops": [
+      {
+        "dataset": "Marker 2026 (declared field parcels with crop code)",
+        "publisher": "Landbrugsstyrelsen",
+        "url": "https://landbrugsgeodata.fvm.dk/Download/Marker/Marker_2026.zip",
+        "bytes": 360175074,
+        "last_modified": "2026-11-17",
+        "licence": "not found",
+        "verified": "2026-11-17 (download listing and HEAD opened; licence not found, contents not opened)",
+        "notes": "Years 2008 to 2026 are listed. Markblokke_2026.zip answered 404. The 2026 crop code list is dated 25 February 2026. Orchard, berry and vine codes were not mapped to the kinds crops.sqlite uses."
+      }
+    ],
+    "buildings": [
+      {
+        "dataset": "GeoDanmark Bygning",
+        "publisher": "Klimadatastyrelsen and the municipalities",
+        "url": "https://grunddatamodel.datafordeler.dk/objekttypekatalog/GeoDanmark/Bygninger/Bygning.html",
+        "licence": "CC-BY-4.0-KDS",
+        "verified": "2026-11-17",
+        "notes": "Outlines with building type and a link to BBR; no height attribute. buildings.sqlite stores a height, so heights would come from OSM or from DHM/Overflade minus DHM/Terræn."
+      },
+      {
+        "dataset": "BBR, the building and dwelling register",
+        "publisher": "Vurderingsstyrelsen, through Datafordeler",
+        "licence": "not read",
+        "verified": "search only",
+        "notes": "Storeys (byg054) and construction year (byg026); no building height found."
+      }
+    ],
+    "places": [
+      {
+        "dataset": "Danske Stednavne (about 140,000 names in 25 categories and 217 subtypes)",
+        "publisher": "Klimadatastyrelsen",
+        "licence": "CC-BY-4.0-KDS",
+        "access": "Datafordeler key",
+        "verified": "2026-11-17",
+        "notes": "Not updated since September 2025."
+      }
+    ],
+    "addresses": [
+      {
+        "dataset": "DAR, Danmarks Adresseregister",
+        "publisher": "Klimadatastyrelsen, through Datafordeler",
+        "licence": "CC-BY-4.0-KDS ('Som bruger af frie grunddata er du underlagt CC BY 4.0', terms of 16 May 2024)",
+        "access": "Datafordeler GraphQL, key",
+        "verified": "2026-11-17",
+        "role": "primary"
+      },
+      {
+        "dataset": "Overture Maps addresses, Denmark",
+        "release": "2026-10-21.0",
+        "rows": 3933282,
+        "licence": "CC BY 4.0",
+        "attribution": "Contains data from the Danish Agency for Data Supply and Infrastructure... Distributed by OpenAddresses. Accessed: 2026-10-15",
+        "url": "https://docs.overturemaps.org/attribution/",
+        "verified": "2026-11-17",
+        "role": "alternative",
+        "notes": "Overture takes Denmark from OpenAddresses' sources/dk/countrywide.json, a single upload of 27 March 2026 (56,689,209 bytes) drawn from DAR. With DAWA closed it will not refresh by itself; whether it is refreshed was not found."
+      }
+    ],
+    "pois": [
+      {
+        "dataset": "OpenStreetMap",
+        "publisher": "OpenStreetMap contributors via Geofabrik",
+        "licence": "ODbL-1.0",
+        "verified": "2026-11-17",
+        "role": "primary"
+      }
+    ]
+  },
+  "not_open_nationwide": [
+    "Defibrillators: hjertestarter.dk (TrygFonden) allows reuse only by prior agreement (https://hjertestarter.dk/vilkaar, opened). OSM has 2,775 emergency=defibrillator.",
+    "Public warning sirens: about 1,000, covering about 80 % of the urban population; no list of locations is published (Beredskabsstyrelsen, page of 7 April 2025, opened). OSM has 38 emergency=siren.",
+    "Shelters (sikringsrum): no public list. A national survey began on 16 September 2026 and is due in 2027 (mssb.dk, opened).",
+    "Building heights: neither GeoDanmark nor BBR has one (see buildings).",
+    "Crop parcels: Marker 2026 is downloadable without an account, but no licence was found."
+  ]
 }
