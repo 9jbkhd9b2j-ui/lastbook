@@ -94,7 +94,7 @@ The setup contract, including state maps, is in [docs/SETUP-API.md](docs/SETUP-A
 | `content/` | The curated guides (`topics/*.json`) and what curators looked for and did not find (`gaps.json`). Format: `content/SCHEMA.md`. |
 | `packaging/` | App builds (macOS, Windows and Linux), the Windows installer and its front (`setup_stub/`), signing helper (`sign_windows.ps1`), icons (`icon/`), pack and state-map builders, release manifest, TLS roots tools, package scans, and `packaging/llm/` (the local AI runner). |
 | `derived/packs/pack-spec.json` | What goes into each download pack (Small, Medium, All and add-ons) and each state map. Everything else under `derived/` is generated and not kept here. |
-| `tools/` | Builders for the offline map, addresses and place finder, plus curator helpers (`libq.py`, `validate_topics.py`). |
+| `tools/` | Builders for the offline map, addresses and place finder, plus curator helpers (`libq.py`, `validate_topics.py`), and `compare_packs.py`, which compares two packs' file lists. |
 | `website/`, `website-next/` | The earlier website and the current static lastbook.org site, respectively. |
 | `docs/` | The setup contract (`SETUP-API.md`), how the offline map is put together (`MAPS.md`) and notes on the library server version (`LIBRARY-SERVER.md`). |
 

@@ -838,6 +838,77 @@ class Switching(Base):
         self.assertEqual(s.start('small', True)['code'], 'nothing')
 
 
+class PackCompare(unittest.TestCase):
+    """Comparing an installed pack-manifest.tsv with a new one (issue #144): read-only, from the two lists alone."""
+    HEADER = 'path\tbytes\tsha256\thow\tchanges\n'
+
+    def setUp(self):
+        self.tmp = shorttemp.mkdtemp('lastbook-compare-')
+        self.addCleanup(shutil.rmtree, self.tmp, True)
+
+    def write(self, name, text):
+        p = self.tmp / name
+        p.write_text(text, encoding='utf-8')
+        return p
+
+    def test_compare(self):
+        a, b, c = sha(b'a'), sha(b'b'), sha(b'c')
+        old = [('pack.json', 10, a), ('library-data/kept.pdf', 100, b), ('library-data/bigger.pdf', 50, c),
+               ('library-data/rehashed.pdf', 70, a), ('library-data/gone.pdf', 30, b)]
+        new = [('pack.json', 10, a), ('library-data/kept.pdf', 100, b), ('library-data/bigger.pdf', 60, c),
+               ('library-data/rehashed.pdf', 70, b), ('library-data/fresh.pdf', 40, c)]
+        d = install.compare_pack_manifests(old, new)
+        self.assertEqual(d['added'], ['library-data/fresh.pdf'])
+        self.assertEqual(d['removed'], ['library-data/gone.pdf'])
+        self.assertEqual(d['changed'], ['library-data/bigger.pdf', 'library-data/rehashed.pdf'])     # size, then SHA-256 only
+        self.assertEqual(d['unchanged'], ['library-data/kept.pdf', 'pack.json'])
+        self.assertEqual(d['unsafe'], [])
+        self.assertEqual(d['bytes'], {'added': 40, 'changed': 130, 'unchanged': 110, 'removed': 30})
+        self.assertEqual((d['fetch_bytes'], d['reuse_bytes']), (170, 110))
+        same = install.compare_pack_manifests(new, new)
+        self.assertEqual((same['fetch_bytes'], same['reuse_bytes'], same['changed']), (0, 280, []))
+
+    def test_empty_and_unsafe(self):
+        d = install.compare_pack_manifests([], [])
+        self.assertEqual((d['added'], d['removed'], d['fetch_bytes'], d['reuse_bytes']), ([], [], 0, 0))
+        d = install.compare_pack_manifests([], [('pack.json', 5, sha(b'x'))])
+        self.assertEqual((d['added'], d['fetch_bytes']), (['pack.json'], 5))
+        d = install.compare_pack_manifests([('../outside', 1, 'x'), ('pack.json', 5, 'y')],
+                                           [('/etc/hosts', 9, 'z'), ('../outside', 1, 'x'), ('library-data/../../up', 2, 'w')])
+        self.assertEqual(d['unsafe'], ['../outside', '/etc/hosts', 'library-data/../../up'])     # never kept, never fetched
+        self.assertEqual((d['removed'], d['unchanged'], d['added'], d['fetch_bytes'], d['reuse_bytes']), (['pack.json'], [], [], 0, 0))
+
+    def test_reading(self):
+        p = self.write('m.tsv', self.HEADER + f'pack.json\t5\t{sha(b"x")}\tgenerated\t\n\n  \nlibrary-data/a.pdf\t7\t{sha(b"a")}\r\n')
+        self.assertEqual(install.read_pack_manifest(p), [('pack.json', 5, sha(b'x')), ('library-data/a.pdf', 7, sha(b'a'))])
+        self.assertEqual(install.read_pack_manifest(self.write('header.tsv', self.HEADER)), [])
+        self.assertEqual(install.read_pack_manifest(self.write('empty.tsv', '')), [])
+        # The first line is always the header, as repair reads it, even when it looks like a row.
+        self.assertEqual(install.read_pack_manifest(self.write('nohead.tsv', 'pack.json\t5\tabc\n')), [])
+        for name, row in (('short', 'pack.json\t5\n'), ('size', 'pack.json\tfive\tabc\n'), ('negative', 'pack.json\t-1\tabc\n'),
+                          ('nopath', '\t5\tabc\n'), ('twice', 'pack.json\t5\tabc\npack.json\t6\tdef\n')):
+            with self.subTest(name), self.assertRaises(ValueError):
+                install.read_pack_manifest(self.write(name + '.tsv', self.HEADER + row))
+        with self.assertRaises(OSError):
+            install.read_pack_manifest(self.tmp / 'missing.tsv')
+
+    def test_tool(self):
+        """tools/compare_packs.py as a maintainer runs it, as its own process."""
+        tool = ROOT / 'tools' / 'compare_packs.py'
+        (self.tmp / 'lib').mkdir()
+        self.write('lib/pack-manifest.tsv', self.HEADER + f'pack.json\t5\t{sha(b"x")}\t\t\nold.pdf\t3\t{sha(b"o")}\t\t\n')
+        new = self.write('new.tsv', self.HEADER + f'pack.json\t5\t{sha(b"x")}\t\t\nfresh.pdf\t2000\t{sha(b"f")}\t\t\n')
+        r = subprocess.run([sys.executable, '-B', str(tool), '--data', str(self.tmp / 'lib'), str(new), '--list'], capture_output=True, text=True)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn('To fetch: 2.0 KB (added and changed). Already here: 5 bytes.', r.stdout)
+        self.assertIn('added:\n  fresh.pdf', r.stdout)
+        self.assertIn('removed:\n  old.pdf', r.stdout)
+        bad = self.write('bad.tsv', self.HEADER + 'pack.json\tfive\tabc\n')
+        r = subprocess.run([sys.executable, '-B', str(tool), str(new), str(bad)], capture_output=True, text=True)
+        self.assertNotEqual(r.returncode, 0)
+        self.assertIn('line 2 of', r.stderr)
+
+
 class Manage(Base):
     """Repair, removing the AI, and the folder picker's answer."""
 
