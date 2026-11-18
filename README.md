@@ -94,7 +94,7 @@ The setup contract, including state maps, is in [docs/SETUP-API.md](docs/SETUP-A
 | `content/` | The curated guides (`topics/*.json`) and what curators looked for and did not find (`gaps.json`). Format: `content/SCHEMA.md`. |
 | `packaging/` | App builds (macOS, Windows and Linux), the Windows installer and its front (`setup_stub/`), signing helper (`sign_windows.ps1`), icons (`icon/`), pack and state-map builders, release manifest, TLS roots tools, package scans, and `packaging/llm/` (the local AI runner). |
 | `derived/packs/pack-spec.json` | What goes into each download pack (Small, Medium, All and add-ons) and each state map. Everything else under `derived/` is generated and not kept here. |
-| `tools/` | Builders for the offline map, addresses and place finder, plus curator helpers (`libq.py`, `validate_topics.py`). |
+| `tools/` | Builders for the offline map, addresses and place finder, plus curator helpers (`libq.py`, `validate_topics.py`), and `compare_packs.py`, which compares two packs' file lists. |
 | `website/`, `website-next/` | The earlier website and the current static lastbook.org site, respectively. |
 | `docs/` | The setup contract (`SETUP-API.md`), how the offline map is put together (`MAPS.md`) and notes on the library server version (`LIBRARY-SERVER.md`). |
 
@@ -108,6 +108,35 @@ unzipping a pack from lastbook.org.
 python3 -m venv .venv
 .venv/bin/pip install -r packaging/requirements_macos.txt     # on Windows: packaging/requirements_app.txt
 .venv/bin/python app/main.py --data /path/to/LastbookData
+```
+
+On Linux, start it through `packaging/linux/run_source_linux.sh` instead, or videos will not play. The window comes
+from the system (WebKitGTK 4.1 and PyGObject), so make the virtual environment with `--system-site-packages` and install
+`packaging/linux/requirements_linux.txt`:
+
+```bash
+python3 -m venv --system-site-packages .venv
+.venv/bin/pip install -r packaging/linux/requirements_linux.txt
+bash packaging/linux/run_source_linux.sh --data /path/to/LastbookData
+```
+
+The packaged app plays library videos through `lastbooksrc`, its own GStreamer source for `lastbook://` addresses
+(`packaging/linux/gst/lastbooksrc.c`). A source run has no copy of it. The script builds it into `derived/gst/`,
+points GStreamer and WebKit at it for that launch only, and warns about any missing decoders. It needs these packages:
+
+| | Arch | Ubuntu |
+|---|---|---|
+| Build the plugin | `gcc pkg-config gstreamer` | `gcc pkg-config libgstreamer1.0-dev` |
+| Window | `webkit2gtk-4.1 python-gobject` | `gir1.2-webkit2-4.1 python3-gi` |
+| MP4, H.264, AAC | `gst-plugins-base gst-plugins-good gst-libav` | `gstreamer1.0-plugins-good gstreamer1.0-libav` |
+| AV1 (many of the library's videos) | `gst-plugin-dav1d` | `gstreamer1.0-plugins-bad` |
+
+Without an AV1 decoder, those videos fail or play with sound and a black picture. To check video without opening the
+window, decode a few library videos through `lastbooksrc`. Name an AV1 video to cover that decoder too:
+
+```bash
+bash packaging/linux/run_source_linux.sh --check /path/to/LastbookData
+bash packaging/linux/run_source_linux.sh --check /path/to/LastbookData "videos/<folder>/<file>.mp4"
 ```
 
 Without `--data`, the app checks `LASTBOOK_DATA`, the folder chosen last time, and its own data folder.

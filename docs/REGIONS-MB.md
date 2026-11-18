@@ -10,9 +10,9 @@ A US state map is cut by `packaging/build_packs.py map <ST>` from the base map p
 
 | Code | Name | Country | Level | Box (west, south, east, north) | Box with 0.15° margin | Box taken from |
 |---|---|---|---|---|---|---|
-| `CA-MB` | Manitoba | Canada | province | -102.0080, 48.9988, -88.9919, 59.9995 | -102.16, 48.85, -88.84, 60.15 | Government of Manitoba, Manitoba Provincial Boundary (OpenMB Information and Data Use License) |
+| `CA-MB` | Manitoba | Canada | province | -102.0080, 48.9988, -88.9919, 59.9995 | -102.16, 48.84, -88.84, 60.15 | Government of Manitoba, Manitoba Provincial Boundary (OpenMB Information and Data Use License) |
 
-- The box was computed from the GeoJSON published by the Government of Manitoba (item `ed39fb5989bc41bcb4b102f8ea899abf` on geoportal.gov.mb.ca), reprojected from Web Mercator to WGS84. The north edge follows the Hudson Bay shoreline as drawn in that dataset (generalized from 1:500 000 mapping; estimated accuracy ±125 m). The south edge is the international boundary with the United States.
+- The box was computed from the GeoJSON published by the Government of Manitoba (item `ed39fb5989bc41bcb4b102f8ea899abf` on geoportal.gov.mb.ca: [dataset page](https://geoportal.gov.mb.ca/datasets/ed39fb5989bc41bcb4b102f8ea899abf), [feature service](https://services.arcgis.com/mMUesHYPkXjaFGfS/arcgis/rest/services/Manitoba_Provincial_Boundary/FeatureServer)), reprojected from Web Mercator to WGS84. The north edge follows the Hudson Bay shoreline as drawn in that dataset (generalized from 1:500 000 mapping; estimated accuracy ±125 m). The south edge is the international boundary with the United States.
 
 ### Codes
 
@@ -31,7 +31,7 @@ Each map file a state map holds needs a replacement for its US source. “OGL”
 | Crops (`crops.sqlite`) | USDA Cropland Data Layer | Annual Crop Inventory, 30 m | Agriculture and Agri-Food Canada | OGL – Canada |
 | Buildings (`buildings.sqlite`) | Microsoft US footprints, OSM heights | Open Database of Buildings; Microsoft Canadian Building Footprints to fill gaps; OSM heights | Statistics Canada; Microsoft; OSM contributors | OGL – Canada; ODbL; ODbL |
 | Places (`places.sqlite`) | GNIS, Census gazetteers, OSM | Canadian Geographical Names (CGN); census boundary files; OSM named places | Natural Resources Canada; Statistics Canada; OSM contributors | OGL – Canada; OGL – Canada; ODbL |
-| Addresses (`addresses/CA-MB.sqlite`) | Overture addresses | Overture addresses (the Canadian rows are Statistics Canada’s National Address Register); the Open Database of Addresses as an alternative | Overture Maps Foundation / Statistics Canada | Statistics Canada Open Licence; OGL – Canada |
+| Addresses (`addresses/CA-MB.sqlite`) | Overture addresses | Overture addresses (including Statistics Canada’s National Address Register); the Open Database of Addresses as an alternative | Overture Maps Foundation / Statistics Canada | Statistics Canada Open Licence; OGL – Canada |
 | Points of interest (`poi` rows) | OSM | OSM; Open Database of Healthcare Facilities; Open Database of Educational Facilities | OSM contributors; Statistics Canada | ODbL; OGL – Canada |
 
 Notes:
@@ -47,9 +47,9 @@ Notes:
 
 All the proposed licences allow redistribution, including in a free offline library. What each asks in return:
 
-- **OGL – Canada.** Give the provider’s attribution statement and, where possible, link the licence. Where several providers make that impractical, the licence gives a fixed sentence, such as “Contains information licensed under the Open Government Licence – Canada.”
-- **OpenMB Information and Data Use License.** Attribution of the form “Contains information from the Government of Manitoba, licensed under the OpenMB Information and Data Use License” (or the equivalent wording published with the dataset), with a link where practical.
-- **Statistics Canada Open Licence.** For adapted data: “Adapted from Statistics Canada, *product*, *reference date*. This does not constitute an endorsement by Statistics Canada of this product.”
+- **OGL – Canada** ([licence](https://open.canada.ca/en/open-government-licence-canada)). Give the provider’s attribution statement and, where possible, link the licence. Where several providers make that impractical, the licence gives a fixed sentence, such as “Contains information licensed under the Open Government Licence – Canada.”
+- **OpenMB Information and Data Use License** ([licence](https://www.gov.mb.ca/asset_library/en/legal/OpenMB-Information-Data-Use-Licence.pdf); [explanation](https://www.gov.mb.ca/legal/copyright.html)). The boundary dataset's own page labels its licence “Manitoba Open Data Licence” and links to that explanation. The example attribution published there is “Contains information from the Manitoba government, licensed under the OpenMB Information and Data Use Licence (Manitoba.ca/OpenMB)”, with a link to [Manitoba.ca/OpenMB](https://www.manitoba.ca/OpenMB) where possible.
+- **Statistics Canada Open Licence** ([licence](https://www.statcan.gc.ca/en/terms-conditions/open-licence)). For adapted data: “Adapted from Statistics Canada, *product*, *reference date*. This does not constitute an endorsement by Statistics Canada of this product.”
 - **ODbL** (OpenStreetMap, Microsoft’s Canadian footprints, Overture buildings). Credit “© OpenStreetMap contributors”, say the data is under the ODbL, and offer a database built from it under the ODbL too. The US map already carries ODbL data, so this is not new.
 
 These notices would belong wherever the map already credits its sources, and in `THIRD_PARTY_NOTICES.md` if that is where the maintainers keep data licences.
@@ -74,4 +74,5 @@ Each of these needs the maintainers’ decision before any code changes (the sam
 
 - The Manitoba Provincial Boundary GeoJSON was downloaded from the Government of Manitoba geoportal and the bounding box computed in WGS84 on 17 November 2026.
 - Licence pages for OpenMB, OGL – Canada, Statistics Canada, and the national datasets already cited in the Ontario/British Columbia proposal were confirmed consistent.
+- Rechecked for the maintainers' follow-up on 18 November 2026: the boundary feature service's extent in WGS84 (-102.0080, 48.9988, -88.9919, 59.9995, the box above); the dataset item's licence link; the OpenMB, OGL – Canada and Statistics Canada licence pages linked above; and [Overture's attribution page](https://docs.overturemaps.org/attribution/), which lists Statistics Canada's National Address Register under the Statistics Canada Open Licence among its Canadian address sources, alongside separately attributed Yukon and Quebec sources. The Ontario / British Columbia / Guyana proposal is [REGIONS.md](REGIONS.md).
 - Not re-checked on this date: the exact 2021 Statistics Canada boundary files and the full text of every linked licence (they match the checks already recorded for the other Canadian provinces).

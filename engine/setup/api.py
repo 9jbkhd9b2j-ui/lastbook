@@ -554,16 +554,29 @@ class Setup:
             model = self.manifest.model() if (ai or cur['model']) else None
             parent, target = self.current.parent, self.current
             work = _work_for(target)
-            srcs = {f['name']: f['path'] for f in self.found() if f.get('size_ok') and f['kind'] in ('pack', 'model')}
+            srcs = {f['name']: f['path'] for f in self.found() if f.get('size_ok') and f['kind'] in ('pack', 'model', 'map')}
             items = [{'id': pack['id'], 'kind': 'pack', 'title': pack['title'], 'state': 'waiting', 'bytes_done': 0,
                       'bytes_total': pack['installed_bytes'], 'rate_bps': 0, 'eta_s': None, 'error': None}]
             if model:
                 items.append({'id': model['id'], 'kind': 'model', 'title': model['title'], 'state': 'waiting', 'bytes_done': 0,
                               'bytes_total': model['size'], 'rate_bps': 0, 'eta_s': None, 'error': None})
-            names = [f['name'] for f in pack['files']] + ([model['file']] if model else [])
+            mp = None
+            if _separate_map(target):
+                try:                 # a state map's files come from its own download, not the pack's: the pack check skips them
+                    install.check_map(target)
+                except install.Refused as e:
+                    print('setup: repair:', e.message, flush=True)
+                    mp = self.manifest.map(cur['map'])
+                    if not mp or not mp['available']:
+                        return {'error': f'The {cur["map"]} map in this library is damaged, and this version does not offer it to download again. '
+                                         'Choose a map again.', 'code': 'unavailable'}
+                    if mp:
+                        items.insert(1, {'id': mp['id'], 'kind': 'map', 'title': mp['title'], 'state': 'waiting', 'bytes_done': 0,
+                                         'bytes_total': mp['download_bytes'], 'rate_bps': 0, 'eta_s': None, 'error': None})
+            names = [f['name'] for f in pack['files']] + ([model['file']] if model else []) + ([f['name'] for f in mp['files']] if mp else [])
             self.job = {'id': uuid.uuid4().hex[:12], 'state': 'waiting', 'items': items, 'error': None, 'started': _now(), 'folder': str(target),
                         'repair': True,
-                        'plan': {'pack': pack, 'model': model, 'parent': str(parent), 'target': str(target), 'work': str(work),
+                        'plan': {'pack': pack, 'model': model, 'map': mp, 'parent': str(parent), 'target': str(target), 'work': str(work),
                                  'sources': {k: v for k, v in srcs.items() if k in names}, 'explicit': False, 'retried': {},
                                  'switch': True, 'repair': True}}
             s = self._settings()
@@ -581,12 +594,8 @@ class Setup:
             rows = [(r[0], int(r[1]), r[2]) for r in rows]
         except (OSError, ValueError, IndexError):
             return ['pack-manifest.tsv']
-        if install.map_set(lib):      # a state map replaced the pack's own: its files are checked against map-set.json instead
+        if _separate_map(lib):        # a state map replaced the pack's own: _start_repair checks it against map-set.json instead
             rows = [r for r in rows if not install.map_member(r[0])]
-            try:
-                install.check_map(lib)
-            except install.Refused as e:
-                print('setup: repair:', e.message, flush=True)
         total = sum(r[1] for r in rows) or 1
         tracker, done, bad = _Item(it), 0, []
         self._set(it, 'verifying', bytes_done=0, bytes_total=total)
@@ -959,8 +968,8 @@ class Setup:
             if metadata.get('content_revision') != pack['revision']:
                 raise install.Refused('unpack', 'The library content version does not match this download.')
         current = self.current_info() or {}
-        if (not plan.get('repair') and not plan.get('map') and Path(plan['target']) == self.current and current.get('pack') == pack['id']
-                and current.get('map') not in (None, 'base')):
+        if (not plan.get('map') and Path(plan['target']) == self.current and current.get('pack') == pack['id']
+                and _separate_map(self.current)):          # kept only when Repair found it whole, or it would have its own item
             install.copy_map(self.current, lib)
         install._write_json(lib / 'setup-pack.json', {'pack': pack['id'], 'installed': _now(), 'files': [f['name'] for f in pack['files']]})
         for path, ours in got:
@@ -1123,6 +1132,24 @@ def _tree_size(p):
             except OSError:
                 pass
     return n
+
+
+def _separate_map(lib):
+    """Does the library hold a map set installed apart from its pack (a state map), rather than the pack's own (All's whole US)?
+    The pack's own set is named by pack.json's `map`, and its map-set.json is listed in pack-manifest.tsv with its other files,
+    so they are checked and fetched with the pack. Ownership never depends on map-set.json's contents being whole: a damaged one
+    of the pack's own then shows up as a damaged pack file."""
+    lib = Path(lib)
+    d = install.map_set(lib)
+    if not d:
+        return False
+    try:
+        own = json.loads((lib / 'pack.json').read_text(encoding='utf-8')).get('map')
+        listed = any(line.split('\t', 1)[0] == 'map-set.json'
+                     for line in (lib / 'pack-manifest.tsv').read_text(encoding='utf-8').splitlines()[1:])
+    except (OSError, ValueError, AttributeError):
+        return True
+    return not (listed and d.get('name') == own)
 
 
 # ------------------------------------------------------------------------------------------------ startup and the app --

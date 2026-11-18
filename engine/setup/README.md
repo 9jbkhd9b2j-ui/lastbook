@@ -25,6 +25,14 @@ The contract is `docs/SETUP-API.md`. This package fills it in.
 - `POST /api/setup/delete-old {path}` deletes a `LastbookData.old-*` that setup itself moved aside. These are listed in `state.current.old`.
 - `state.recommend` also carries `folder` and `need_bytes` (per pack). Each `found` entry is `{kind: library|pack|model, path, name, id, size, size_ok}`.
 
+## Comparing two packs (not used by setup yet)
+
+`install.read_pack_manifest` reads a `pack-manifest.tsv` the way repair does, and `install.compare_pack_manifests` compares an installed library's list with a new release's: which paths would be added, removed, changed (size or SHA-256) or unchanged, and how many bytes would have to be fetched or are already here. It is read-only: it opens no library file and downloads nothing. Nothing in setup calls it yet. It is a first step toward upgrades that fetch only what changed (issue #144). To try it:
+
+```bash
+python3 tools/compare_packs.py --data /path/to/LastbookData /path/to/new/pack-manifest.tsv --list
+```
+
 ## Tests
 
 The tests use a local HTTPS test server, which exists only in the test file. It can cut the connection, send corrupt bytes, change the ETag, ignore Range and redirect to bad hosts. The tests also cover kill and restart mid-download and mid-unpack, unpack guards, switching, rollback, upgrades, recommendations, and the bridge:
