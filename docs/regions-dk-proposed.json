@@ -1,0 +1,389 @@
+{
+  "about": "Proposed region definitions for detailed maps of Denmark: its 5 regions, one map region each. A proposal for discussion (docs/REGIONS-DK.md); no code reads this file, and it does not ship.",
+  "status": "proposal",
+  "checked": "2026-11-17",
+  "codes": {
+    "proposal": "ISO 3166-2:DK codes DK-81 to DK-85, the level closest to a US state.",
+    "why": "A bare DK is not in STATE_CODES (engine/address_search.py). The parts after the hyphen are two digits, while address index ids must match [A-Z]{2} (engine/setup/manifest.py line 72, engine/setup/install.py line 267), the same question REGIONS-TH.md raises for TH-10.",
+    "same_digits": "The two digits are the last two of the DAGI and CPR region code (1081 to 1085), valid from 1 January 2007 (Danmarks Statistik, opened), and StatBank's 081 to 085.",
+    "iso_checked": "search only: iso.org refused automated reading (HTTP 403), as for the other proposals.",
+    "not_included": "Greenland (GL) and the Faroe Islands (FO) are parts of the Danish realm with home rule, but Geofabrik, Overture and the Danish address register all treat them apart from Denmark (opened). They are not proposed here.",
+    "pr_84": "PR #84 lists all of Denmark as one map, eu-dk, boxed by Geofabrik's outline (7.7011, 54.4406, 15.6545, 58.0624).",
+    "pr_35": "PR #35 has a box for Copenhagen, dk-kob (12.26, 55.38, 12.86, 55.98), cut from the same extract."
+  },
+  "regions": [
+    {
+      "code": "DK-84",
+      "name": "Region Hovedstaden",
+      "name_en": "Capital Region of Denmark",
+      "country": "Denmark",
+      "country_iso": "DK",
+      "admin_level": "region",
+      "dagi_code": "1084",
+      "statbank_code": "084",
+      "nuts_2024": "DK01",
+      "municipalities": {
+        "count": 29,
+        "plus": "Christiansø (Ertholmene), StatBank code 411, outside the municipal division",
+        "names": [
+          "København",
+          "Frederiksberg",
+          "Dragør",
+          "Tårnby",
+          "Albertslund",
+          "Ballerup",
+          "Brøndby",
+          "Gentofte",
+          "Gladsaxe",
+          "Glostrup",
+          "Herlev",
+          "Hvidovre",
+          "Høje-Taastrup",
+          "Ishøj",
+          "Lyngby-Taarbæk",
+          "Rødovre",
+          "Vallensbæk",
+          "Allerød",
+          "Egedal",
+          "Fredensborg",
+          "Frederikssund",
+          "Furesø",
+          "Gribskov",
+          "Halsnæs",
+          "Helsingør",
+          "Hillerød",
+          "Hørsholm",
+          "Rudersdal",
+          "Bornholm"
+        ]
+      },
+      "bbox": {
+        "west": 11.6958,
+        "south": 54.9876,
+        "east": 15.1943,
+        "north": 56.2008,
+        "source": {
+          "dataset": "Eurostat GISCO NUTS 2024, level 2, 1:1 million, DK01",
+          "url": "https://gisco-services.ec.europa.eu/distribution/v2/nuts/distribution/DK01-region-01m-4326-2024.geojson",
+          "method": "Extent of every vertex",
+          "verified": "2026-11-17"
+        }
+      },
+      "bbox_with_margin_0_15": {
+        "west": 11.54,
+        "south": 54.83,
+        "east": 15.35,
+        "north": 56.36,
+        "rounding": "outward to 0.01 degree"
+      },
+      "population": {
+        "value": 1954759,
+        "date": "2026-10-01",
+        "source": "POST https://api.statbank.dk/v1/data, table FOLK1A, OMRÅDE 000 and 081 to 085, Tid 2026K4 (1 October 2026; table updated 2026-11-10)",
+        "verified": "2026-11-17"
+      },
+      "parts": [
+        {
+          "name": "Hovedstaden west of 14° E (north-east Zealand)",
+          "bbox": {
+            "west": 11.6958,
+            "south": 55.5552,
+            "east": 12.7913,
+            "north": 56.2008
+          },
+          "bbox_with_margin_0_15": {
+            "west": 11.54,
+            "south": 55.4,
+            "east": 12.95,
+            "north": 56.36
+          }
+        },
+        {
+          "name": "Bornholm and Ertholmene",
+          "bbox": {
+            "west": 14.6864,
+            "south": 54.9876,
+            "east": 15.1943,
+            "north": 55.3261
+          },
+          "bbox_with_margin_0_15": {
+            "west": 14.53,
+            "south": 54.83,
+            "east": 15.35,
+            "north": 55.48
+          }
+        }
+      ],
+      "note": "Bornholm lies about 130 km east of Copenhagen, so one box for the region is 3.8 degrees wide and holds most of Skåne in Sweden (Malmö, Lund, Helsingborg, Ystad, Kristianstad). The Denmark extract stops at the Danish border, so Sweden would be blank, not mapped."
+    },
+    {
+      "code": "DK-85",
+      "name": "Region Sjælland",
+      "name_en": "Region Zealand",
+      "country": "Denmark",
+      "country_iso": "DK",
+      "admin_level": "region",
+      "dagi_code": "1085",
+      "statbank_code": "085",
+      "nuts_2024": "DK02",
+      "municipalities": {
+        "count": 17,
+        "names": [
+          "Greve",
+          "Køge",
+          "Lejre",
+          "Roskilde",
+          "Solrød",
+          "Faxe",
+          "Guldborgsund",
+          "Holbæk",
+          "Kalundborg",
+          "Lolland",
+          "Næstved",
+          "Odsherred",
+          "Ringsted",
+          "Slagelse",
+          "Sorø",
+          "Stevns",
+          "Vordingborg"
+        ]
+      },
+      "bbox": {
+        "west": 10.8896,
+        "south": 54.5625,
+        "east": 12.554,
+        "north": 55.9964,
+        "source": {
+          "dataset": "Eurostat GISCO NUTS 2024, level 2, 1:1 million, DK02",
+          "url": "https://gisco-services.ec.europa.eu/distribution/v2/nuts/distribution/DK02-region-01m-4326-2024.geojson",
+          "method": "Extent of every vertex",
+          "verified": "2026-11-17"
+        }
+      },
+      "bbox_with_margin_0_15": {
+        "west": 10.73,
+        "south": 54.41,
+        "east": 12.71,
+        "north": 56.15,
+        "rounding": "outward to 0.01 degree"
+      },
+      "population": {
+        "value": 860130,
+        "date": "2026-10-01",
+        "source": "POST https://api.statbank.dk/v1/data, table FOLK1A, OMRÅDE 000 and 081 to 085, Tid 2026K4 (1 October 2026; table updated 2026-11-10)",
+        "verified": "2026-11-17"
+      },
+      "note": "Its padded box holds Copenhagen and most of Hovedstaden west of 14° E, Helsingborg in Sweden, and the north of Fehmarn in Germany."
+    },
+    {
+      "code": "DK-83",
+      "name": "Region Syddanmark",
+      "name_en": "Region of Southern Denmark",
+      "country": "Denmark",
+      "country_iso": "DK",
+      "admin_level": "region",
+      "dagi_code": "1083",
+      "statbank_code": "083",
+      "nuts_2024": "DK03",
+      "municipalities": {
+        "count": 22,
+        "names": [
+          "Assens",
+          "Faaborg-Midtfyn",
+          "Kerteminde",
+          "Langeland",
+          "Middelfart",
+          "Nordfyns",
+          "Nyborg",
+          "Odense",
+          "Svendborg",
+          "Ærø",
+          "Billund",
+          "Esbjerg",
+          "Fanø",
+          "Fredericia",
+          "Haderslev",
+          "Kolding",
+          "Sønderborg",
+          "Tønder",
+          "Varde",
+          "Vejen",
+          "Vejle",
+          "Aabenraa"
+        ]
+      },
+      "bbox": {
+        "west": 8.0781,
+        "south": 54.7246,
+        "east": 10.9545,
+        "north": 55.9541,
+        "source": {
+          "dataset": "Eurostat GISCO NUTS 2024, level 2, 1:1 million, DK03",
+          "url": "https://gisco-services.ec.europa.eu/distribution/v2/nuts/distribution/DK03-region-01m-4326-2024.geojson",
+          "method": "Extent of every vertex",
+          "verified": "2026-11-17"
+        }
+      },
+      "bbox_with_margin_0_15": {
+        "west": 7.92,
+        "south": 54.57,
+        "east": 11.11,
+        "north": 56.11,
+        "rounding": "outward to 0.01 degree"
+      },
+      "population": {
+        "value": 1245181,
+        "date": "2026-10-01",
+        "source": "POST https://api.statbank.dk/v1/data, table FOLK1A, OMRÅDE 000 and 081 to 085, Tid 2026K4 (1 October 2026; table updated 2026-11-10)",
+        "verified": "2026-11-17"
+      },
+      "note": "Its padded box holds Flensburg and the island of Sylt in Germany."
+    },
+    {
+      "code": "DK-82",
+      "name": "Region Midtjylland",
+      "name_en": "Central Denmark Region",
+      "country": "Denmark",
+      "country_iso": "DK",
+      "admin_level": "region",
+      "dagi_code": "1082",
+      "statbank_code": "082",
+      "nuts_2024": "DK04",
+      "municipalities": {
+        "count": 19,
+        "names": [
+          "Favrskov",
+          "Hedensted",
+          "Horsens",
+          "Norddjurs",
+          "Odder",
+          "Randers",
+          "Samsø",
+          "Silkeborg",
+          "Skanderborg",
+          "Syddjurs",
+          "Aarhus",
+          "Herning",
+          "Holstebro",
+          "Ikast-Brande",
+          "Lemvig",
+          "Ringkøbing-Skjern",
+          "Skive",
+          "Struer",
+          "Viborg"
+        ]
+      },
+      "bbox": {
+        "west": 8.0989,
+        "south": 55.67,
+        "east": 11.6446,
+        "north": 56.8468,
+        "source": {
+          "dataset": "Eurostat GISCO NUTS 2024, level 2, 1:1 million, DK04",
+          "url": "https://gisco-services.ec.europa.eu/distribution/v2/nuts/distribution/DK04-region-01m-4326-2024.geojson",
+          "method": "Extent of every vertex",
+          "verified": "2026-11-17"
+        }
+      },
+      "bbox_with_margin_0_15": {
+        "west": 7.94,
+        "south": 55.52,
+        "east": 11.8,
+        "north": 57.0,
+        "rounding": "outward to 0.01 degree"
+      },
+      "population": {
+        "value": 1389638,
+        "date": "2026-10-01",
+        "source": "POST https://api.statbank.dk/v1/data, table FOLK1A, OMRÅDE 000 and 081 to 085, Tid 2026K4 (1 October 2026; table updated 2026-11-10)",
+        "verified": "2026-11-17"
+      }
+    },
+    {
+      "code": "DK-81",
+      "name": "Region Nordjylland",
+      "name_en": "North Denmark Region",
+      "country": "Denmark",
+      "country_iso": "DK",
+      "admin_level": "region",
+      "dagi_code": "1081",
+      "statbank_code": "081",
+      "nuts_2024": "DK05",
+      "municipalities": {
+        "count": 11,
+        "names": [
+          "Brønderslev",
+          "Frederikshavn",
+          "Hjørring",
+          "Jammerbugt",
+          "Læsø",
+          "Mariagerfjord",
+          "Morsø",
+          "Rebild",
+          "Thisted",
+          "Vesthimmerlands",
+          "Aalborg"
+        ]
+      },
+      "bbox": {
+        "west": 8.2227,
+        "south": 56.5511,
+        "east": 11.1979,
+        "north": 57.7512,
+        "source": {
+          "dataset": "Eurostat GISCO NUTS 2024, level 2, 1:1 million, DK05",
+          "url": "https://gisco-services.ec.europa.eu/distribution/v2/nuts/distribution/DK05-region-01m-4326-2024.geojson",
+          "method": "Extent of every vertex",
+          "verified": "2026-11-17"
+        }
+      },
+      "bbox_with_margin_0_15": {
+        "west": 8.07,
+        "south": 56.4,
+        "east": 11.35,
+        "north": 57.91,
+        "rounding": "outward to 0.01 degree"
+      },
+      "population": {
+        "value": 594293,
+        "date": "2026-10-01",
+        "source": "POST https://api.statbank.dk/v1/data, table FOLK1A, OMRÅDE 000 and 081 to 085, Tid 2026K4 (1 October 2026; table updated 2026-11-10)",
+        "verified": "2026-11-17"
+      }
+    }
+  ],
+  "totals": {
+    "municipalities": 98,
+    "population": 6044001,
+    "population_date": "2026-10-01",
+    "dagi_summary": "98 kommuner, 5 regioner, 1100 postnumre, 7849 supplerende bynavne (Klimadatastyrelsen, Danmarks Administrative Geografiske Inddeling; opened)"
+  },
+  "box_caveats": [
+    "GISCO's terms allow use of its NUTS boundaries with the credit '© EuroGeographics for the administrative boundaries', and are read as non-commercial (search only). The boxes are four numbers each, but before a build they should be recomputed from DAGI, the national boundary register (CC BY 4.0), which now needs a free Datafordeler key.",
+    "Cross-check against OpenStreetMap's region relations (Nominatim; ODbL): every edge agrees within about 0.03 degree, except that OSM's Region Hovedstaden ends at 15.157° E and leaves out Ertholmene.",
+    "The boxes overlap: DK-85's padded box holds most of mainland DK-84, and DK-82's holds Vejle (DK-83)."
+  ],
+  "osm_extract": {
+    "dataset": "Geofabrik Denmark extract (no sub-regions)",
+    "url": "https://download.geofabrik.de/europe/denmark.html",
+    "licence": "ODbL-1.0",
+    "data_up_to": "2026-11-16T21:22:36Z",
+    "files": {
+      "denmark-latest.osm.pbf": {
+        "bytes": 498163345,
+        "dated": "2026-11-17",
+        "md5_checked": "matches Geofabrik's .md5"
+      },
+      "denmark-latest-free.gpkg.zip": {
+        "bytes": 841513543,
+        "dated": "2026-11-16"
+      },
+      "denmark-latest-free.shp.zip": {
+        "bytes": 814578465,
+        "dated": "2026-11-16"
+      }
+    },
+    "outline": "denmark.poly, one ring of 80 points, 7.70 to 15.65° E, 54.44 to 58.06° N. Christiansø is inside; Malmö, Helsingborg, Ystad, Flensburg and Kiel are outside.",
+    "verified": "2026-11-17"
+  }
+}
