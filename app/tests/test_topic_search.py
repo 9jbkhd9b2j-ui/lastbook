@@ -110,6 +110,16 @@ UNDISTURBED = {
 }
 TOPS = sorted({*SAME_AS, *SAME_AS.values(), *SAME_GUIDE, *SAME_GUIDE.values(), *FIRST, *UNDISTURBED})
 
+# Words used in Thailand and Denmark. Emergency numbers find what 911 finds; haze, PM2.5 and cloudburst sit in a
+# guide's keywords only and open the guide their US word opens.
+TH_DK_SAME_AS = {'1669': '911', '191': '911', '199': '911', '1813': '911'}
+TH_DK_SAME_GUIDE = {'haze': 'air quality', 'PM2.5': 'air quality', 'pm2.5': 'air quality', 'cloudburst': 'flood'}
+# Searches those words must not disturb: [guide, choice] that comes first.
+TH_DK_UNDISTURBED = {'cloud': ['disaster', 'tornado'], 'funnel cloud': ['disaster', 'tornado'],
+                     'burn': ['hurt', 'burn'], 'flood': ['disaster', 'flood'], 'mask': ['shelter', None]}
+TOPS = sorted({*TOPS, *TH_DK_SAME_AS, *TH_DK_SAME_GUIDE, *TH_DK_SAME_GUIDE.values(), *TH_DK_UNDISTURBED,
+              'burning', 'season'})
+
 # A made-up topic in Spanish and Chinese: found by Spanish words and by a single Han character.
 OWN = {'id': 'own', 'title': 'Agua potable', 'short': 'Hervir el agua', 'keywords': ['水'], 'choices': []}
 RANK_OWN = [['agua', [OWN]], ['水', [OWN]], ['hervir', [OWN]]]
@@ -204,6 +214,24 @@ class TopicSearch(unittest.TestCase):
                 with self.subTest(q=case['q'], segmenter=r['segmenter']):
                     self.assertEqual(ok(case['now']), case['before'])
         self.assertGreater(sum(1 for c in self.seg['rank'] if c['before']), 30)   # the list does reach the guides
+
+    def test_words_used_in_thailand_and_denmark(self):
+        for r in self.modes:
+            top = dict(zip(TOPS, (ok(e) for e in r['tops'])))
+            for q, us in TH_DK_SAME_AS.items():
+                with self.subTest(q=q, us=us, segmenter=r['segmenter']):
+                    self.assertTrue(top[us])
+                    self.assertEqual(top[q], top[us])
+            for q, us in TH_DK_SAME_GUIDE.items():
+                with self.subTest(q=q, us=us, segmenter=r['segmenter']):
+                    self.assertTrue(top[q])
+                    self.assertEqual(top[q][0][0], top[us][0][0])
+            for q, first in TH_DK_UNDISTURBED.items():
+                with self.subTest(q=q, segmenter=r['segmenter']):
+                    self.assertEqual(top[q][:1], [first])
+            for q in ('burning', 'season'):                    # "burning season" was left out for these two
+                with self.subTest(q=q, segmenter=r['segmenter']):
+                    self.assertEqual(top[q], [])
 
     def test_words_used_outside_the_us(self):
         for r in self.modes:
