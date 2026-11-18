@@ -119,6 +119,7 @@ issue before any code.
 [REGIONS-IN.md](REGIONS-IN.md) does the same for India's 28 states and 8 union territories.
 [REGIONS-PK.md](REGIONS-PK.md) does the same for Pakistan's provinces and territories, with Islamabad and Rawalpindi
 as one map.
+[REGIONS-MB.md](REGIONS-MB.md) does the same for the Canadian province of Manitoba.
 
 ## Checking a map change
 
