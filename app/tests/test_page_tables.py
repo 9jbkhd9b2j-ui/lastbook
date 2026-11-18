@@ -94,6 +94,18 @@ PROSE = '\n'.join([
     '   Let it cool,   then store it covered in a clean container.   Use 2 drops of bleach',
     'per litre only if you cannot boil it.',
     '        Wash your hands before touching stored water.'])
+# Each label entirely above its amount (from review, invented): the nearest line to "1 kg" is "Second crate".
+CRATES = '\n'.join([
+    '    Crate                     Quantity',
+    '    First crate',
+    '    packed',
+    '                                      1 kg',
+    '    Second crate',
+    '    packed',
+    '                                      2 kg',
+    '    Third crate',
+    '    packed',
+    '                                      3 kg'])
 # Columns without a unit (a timetable), side-by-side prose columns, a list of numbers: no table to rebuild.
 NO_AMOUNTS = '\n'.join([
     '   Day        Morning        Evening',
@@ -156,6 +168,24 @@ class LabelsKeepTheirValues(unittest.TestCase):
         self.assertEqual(len(at), 1, text)   # the dose column still lines up
         self.assertLess(max(map(len, lines)), max(map(len, WRAPPED.split('\n'))))
         self.assertTrue(text.rstrip().endswith('take out any teeth that'))
+
+    def test_labels_above_their_amounts_not_paired_one_row_off(self):
+        """When each label sits wholly above its amount, the nearest line to an amount is the next row's label. Such a
+        table is either paired right or not called sure, and then kept as printed, where each label stays over its own
+        amount."""
+        [t] = T.tables(CRATES)
+        right = {'First crate packed': '1 kg', 'Second crate packed': '2 kg', 'Third crate packed': '3 kg'}
+        text = T.for_model(CRATES)
+        if t['sure']:
+            self.assertEqual(rows(text), right, text)
+        else:
+            self.assertEqual(rows(text), {})
+            self.assertIn('Table as printed', text)
+            lines = [l.strip() for l in text.split('\n')]
+            for label, amount in (('First crate', '1 kg'), ('Second crate', '2 kg'), ('Third crate', '3 kg')):
+                at = lines.index(label)
+                self.assertEqual(lines[at + 1:at + 3], ['packed', amount], text)
+        self.assertNotRegex(text, r'Second crate[^\n]*\| 1 kg|Third crate[^\n]*\| 2 kg')   # never one row off
 
     def test_table_laid_across_read_down_each_column(self):
         down = T._down(T._segments(ACROSS.split('\n')))
