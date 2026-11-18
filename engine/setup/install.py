@@ -297,7 +297,13 @@ def switch(new_lib, target):
         os.replace(new_lib, target)
     except OSError as e:
         if old:
-            os.replace(old, target)
+            try:
+                os.replace(old, target)
+            except OSError:
+                still = [str(moved) for moved in carried if moved.is_file()]
+                raise Refused('activate', f'Lastbook could not put the new library in place ({type(e).__name__}), nor the old one back. '
+                                          f'The old library is in {old}.'
+                                          + (' These files of yours are still in the new library: ' + ', '.join(still) if still else ''))
         _refuse_carried_back(carried, new_lib, target, f'Lastbook could not put the new library in place ({type(e).__name__}).')
     return old
 
