@@ -324,7 +324,7 @@
   {
    "id": "allergy",
    "label": "Severe allergic reaction",
-   "hint": "Swollen lips or throat, trouble breathing, hives after a sting, food or medicine",
+   "hint": "Swollen lips or throat, trouble breathing or can't breathe, hives after a sting, food or medicine",
    "read": [
     {
      "doc": "med-443ae5cfaa6ecc68",
@@ -528,9 +528,9 @@
    "page": 328
   },
   {
-   "text": "If the bite came from a wild animal, rabies is common in the area and the person has not been vaccinated against it, seek further medical care.",
-   "doc": "med-2e83e22162a9a006",
-   "page": 324
+   "text": "Rabies is deadly once signs appear. After a monkey, bat or raccoon bite, or a bite from a dog or another animal that could have rabies, get a rabies vaccination right away.",
+   "doc": "med-443ae5cfaa6ecc68",
+   "page": 17
   },
   {
    "text": "If someone has heavy blood loss, cannot be woken, has great difficulty breathing, cannot drink for a day or more, or other listed danger signs, they are probably too sick to treat at home; seek skilled medical help as soon as possible.",
