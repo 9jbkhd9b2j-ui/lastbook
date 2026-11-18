@@ -559,7 +559,7 @@
       "format": "Four digits, 1050 to 9990 in the address data.",
       "example_pattern": "0000",
       "relation_to_regions": "Postcodes are set under the Postal Act with 'ingen automatisk sammenhæng' (no automatic connection) to administrative boundaries (danmarksadresser.dk, opened). In the OpenAddresses copy of DAR (27 March 2026; 3,933,406 rows; 1,089 postcodes), 38 postcodes cross a region boundary, for example 7100 Vejle with 921 addresses in Midtjylland and 9500 Hobro with 789. An index per region must be cut by municipality code, not by postcode.",
-      "postal_districts": "Copenhagen, Aarhus, Odense and Aalborg postcodes carry a district letter or two after the town: København K, V, Ø, N, S, NV, SV; Aarhus C, N, V; Odense C, M, NV, SV, SØ, NØ."
+      "postal_districts": "Copenhagen, Aarhus, Odense and Aalborg postcodes carry a district letter or two after the town: København K, N, NV, S, SV, V, Ø; Aarhus C, N, V; Odense C, M, N, NV, NØ, S, SV, SØ, V; Aalborg SV, SØ, Øst (addr:city values with more than 200 uses in the Denmark extract, taginfo, 2026-11-17)."
     },
     "letters": "Street and town names use æ, ø and å, and older spellings write å as aa: 695 street names contain aa and 4,499 contain å, and twenty postal towns use Aa (Aarhus, Aalborg, Aabenraa, Faaborg). Some names also hold ä, ö, ü or é.",
     "counts": {

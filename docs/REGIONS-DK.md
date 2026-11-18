@@ -256,8 +256,9 @@ fixed US list.
   connection) with administrative boundaries (opened). In the OpenAddresses copy of DAR (27 March 2026; 1,089
   postcodes), 38 cross a region boundary; the largest are 7100 Vejle, with 921 addresses in Midtjylland, and 9500 Hobro,
   with 789. An index per region must be cut by municipality code, not by postcode.
-- **Postal districts.** In the four largest cities the town carries a district letter or two: København K, V, Ø, N, S,
-  NV and SV; Aarhus C, N and V; Odense C, M, NV, SV, SØ and NØ.
+- **Postal districts.** In the four largest cities the town carries a district letter or two: København K, N, NV, S,
+  SV, V and Ø; Aarhus C, N and V; Odense C, M, N, NV, NØ, S, SV, SØ and V; Aalborg SV, SØ and Øst (the `addr:city`
+  values with more than 200 uses in the Denmark extract, taginfo; opened).
 - **Letters.** Names use æ, ø and å, and older spellings write å as "aa": 695 street names contain "aa" and 4,499
   contain "å", and twenty postal towns use "Aa" (Aarhus, Aalborg, Aabenraa, Faaborg). The city is officially Aarhus,
   but "Århus" is still common in writing. Search should treat "aa" and "å" as the same letter.
