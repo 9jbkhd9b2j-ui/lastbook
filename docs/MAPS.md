@@ -115,6 +115,7 @@ issue before any code.
 [REGIONS-ES.md](REGIONS-ES.md) does the same for Spain's 17 autonomous communities and its two autonomous cities.
 [REGIONS-FR.md](REGIONS-FR.md) does the same for France's 18 regions, with figures from a trial build.
 [REGIONS-CL.md](REGIONS-CL.md) does the same for Chile's 16 regions.
+[REGIONS-AE.md](REGIONS-AE.md) does the same for the United Arab Emirates, proposed as one map for all seven emirates.
 
 ## Checking a map change
 
