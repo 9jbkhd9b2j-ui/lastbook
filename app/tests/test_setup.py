@@ -1702,6 +1702,129 @@ class Manage(Base):
         self.assertEqual(s._check_library({'state': '', 'bytes_done': 0}, new, Control()), [])
         self.assertTrue(Path(note['old']).exists())        # the damaged copy is kept aside until deleted
 
+    def drive(self):
+        d = self.tmp / 'drive'
+        d.mkdir()
+        return d
+
+    def test_copy_to_a_drive_holds_the_library_and_nothing_personal(self):
+        lib = self.installed_library()
+        personal = {'derived/geo/addresses/CA.sqlite': b'addresses', 'derived/index/semantic.sqlite': b'index',
+                    'derived/llm/state.json': b'{}', 'notes.txt': b'mine'}
+        for rel, data in personal.items():
+            (lib / rel).parent.mkdir(parents=True, exist_ok=True)
+            (lib / rel).write_bytes(data)
+        (lib.parent / 'LastbookMine').mkdir()
+        (lib.parent / 'LastbookMine' / 'medication.txt').write_text('private')
+        before = {p.relative_to(lib).as_posix(): sha(p.read_bytes()) for p in lib.rglob('*') if p.is_file()}
+        s = self.setup('manage', current=lib)
+        self.files.log.clear()
+        drive = self.drive()
+        j = s.start(copy_to=str(drive))
+        self.assertTrue(j['copy'])
+        j = self.wait(s)
+        self.assertEqual(j['state'], 'done', j)
+        out = drive / 'LastbookData'
+        got = sorted(p.relative_to(out).as_posix() for p in out.rglob('*') if p.is_file())
+        self.assertEqual(got, ['library-data/big.bin', 'library-data/catalog.json', 'pack-manifest.tsv', 'pack.json'])   # the list, and only the list
+        for rel in got:
+            self.assertEqual((out / rel).read_bytes(), (lib / rel).read_bytes())
+        self.assertEqual(self.files.log, [])                                   # nothing downloaded
+        self.assertEqual(before, {p.relative_to(lib).as_posix(): sha(p.read_bytes()) for p in lib.rglob('*') if p.is_file()})   # the library untouched
+        start = (drive / 'START-HERE.txt').read_text(encoding='utf-8')
+        self.assertIn('Small library', start)
+        self.assertIn('LastbookData', start)
+        self.assertIn('Nothing personal', start)
+        self.assertFalse((out / api.COPY_MARK).exists())
+        self.assertEqual(j['result']['files'], 4)
+        self.assertEqual(sorted(p.name for p in drive.iterdir()), ['LastbookData', 'START-HERE.txt'])   # no work folder, no LastbookMine
+        self.assertIsNone(api.startup(self.settings)[1])                       # no switch staged
+        self.assertEqual(self.setup('manage', current=lib).job, None)          # a copy is not carried over a restart
+
+    def test_copy_carries_on_and_replaces_a_bad_file(self):
+        lib = self.installed_library()
+        drive = self.drive()
+        out = drive / 'LastbookData'
+        (out / 'library-data').mkdir(parents=True)
+        (out / api.COPY_MARK).write_text('copying')
+        (out / 'library-data' / 'catalog.json').write_bytes((lib / 'library-data' / 'catalog.json').read_bytes())
+        good = (out / 'library-data' / 'catalog.json').stat().st_mtime_ns
+        bad = bytearray((lib / 'library-data' / 'big.bin').read_bytes())
+        bad[5] ^= 1
+        (out / 'library-data' / 'big.bin').write_bytes(bad)                    # right size, wrong bytes
+        (out / 'library-data' / 'big.bin.partial').write_bytes(b'half')        # an earlier copy stopped here
+        s = self.setup('manage', current=lib)
+        s.start(copy_to=str(drive))
+        j = self.wait(s)
+        self.assertEqual(j['state'], 'done', j)
+        self.assertEqual((out / 'library-data' / 'big.bin').read_bytes(), (lib / 'library-data' / 'big.bin').read_bytes())
+        self.assertEqual((out / 'library-data' / 'catalog.json').stat().st_mtime_ns, good)   # a good file is kept, not copied again
+        self.assertFalse((out / 'library-data' / 'big.bin.partial').exists())
+
+    def test_copy_stops_on_a_damaged_library_file(self):
+        lib = self.installed_library()
+        data = bytearray((lib / 'library-data' / 'big.bin').read_bytes())
+        data[0] ^= 1
+        (lib / 'library-data' / 'big.bin').write_bytes(data)
+        s = self.setup('manage', current=lib)
+        drive = self.drive()
+        s.start(copy_to=str(drive))
+        j = self.wait(s)
+        self.assertEqual((j['state'], j['error']['code']), ('failed', 'copy'), j)
+        self.assertIn('big.bin does not match its published copy', j['error']['message'])
+        self.assertFalse((drive / 'LastbookData' / 'library-data' / 'big.bin').exists())          # the damage is not passed on
+        self.assertFalse((drive / 'LastbookData' / 'library-data' / 'big.bin.partial').exists())
+        self.assertFalse((drive / 'START-HERE.txt').exists())
+
+    def test_copy_with_a_state_map_takes_the_state_map(self):
+        lib = self.installed_library()
+        files = {'derived/geo/map.sqlite': b'state map', 'derived/geo/national-status.json': b'{}'}
+        for rel, data in files.items():
+            (lib / rel).parent.mkdir(parents=True, exist_ok=True)
+            (lib / rel).write_bytes(data)
+        (lib / 'map-set.json').write_text(json.dumps({'name': 'CA', 'files': {k: len(v) for k, v in files.items()}}))
+        s = self.setup('manage', current=lib)
+        drive = self.drive()
+        s.start(copy_to=str(drive))
+        j = self.wait(s)
+        self.assertEqual(j['state'], 'done', j)
+        out = drive / 'LastbookData'
+        for rel, data in files.items():
+            self.assertEqual((out / rel).read_bytes(), data)
+        self.assertTrue((out / 'map-set.json').is_file())
+
+    def test_copy_refuses_places_that_would_go_wrong(self):
+        lib = self.installed_library()
+        s = self.setup('manage', current=lib)
+        self.assertEqual(s.start(copy_to=str(lib / 'library-data'))['code'], 'folder')            # inside the library
+        self.assertEqual(s.start(copy_to=str(lib.parent))['code'], 'folder')                      # onto the library itself
+        taken = self.drive() / 'LastbookData'
+        taken.mkdir()
+        (taken / 'something.txt').write_text('not ours')
+        self.assertEqual(s.start(copy_to=str(taken.parent))['code'], 'folder')                    # someone else's folder
+        self.assertEqual(s.start(copy_to=str(self.tmp / 'nowhere'))['code'], 'missing')
+        with mock.patch.object(hardware, 'disk_of', return_value=(10, 10)):
+            other = self.tmp / 'small-drive'
+            other.mkdir()
+            self.assertEqual(s.start(copy_to=str(other))['code'], 'no_space')
+        self.assertEqual(self.setup().start(copy_to=str(self.tmp))['code'], 'nothing')
+        self.assertEqual(sorted(p.name for p in taken.iterdir()), ['something.txt'])
+
+    def test_cancel_a_copy_keeps_the_library_and_a_waiting_switch(self):
+        lib = self.installed_library()
+        s = self.setup('manage', current=lib)
+        self.assertEqual(api._pending_file(self.settings).exists(), False)
+        s.start(copy_to=str(self.drive()))
+        api._pending_file(self.settings).parent.mkdir(parents=True, exist_ok=True)
+        api._pending_file(self.settings).write_text('{}')                       # as if an upgrade were waiting for a restart
+        j = s.cancel()
+        self.assertTrue(api._pending_file(self.settings).exists())            # a copy's cancel never drops it
+        self.assertIn(j['state'], ('failed', 'done'))
+        if j['state'] == 'failed':
+            self.assertEqual(j['error']['code'], 'cancelled')
+            self.assertIn('copy again to the same place', j['error']['message'])
+        self.assertTrue(api.install.is_library(lib))
+
     def test_repair_needs_a_known_pack(self):
         lib = self.parent / 'LastbookData'
         (lib / 'library-data').mkdir(parents=True)
