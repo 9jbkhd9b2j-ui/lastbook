@@ -24,6 +24,7 @@ automatically from `catalog.json` — do not copy them into the topic file.
       "id": "unsafe",
       "label": "Tap water is off or might be unsafe",
       "hint": "Boil-water notice, earthquake, flood, broken main",
+      "urgent": ["not breathing"],     // optional: a search that names one of these phrases shows this choice first
       "read": [
         {"doc": "<catalog id>", "page": 9,
          "label": "Short action-style headline of what the page helps with",
@@ -56,4 +57,6 @@ Rules
 - Medical, chemical (bleach, fuels, pesticides), electrical and gas items: prefer current WHO/CDC/EPA/FEMA/Red Cross/
   Hesperian/MSF/USDA/extension sources; mention in `note` if a source is old (e.g. 1980s civil defense) or written for
   health workers or trained responders.
+- `urgent` is only for a life-threatening choice that must win over any other choice in its topic. Each phrase is matched
+  as whole words in order, so "not breathing" does not catch "trouble breathing".
 - Favour fewer, better items: 1–4 readings per choice, 3–8 in prepare, 4–10 in learn.
