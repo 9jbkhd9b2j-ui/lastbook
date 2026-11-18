@@ -5,7 +5,7 @@ Skipped when the file is not on this computer. The ZIM is not in the repository.
 
   LASTBOOK_TEST_ZIM=/path/to/appropedia_en_all_maxi_2026-02.zim python3 -B -m unittest app.tests.test_encyclopedias_real
 """
-import json, os, socket, subprocess, sys, tempfile, threading, time, unittest, urllib.error, urllib.request
+import json, os, shutil, socket, subprocess, sys, tempfile, threading, time, unittest, urllib.error, urllib.request
 from pathlib import Path
 from unittest import mock
 
@@ -36,6 +36,14 @@ def find_zim():
     return None
 
 
+# Lastbook's own top-level modules and package: what load() may import and must not leave behind.
+PROJECT_MODULES = ('assistant', 'retrieval', 'server', 'llm_local', 'bridge', 'engine')
+
+
+def ours(name):
+    return name.split('.')[0] in PROJECT_MODULES
+
+
 def load():
     before, env = dict(sys.modules), dict(os.environ)
     sys.path.insert(0, str(ROOT))
@@ -47,8 +55,9 @@ def load():
     finally:
         if str(ROOT) in sys.path:
             sys.path.remove(str(ROOT))
-        for name in set(sys.modules) - set(before):
-            del sys.modules[name]
+        for name in set(sys.modules) - set(before):   # Lastbook's own modules only; NumPy and the like stay loaded
+            if ours(name):
+                del sys.modules[name]
         sys.modules.update(before)
         if 'onnxruntime' not in before:
             sys.modules.pop('onnxruntime', None)
@@ -69,7 +78,11 @@ class RealZim(unittest.TestCase):
         collections = cls.data / 'library-data' / 'collections'
         collections.mkdir(parents=True)
         dest = collections / ZIM.name
-        os.symlink(ZIM.resolve(), dest)
+        # The file must really sit in collections/: a symlink to it is refused, like the /zim/ reader refuses it.
+        try:
+            os.link(ZIM.resolve(), dest)   # same filesystem: a hard link, no copy
+        except OSError:
+            shutil.copyfile(ZIM.resolve(), dest)
         cls.lib = cls.data / 'library-data'
         cls.zim_name = ZIM.name
         cls.root = cls.lib

@@ -192,6 +192,12 @@ def wiki_row(hit, text=None):
     body = text if text is not None else (hit.get('text') or hit.get('excerpt') or '')
     key = hit.get('zim_key') or hit.get('zim') or hit.get('doc_id')
     year = hit.get('year') or encyclopedias.year_of(hit.get('zim') or '')
+    # The reader address, percent-encoded by encyclopedias.ui_path (as the Encyclopedias page uses it). The source card
+    # links with this, never with the raw key: article names can hold ?, % and ".
+    path = hit.get('path')
+    if not path:
+        parsed = encyclopedias.parse_key(key or '')
+        path = encyclopedias.ui_path(*parsed) if parsed else None
     return {
         'doc_id': key,
         'title': hit.get('title') or key,
@@ -203,6 +209,7 @@ def wiki_row(hit, text=None):
         'page': None,
         't': None,
         'zim': key,
+        'path': path,
         'excerpt': re.sub(r'\s+', ' ', body or '')[:900],
         'notes': 'Community-written encyclopedia; prefer a manual for safety-critical steps when both exist.',
     }

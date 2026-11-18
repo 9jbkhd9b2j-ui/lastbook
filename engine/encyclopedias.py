@@ -10,7 +10,7 @@ import threading
 import urllib.parse
 from pathlib import Path
 
-from engine import paths
+from engine import paths, safe_paths
 
 PER_FILE = 8
 SEARCH_LIMIT = 24
@@ -41,13 +41,35 @@ def collections_dir(root=None):
     return Path(base) / 'collections'
 
 
+def library_dir(root=None):
+    return Path(root) if root is not None else paths.LIB
+
+
+def zim_path(name, root=None):
+    """The file for an encyclopedia name, or None when the /zim/ reader would refuse it.
+
+    Same check as engine/library.py zim_file(): links and junctions are followed, and a file whose real path is
+    outside collections/ (or has a refused name, or an unsafe Windows segment) is refused. So Chat never searches,
+    reads or cites a file whose source card could not then open.
+    """
+    try:
+        path = safe_paths.zim_file(library_dir(root), name)
+    except (ValueError, OSError):
+        return None
+    try:
+        return path if path.is_file() else None
+    except OSError:
+        return None
+
+
 def list_files(root=None):
-    """Filenames of encyclopedia files that are actually present."""
+    """Filenames of encyclopedia files that are actually present and that the /zim/ reader would open."""
     folder = collections_dir(root)
     try:
-        return sorted(p.name for p in folder.glob('*.zim') if p.is_file() and p.name == Path(p.name).name)
+        names = sorted(p.name for p in folder.glob('*.zim'))
     except OSError:
         return []
+    return [n for n in names if zim_path(n, root) is not None]
 
 
 def publisher(name):
@@ -81,6 +103,7 @@ def key_ok(key, names=None, root=None):
     if not parsed:
         return False
     name, article = parsed
+    # names: a list the caller already checked the same way (server.zim_names uses list_files).
     present = set(names) if names is not None else set(list_files(root))
     return bool(article) and name in present
 
@@ -225,9 +248,9 @@ def entry_text(arc, article, cap=READ_CHARS):
 def iter_archives(root=None, opener=None):
     """Yield (filename, path, archive) for each encyclopedia file that can be opened."""
     opener = opener or _open_archive
-    folder = collections_dir(root)
-    for path in sorted(folder.glob('*.zim')):
-        if path.name != Path(path.name).name or not path.is_file():
+    for name in list_files(root):
+        path = zim_path(name, root)
+        if path is None:
             continue
         try:
             yield path.name, path, opener(path)
@@ -256,13 +279,9 @@ def search(q, per_file=PER_FILE, limit=SEARCH_LIMIT, root=None, archives=None, s
         rows = list(archives)
     else:
         rows = []
-        folder = collections_dir(root)
-        try:
-            paths = sorted(folder.glob('*.zim'))
-        except OSError:
-            paths = []
-        for path in paths:
-            if path.name != Path(path.name).name or not path.is_file():
+        for name in list_files(root):
+            path = zim_path(name, root)
+            if path is None:
                 continue
             try:
                 rows.append((path.name, _open_archive(path)))
@@ -321,8 +340,8 @@ def read(key, query='', cap=READ_CHARS, root=None, archives=None):
                 arc = a
                 break
     else:
-        path = collections_dir(root) / name
-        if path.is_file() and path.name == name:
+        path = zim_path(name, root)
+        if path is not None:
             try:
                 arc = _open_archive(path)
             except Exception:

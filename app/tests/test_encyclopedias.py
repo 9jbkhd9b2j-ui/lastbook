@@ -11,6 +11,14 @@ sys.dont_write_bytecode = True
 ROOT = Path(__file__).resolve().parents[2]
 
 
+# Lastbook's own top-level modules and package: what load() may import and must not leave behind.
+PROJECT_MODULES = ('assistant', 'retrieval', 'server', 'llm_local', 'bridge', 'engine')
+
+
+def ours(name):
+    return name.split('.')[0] in PROJECT_MODULES
+
+
 def load():
     """encyclopedias and the Chat helpers, imported without leaving a data-folder path behind."""
     before, env = dict(sys.modules), dict(os.environ)
@@ -21,13 +29,15 @@ def load():
         import assistant
         return encyclopedias, assistant
     finally:
-        # Drop the imported modules from sys.modules so later tests (test_what_ships and
+        # Drop Lastbook's own modules from sys.modules so later tests (test_what_ships and
         # others) can import engine.paths / server against their own LASTBOOK_DATA.
-        # This file keeps the module objects it returned.
+        # This file keeps the module objects it returned. Third-party modules (NumPy above all,
+        # which cannot be imported twice in one process) stay loaded.
         if str(ROOT) in sys.path:
             sys.path.remove(str(ROOT))
         for name in set(sys.modules) - set(before):
-            del sys.modules[name]
+            if ours(name):
+                del sys.modules[name]
         sys.modules.update(before)
         if 'onnxruntime' not in before:
             sys.modules.pop('onnxruntime', None)
@@ -230,6 +240,77 @@ class SearchAndRead(unittest.TestCase):
             shutil.rmtree(tmp)
 
 
+class LinkedFiles(unittest.TestCase):
+    """The same check as the /zim/ reader (library.zim_file): a file in collections/ that is really a link to somewhere
+    outside it is not listed, searched, read or cited. A normal file inside collections/ works."""
+
+    def setUp(self):
+        import tempfile
+        self.tmp = tempfile.TemporaryDirectory()
+        base = Path(self.tmp.name)
+        self.lib = base / 'library-data'
+        folder = self.lib / 'collections'
+        folder.mkdir(parents=True)
+        (folder / ZIM).write_bytes(b'fake zim inside the library')
+        outside = base / 'elsewhere'
+        outside.mkdir()
+        (outside / 'linked.zim').write_bytes(b'fake zim outside the library')
+        try:
+            os.symlink(outside / 'linked.zim', folder / 'linked.zim')
+        except (OSError, NotImplementedError):
+            self.skipTest('cannot make a symlink here')
+        self.opened = []
+        self.saved_s = assistant.S
+
+    def tearDown(self):
+        assistant.S = self.saved_s
+        self.tmp.cleanup()
+
+    def opener(self, path):
+        self.opened.append(Path(path).name)
+        return mdwiki()
+
+    def test_shared_check_refuses_the_link(self):
+        safe_paths = encyclopedias.safe_paths   # the module engine/library.py zim_file() uses
+        self.assertEqual(safe_paths.zim_file(self.lib, ZIM), self.lib / 'collections' / ZIM)
+        with self.assertRaises(ValueError):
+            safe_paths.zim_file(self.lib, 'linked.zim')
+        self.assertIsNotNone(encyclopedias.zim_path(ZIM, self.lib))
+        self.assertIsNone(encyclopedias.zim_path('linked.zim', self.lib))
+
+    def test_not_listed(self):
+        self.assertEqual(encyclopedias.list_files(self.lib), [ZIM])
+        self.assertEqual([n for n, _, _ in encyclopedias.iter_archives(self.lib, opener=self.opener)], [ZIM])
+        self.assertNotIn('linked.zim', self.opened)
+
+    def test_not_searched(self):
+        with mock.patch.object(encyclopedias, '_open_archive', side_effect=self.opener):
+            hits = encyclopedias.search('cholera', root=self.lib, search_paths=search_paths)
+        self.assertEqual(self.opened, [ZIM])
+        self.assertTrue(hits)
+        self.assertEqual({h['zim'] for h in hits}, {ZIM})
+
+    def test_not_read(self):
+        with mock.patch.object(encyclopedias, '_open_archive', side_effect=self.opener):
+            self.assertIsNone(encyclopedias.read('zim/linked.zim/Cholera', root=self.lib))
+            hit = encyclopedias.read('zim/' + ZIM + '/Cholera', root=self.lib)
+        self.assertEqual(self.opened, [ZIM])
+        self.assertEqual(hit['title'], 'Cholera')
+
+    def test_not_cited(self):
+        self.assertFalse(encyclopedias.key_ok('zim/linked.zim/A', root=self.lib))
+        self.assertTrue(encyclopedias.key_ok('zim/' + ZIM + '/A', root=self.lib))
+        # Chat checks citations against server.zim_names(), which is list_files() of the open library.
+        assistant.S = mock.Mock()
+        assistant.S.zim_names.side_effect = lambda: encyclopedias.list_files(self.lib)
+        sess = assistant.Session()
+        bad = sess.add(assistant.wiki_row({'zim_key': 'zim/linked.zim/Cholera', 'zim': 'linked.zim', 'title': 'Cholera'}))
+        good = sess.add(assistant.wiki_row({'zim_key': 'zim/' + ZIM + '/Cholera', 'zim': ZIM, 'title': 'Cholera'}))
+        _, valid, invalid = assistant.validate_citations(f'A [{bad}] B [{good}]', sess)
+        self.assertEqual(valid, [good])
+        self.assertEqual(invalid, [bad])
+
+
 class ChatTools(unittest.TestCase):
     def setUp(self):
         self.arc = mdwiki()
@@ -257,6 +338,16 @@ class ChatTools(unittest.TestCase):
         self.assertIn('[S99]', answer)
         self.assertEqual(valid, [k])
         self.assertEqual(invalid, ['S99'])
+
+    def test_wiki_row_carries_the_encoded_reader_path(self):
+        hit = {'zim_key': 'zim/' + ZIM + '/100%_Juice', 'zim': ZIM, 'title': '100% Juice',
+               'path': encyclopedias.ui_path(ZIM, '100%_Juice')}
+        self.assertEqual(assistant.wiki_row(hit)['path'], 'zim/' + ZIM + '/100%25_Juice')
+        # A hit without one gets it from its key, encoded the same way.
+        row = assistant.wiki_row({'zim_key': 'zim/' + ZIM + '/X"onmouseover="alert(1)', 'zim': ZIM})
+        self.assertEqual(row['path'], encyclopedias.ui_path(ZIM, 'X"onmouseover="alert(1)'))
+        self.assertNotIn('"', row['path'])
+        self.assertEqual(assistant.wiki_row({'zim_key': 'zim/' + ZIM + '/Why?', 'zim': ZIM})['path'], 'zim/' + ZIM + '/Why%3F')
 
     def test_invented_or_unknown_catalog_keys_are_rejected(self):
         self.sess.add({'doc_id': 'not-in-catalog', 'kind': 'pdf', 'page': 1, 'title': 'X'})
