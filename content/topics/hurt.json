@@ -47,6 +47,9 @@
   "rehydration",
   "ORS",
   "heart attack",
+  "cardiac arrest",
+  "AED",
+  "defibrillator",
   "stroke",
   "seizure",
   "diabetes",
@@ -209,7 +212,7 @@
   {
    "id": "breathing",
    "label": "Not breathing, unconscious or choking",
-   "hint": "Collapsed or fainted, not responding, can't breathe, gasping, food stuck in throat, drowning",
+   "hint": "Collapsed or fainted, not responding, heart stopped (cardiac arrest), AED or defibrillator, can't breathe, gasping, food stuck in throat, drowning",
    "read": [
     {
      "doc": "med-2e83e22162a9a006",
