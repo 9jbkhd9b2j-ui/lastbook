@@ -241,3 +241,76 @@ For a doctor out of hours each region has its own number, so a regional map is t
 As in France, CC BY points merged with OSM points in one `poi` table probably make a derived database under the ODbL; one
 file or table per licence avoids that (a question, not legal advice). `MAP_CREDIT` in `packaging/build_packs.py` is a
 fixed US list.
+
+## How addresses are written
+
+- **Order.** Street name first, then the house number, then floor and door, then the postcode and town:
+  "Rådhuspladsen 1, 1550 København V", or with a flat, "Nørrebrogade 20, 2. th, 2200 København N". A supplementary town
+  name (*supplerende bynavn*), naming a village inside a postal area, goes on its own line between the street line and
+  the postcode line (danmarksadresser.dk, the register's rules; opened).
+- **House number.** 1 to 999, optionally followed by a capital letter with no space ("12B"). I, J, O and Q are not used
+  in new numbers (opened). In the address data every number is digits (3,309,201) or digits and a letter (624,205).
+- **Floor and door.** `st` is the ground floor, then 1 to 99; `kl` the basement. The door is `tv` (left), `th` (right) or
+  `mf` (middle), or a number counted from the left (opened). 1,483,234 of 3,933,406 addresses have a floor or door.
+- **Postcode.** Four digits, 1050 to 9990 in the data. Postcodes have "ingen automatisk sammenhæng" (no automatic
+  connection) with administrative boundaries (opened). In the OpenAddresses copy of DAR (27 March 2026; 1,089
+  postcodes), 38 cross a region boundary; the largest are 7100 Vejle, with 921 addresses in Midtjylland, and 9500 Hobro,
+  with 789. An index per region must be cut by municipality code, not by postcode.
+- **Postal districts.** In the four largest cities the town carries a district letter or two: København K, V, Ø, N, S,
+  NV and SV; Aarhus C, N and V; Odense C, M, NV, SV, SØ and NØ.
+- **Letters.** Names use æ, ø and å, and older spellings write å as "aa": 695 street names contain "aa" and 4,499
+  contain "å", and twenty postal towns use "Aa" (Aarhus, Aalborg, Aabenraa, Faaborg). The city is officially Aarhus,
+  but "Århus" is still common in writing. Search should treat "aa" and "å" as the same letter.
+- **What the current code does with that** (read in this repository on 17 November 2026, by calling its functions):
+
+| Query | What happens |
+|---|---|
+| `Rådhuspladsen 1, 1550 København V` | Not treated as an address: `is_address_query` needs the query to start with a digit. |
+| `Nørrebrogade 20, 2. th, 2200 København N` | The same. |
+| `København`, `Århus`, `Ærøskøbing` | `normalize()` keeps only `a-z` and `0-9`: they become `k benhavn`, `rhus` and `r sk bing`. "Århus" never meets "Aarhus". |
+| `12 Tomsgårdsvej 2400 København NV` | Searched in Nevada: `_parts()` takes a last word equal to a US state code for a state, and NV is a postal district in København and Odense. |
+| `… 1550 København V` | `_parts()` reads only a five-digit postcode, so `1550` stays among the street words. |
+
+  `tools/build_addresses.py` also keeps only `country = 'US'`. So a Danish address index needs its own rule, as #79
+  proposes for German addresses (`norm = de-1` in the index's `meta` table): street before number, four-digit postcodes,
+  the floor and door as optional words, `æ`, `ø`, `å` and `aa` folded, and no US-state guess.
+
+## Still undecided
+
+Each of these needs the maintainers' decision before any code changes.
+
+1. **Codes and index names.** Whether `DK-84` style codes are acceptable as a manifest `id`, in `map-set.json` and in
+   `Lastbook-Map-<id>.zip`, and how address indexes are named when `[A-Z]{2}` does not fit. Thailand has the same
+   question.
+2. **Bornholm.** One `DK-84` map cut by the region's outline, two maps, or Bornholm as an extra download.
+3. **The box source.** Boxes recomputed from DAGI, which needs a Datafordeler key on the build machine, in place of the
+   GISCO boundaries used here.
+4. **Addresses.** DAR directly through Datafordeler, or Overture's copy, which was last drawn from DAR in March 2026;
+   the floor and door kept, or one row per house number; one shared `meta` key for the spelling rule.
+5. **Credits.** The wording for CC BY 4.0 data from an agency that changes its name on 1 December 2026, and one table
+   or file per licence, or CC BY and OSM points merged under the ODbL.
+6. **Water.** Whether coastal dikes become a kind in `water.sqlite`, and whether storm-surge areas belong on the map.
+7. **Help points.** A plain word for the nature lean-tos, and whether the regional out-of-hours doctor number is shown
+   with the map.
+8. **Crops.** Whether to ask Landbrugsstyrelsen to state a licence for the Marker files, and who asks.
+
+## What was checked, and what was not
+
+- Opened on 17 November 2026: Klimadatastyrelsen's notices on DAWA's closure (2 July 2026) and the licence change
+  (16 May 2024); Datafordeler's terms page for the agency's data and its page for the elevation model downloads; the
+  ministry's notice of the merger with DMI; the GeoDanmark object catalogue for `Bygning`; danmarksadresser.dk's rules
+  for addresses and postcodes; Danmarks Statistik's region code page; Geofabrik's Denmark page and `denmark.poly`;
+  Overture's attribution page; the OpenAddresses source file for Denmark; hjertestarter.dk's terms; Beredskabsstyrelsen's
+  siren page; the notice of the shelter survey; Kystdirektoratet's dike metadata; the police page for 114; the
+  out-of-hours doctor pages of four regions.
+- Read through public APIs on 17 November 2026: StatBank (FOLK1A), GISCO (NUTS 2024), Nominatim (region relations),
+  taginfo for the Denmark extract, and the HTTP answers of DAWA (410) and Datafordeler (401).
+- Computed on 17 November 2026: the five boxes, the Bornholm split and the towns inside each box, from the GISCO files;
+  postcode, house number and spelling counts from the OpenAddresses file for Denmark; the behaviour of
+  `engine/address_search.py` on Danish queries.
+- Seen only in search results: the ISO 3166-2:DK codes (ISO refused), GISCO's terms, the Datafordeler key's terms and
+  lifetime, Kystdirektoratet's flood data, BBR's fields, and Region Hovedstaden's 1813 page (behind a security check).
+- Not checked: the boxes against DAGI (it needs a key); the size of the elevation model; the contents and licence of
+  the Marker files; BBR's terms; Kystdirektoratet's dike layer itself (its WFS answered HTTP 500); whether Overture's
+  Danish addresses will be refreshed; when Datafordeler's older REST and file services finally close (a phase-out
+  document says 30 June 2026, another page 15 January 2027); OSM counts per region.
