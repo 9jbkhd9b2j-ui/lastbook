@@ -610,6 +610,7 @@ async function watch(id, t, from) {
   <div class="watch">
     <div>
       <div class="player"><video id="vid" controls preload="metadata" playsinline src="${fileUrl(d.path)}${t ? '#t=' + t : ''}"></video></div>
+      <div class="video-speed"><label for="videoSpeed">Playback speed</label><select id="videoSpeed"><option value="0.5">0.5×</option><option value="0.75">0.75×</option><option value="1" selected>Normal</option><option value="1.25">1.25×</option><option value="1.5">1.5×</option><option value="2">2×</option></select></div>
       ${d.remote ? `<p class="small muted" style="margin:6px 0 0">Stored on the remote drive “${esc(d.remote)}”. It plays only while that computer is reachable.</p>` : ''}
       <h1 class="vtitle">${esc(d.title)}</h1>
       <div class="vmeta"><b>${esc(d.publisher || '')}</b><span>${fmtDur(d.duration)}</span>${d.upload_date ? `<span>${esc(d.upload_date.replace(/(\d{4})(\d\d)(\d\d)/, '$1-$2-$3'))}</span>` : ''}<span>${esc(d.trust)}</span></div>
@@ -623,6 +624,14 @@ async function watch(id, t, from) {
   <div id="morev"></div>
   <details class="about-src"><summary>About this video</summary><div class="in"><dl><dt>Channel</dt><dd>${esc(d.publisher || '—')}</dd><dt>Kind</dt><dd>${esc(d.trust)}</dd><dt>Length</dt><dd>${fmtDur(d.duration) || 'unknown'}</dd>${d.notes ? `<dt>Note</dt><dd>${esc(d.notes)}</dd>` : ''}${d.source_url ? `<dt>Online original</dt><dd>${esc(hostOf(d.source_url))} <span class="muted">(online; not needed here)</span></dd>` : ''}</dl></div></details>`;
   const vid = $('#vid');
+  const speed = $('#videoSpeed');
+  speed.addEventListener('change', () => { vid.playbackRate = Number(speed.value) });
+  // Native controls may also change the rate. Keep the visible control in sync.
+  vid.addEventListener('ratechange', () => {
+    const value = String(vid.playbackRate);
+    if (![...speed.options].some(option => option.value === value)) speed.add(new Option(value + '×', value));
+    speed.value = value;
+  });
   if (d.thumb) vid.poster = fileUrl(d.thumb);
   vid.addEventListener('error', async () => {
     const say = why => vid.closest('.player')?.insertAdjacentHTML('afterend', `<div class="err">${why}</div>`);
