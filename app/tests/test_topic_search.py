@@ -109,7 +109,7 @@ UNDISTURBED = {
     'lost in the forest': ['comms', 'signal'],
 }
 # A breathing emergency after a sting must not open routine sting care.
-NOT_STING = ["bee sting can't breathe", 'bee sting cannot breathe']
+NOT_STING = ["bee sting can't breathe", 'bee sting cannot breathe', 'bee sting unconscious', 'wasp sting unconscious']
 TOPS = sorted({*SAME_AS, *SAME_AS.values(), *SAME_GUIDE, *SAME_GUIDE.values(), *FIRST, *UNDISTURBED, *NOT_STING})
 
 # A made-up topic in Spanish and Chinese: found by Spanish words and by a single Han character.
