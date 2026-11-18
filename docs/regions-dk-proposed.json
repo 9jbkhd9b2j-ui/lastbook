@@ -106,6 +106,12 @@
             "east": 15.1943,
             "north": 55.3261
           },
+          "population": {
+            "Bornholm": 38484,
+            "Christiansø": 89,
+            "date": "2026-10-01",
+            "source": "FOLK1A, OMRÅDE 400 and 411, 2026K4"
+          },
           "bbox_with_margin_0_15": {
             "west": 14.53,
             "south": 54.83,
