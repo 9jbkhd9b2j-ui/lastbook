@@ -147,3 +147,97 @@ would be cut from it, as PR #80's tool does for Bangkok. Sizes from HEAD request
 
 Two open pull requests already cut maps from this extract: #84 lists all of Denmark as `eu-dk`, boxed by Geofabrik's
 outline (7.7011, 54.4406, 15.6545, 58.0624), and #35 has a Copenhagen box, `dk-kob` (12.26, 55.38, 12.86, 55.98).
+
+## Sources, layer by layer
+
+These hold for the whole country. The detail is in the JSON.
+
+| Layer (file) | US source today | Proposed for Denmark | Publisher | Licence | Checked |
+|---|---|---|---|---|---|
+| Terrain (`terrain.sqlite`) | USGS 3DEP | Danmarks Højdemodel, DHM/Terræn, 0.4 m grid in 10 km tiles | Klimadatastyrelsen | CC BY 4.0 | opened |
+| Water (`water.sqlite`) | NHD | GeoDanmark lakes (`Sø`) and watercourse centre lines (`Vandløbsmidte`) | Klimadatastyrelsen and the municipalities | CC BY 4.0 | licence opened; object pages search only |
+| Dams | NID | No dam register; coastal dikes from Kystbeskyttelsesanlæg instead | Kystdirektoratet | CC BY 4.0 (metadata) | metadata opened; the WFS failed |
+| Crops (`crops.sqlite`) | USDA Cropland Data Layer | Marker 2026, declared field parcels with crop code | Landbrugsstyrelsen | none found | download opened; licence not found |
+| Buildings (`buildings.sqlite`) | Microsoft US footprints, OSM heights | GeoDanmark `Bygning` outlines; heights from OSM | Klimadatastyrelsen | CC BY 4.0 | opened |
+| Places (`places.sqlite`) | GNIS, Census gazetteers, OSM | Danske Stednavne, about 140,000 names; OSM | Klimadatastyrelsen | CC BY 4.0 | opened |
+| Addresses (`addresses/<code>.sqlite`) | Overture addresses | DAR through Datafordeler; Overture (from DAR, March 2026) as alternative | Klimadatastyrelsen; Overture | CC BY 4.0 | opened |
+| Points of interest (`poi` rows) | OSM | OSM, as today | OSM contributors | ODbL | opened |
+
+Notes:
+
+- **Terrain.** 0.4 m is far finer than zoom 12, the deepest zoom `tools/build_terrain.py` writes, so it would be
+  resampled. About a fifth of the country is flown again each year (opened). The size of the whole-country download
+  was not obtained: Dataforsyningen's pages need JavaScript.
+- **Water.** Denmark is low and flat; its water risk is storm surge and coastal flooding more than dam failure.
+  Kystdirektoratet's dike layer is the nearer equivalent of the NID, but it is described as "not dimension-true" and
+  `water.sqlite` has no kind for a dike. Its flood-risk areas and a 40 cm watercourse-flood grid can be downloaded
+  (search only; licence not checked).
+- **Crops.** `Marker_2026.zip` (360,175,074 bytes, last modified 17 November 2026) downloads without an account, and
+  years back to 2008 are listed, but no licence was found for it, so it is not yet usable. `Markblokke_2026.zip`
+  answered 404. Which crop codes are orchards, berries and vines was not mapped.
+- **Buildings.** GeoDanmark's `Bygning` has outlines, a building type and a link to BBR, but no height
+  (object catalogue, opened). BBR, the building register, has storeys and construction year but no height either
+  (search only). Heights would come from OSM, or from the surface model minus the terrain model.
+- **Places.** Danske Stednavne has not been updated since September 2025 (opened).
+- **Addresses.** DAR, the national address register, is under CC BY 4.0 ("Som bruger af frie grunddata er du underlagt
+  CC BY 4.0", Datafordeler's terms of 16 May 2024; opened). Overture has 3,933,282 Danish addresses (release
+  2026-10-21.0; opened). They come from OpenAddresses' `sources/dk/countrywide.json`, a single upload of 27 March 2026
+  drawn from DAR (opened). With DAWA closed, that copy will not refresh by itself, and whether anyone will refresh it
+  was not found. For a map that may be used for years, DAR directly is the safer source.
+
+## Help points
+
+OpenStreetMap stays the base. Counts for the Denmark extract (taginfo, data until 2026-11-16T21:17:39Z; opened):
+
+| Tag | Count |
+|---|---|
+| `amenity=pharmacy` | 546 |
+| `amenity=hospital` | 193 |
+| `amenity=fire_station` | 256 |
+| `amenity=police` | 154 |
+| `amenity=drinking_water` | 1,022 |
+| `emergency=defibrillator` | 2,775 |
+| `emergency=siren` | 38 |
+| `amenity=shelter` | 7,844 |
+| `military=bunker` | 2,201 |
+
+Over half of the shelters are lean-tos at nature camping sites (*shelterpladser*): 4,049 carry
+`shelter_type=lean_to`, 1,841 are bus shelters and 1,455 picnic shelters. They are useful in an emergency, but they are
+not the shelters a reader may expect from the name. PR #80's tool drops the bus shelters and keeps the rest under one
+class, so a Danish map would need a word for them.
+
+National lists that are **not open**:
+
+- **Defibrillators.** hjertestarter.dk (TrygFonden) is the national register, but its terms allow reuse only by prior
+  agreement (opened). OSM's 2,775 are the open alternative.
+- **Warning sirens.** Beredskabsstyrelsen has about 1,000 sirens, covering about 80 % of the urban population, and
+  publishes no list of where they are (page of 7 April 2025; opened). OSM has 38.
+- **Shelters (*sikringsrum*).** No public list. A national survey by the agency for civil security and the
+  municipalities began on 16 September 2026 and is due to finish in 2027 (opened).
+
+**Emergency numbers.** 112 for ambulance, fire and police, and 114 for police that is not urgent (politi.dk; opened).
+For a doctor out of hours each region has its own number, so a regional map is the right place to carry it:
+
+| Region | Out-of-hours doctor | Checked |
+|---|---|---|
+| `DK-81` Nordjylland | 70 15 03 00 | opened |
+| `DK-82` Midtjylland | 70 11 31 31 | opened |
+| `DK-83` Syddanmark | 70 11 07 07 | opened |
+| `DK-84` Hovedstaden | 1813 (Akuttelefonen, 24 hours) | search only |
+| `DK-85` Sjælland | 1818 | opened |
+
+## Licence notes and attribution
+
+- **CC BY 4.0** (Klimadatastyrelsen: DAGI, the elevation model, GeoDanmark, Danske Stednavne, DAR; opened). It has
+  applied since 16 May 2024 and replaced the 2022 "Vilkår for brug af frie geografiske data". Datafordeler's terms page
+  asks only "Du skal kreditere Klimadatastyrelsen på et passende sted" (credit Klimadatastyrelsen in a suitable place)
+  and gives no wording. The 2022 text fixed one, "Indeholder data fra Styrelsen for Dataforsyning og Infrastruktur,
+  [dataset], [month year]", which Overture still links to. A credit with the dataset and its date, in that shape, fits
+  both. From 1 December 2026 the agency is "DMI, Kort og Grunddata". No share-alike.
+- **ODbL** (OSM). As for the US map. The app and the packs have no link to the ODbL text today, as REGIONS-FR.md notes.
+- **GISCO** (the region boxes only): "© EuroGeographics for the administrative boundaries". Not proposed for any layer.
+- **Not open**: hjertestarter.dk; the Marker crop parcels until a licence is found.
+
+As in France, CC BY points merged with OSM points in one `poi` table probably make a derived database under the ODbL; one
+file or table per licence avoids that (a question, not legal advice). `MAP_CREDIT` in `packaging/build_packs.py` is a
+fixed US list.
