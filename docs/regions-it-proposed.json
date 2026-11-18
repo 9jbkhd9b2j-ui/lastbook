@@ -550,7 +550,8 @@
       "measured": {
         "pharmacies_ministry": 629,
         "pharmacies_ministry_note": "Ministry of Health pharmacy list FRM_FARMA_5_20261118.csv, rows with no end date (data_fine_validita \"-\")"
-      }
+      },
+      "notes": "With the margin the box reaches Monaco, which is not part of Italy, and the French coast around Menton."
     },
     {
       "code": "IT-45",
@@ -1074,7 +1075,7 @@
         "pharmacies_ministry": 1671,
         "pharmacies_ministry_note": "Ministry of Health pharmacy list FRM_FARMA_5_20261118.csv, rows with no end date (data_fine_validita \"-\")"
       },
-      "notes": "South edge is Lampedusa; west edge is Pantelleria. The box is mostly sea and touches no other country's land."
+      "notes": "South edge is Lampedusa; west edge is Pantelleria. The box is mostly sea and contains Malta (the islands of Malta, Gozo and Comino), which is not part of Italy."
     },
     {
       "code": "IT-88",

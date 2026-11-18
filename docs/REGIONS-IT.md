@@ -106,10 +106,11 @@ Pontine islands.
 | `IT-82` | 19 | Sicilia (Sicily) | 11.9257, 35.4929, 15.6533, 38.8177 | 11.77, 35.34, 15.81, 38.97 |
 | `IT-88` | 20 | Sardegna (Sardinia) | 8.1307, 38.8592, 9.8284, 41.3133 | 7.98, 38.7, 9.98, 41.47 |
 
-Boxes overlap their neighbours, as US state boxes do. Three hold another state's land: San Marino lies inside the boxes
-of Emilia-Romagna and Marche, Vatican City inside Lazio's, and Lombardy's holds Campione d'Italia, a Lombard commune
-inside Switzerland, along with parts of Ticino. With the margin, Sardinia's box reaches the southern tip of Corsica. The
-ISTAT layers have 7,896 communes in 2026; the JSON gives the count per region.
+Boxes overlap their neighbours, as US state boxes do. Several boxes include land outside Italy: San Marino lies inside
+the boxes of Emilia-Romagna and Marche, Vatican City inside Lazio's, and Lombardy's holds Campione d'Italia, a Lombard
+commune inside Switzerland, along with parts of Ticino. Sicily's box runs south to Lampedusa and so contains Malta (the
+islands of Malta, Gozo and Comino). With the margin, Sardinia's box reaches the southern tip of Corsica and Liguria's
+reaches Monaco. The ISTAT layers have 7,896 communes in 2026; the JSON gives the count per region.
 
 ## Sources, layer by layer
 
