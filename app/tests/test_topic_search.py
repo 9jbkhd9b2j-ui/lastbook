@@ -44,8 +44,16 @@ EVERYDAY = {
     'dehydrated water': ['hurt', 'diarrhea'], 'throwing up water': ['hurt', 'diarrhea'], 'diarrhoea water': ['hurt', 'diarrhea'],
     'fractured neck': ['hurt', 'head'], 'fractured back': ['hurt', 'head'], 'dislocated neck': ['hurt', 'head'],
     'fractured skull': ['hurt', 'head'], 'fractured spine': ['hurt', 'head'], 'dislocated spine': ['hurt', 'head'],
-    'spinal fracture': ['hurt', 'head'],
+    'spinal fracture': ['hurt', 'head'], 'fractured vertebra': ['hurt', 'head'], 'fractured vertebrae': ['hurt', 'head'],
+    'vertebral fracture': ['hurt', 'head'], 'fractured vertebral column': ['hurt', 'head'],
     'I drank from the stream and have diarrhea': ['hurt', 'diarrhea'], 'I drank and feel dehydrated': ['hurt', 'diarrhea'],
+}
+
+# Injuries in a forest: since "forest fires" joined the wildfire hint, "forest" also picks wildfire, so these only have
+# to show Broken bone somewhere in the results, not first.
+LISTED = {
+    'I fractured my arm in the forest': ['hurt', 'bone'], 'I dislocated my shoulder in the forest': ['hurt', 'bone'],
+    'I had a fall in the forest': ['hurt', 'bone'],
 }
 
 # Query -> words, the same with or without Intl.Segmenter (every script here uses spaces).
@@ -125,7 +133,7 @@ UNDISTURBED = {
     'winter storm': ['shelter', 'cold'], 'furnace smells like gas': ['power', 'gas'], 'gas furnace': ['power', 'gas'],
     'lost in the forest': ['comms', 'signal'],
 }
-TOPS = sorted({*SAME_AS, *SAME_AS.values(), *SAME_GUIDE, *SAME_GUIDE.values(), *FIRST, *UNDISTURBED, *EVERYDAY})
+TOPS = sorted({*SAME_AS, *SAME_AS.values(), *SAME_GUIDE, *SAME_GUIDE.values(), *FIRST, *UNDISTURBED, *EVERYDAY, *LISTED})
 
 # A made-up topic in Spanish and Chinese: found by Spanish words and by a single Han character.
 OWN = {'id': 'own', 'title': 'Agua potable', 'short': 'Hervir el agua', 'keywords': ['水'], 'choices': []}
@@ -221,6 +229,9 @@ class TopicSearch(unittest.TestCase):
             for q, first in EVERYDAY.items():
                 with self.subTest(q=q, segmenter=r['segmenter']):
                     self.assertEqual(top[q][0] if top[q] else None, first)
+            for q, choice in LISTED.items():
+                with self.subTest(q=q, segmenter=r['segmenter']):
+                    self.assertIn(choice, top[q])
 
     def test_english_ranks_as_before(self):
         for r in self.modes:
