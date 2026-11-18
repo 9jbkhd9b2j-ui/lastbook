@@ -827,6 +827,93 @@ class Switching(Base):
         self.assertEqual((cur / 'library-data' / 'catalog.json').read_text(), 'old')
         self.assertEqual(sorted(p.name for p in self.parent.iterdir()), ['LastbookData', 'LastbookData.setup'])
 
+    def test_failed_rename_keeps_carried_files(self):
+        """#74: when either rename fails, the model and address indexes stay with the library that reopens."""
+        real = os.replace
+        for failing in ('current aside', 'staged into place'):
+            with self.subTest(failing=failing):
+                shutil.rmtree(self.parent, ignore_errors=True)
+                cur = self.lib(self.parent / 'LastbookData', 'old')
+                new = self.lib(self.parent / 'LastbookData.setup' / 'unpack' / 'LastbookData', 'new')
+                (cur / 'models').mkdir()
+                (cur / 'models' / 'model.gguf').write_bytes(b'model')
+                (cur / 'derived/geo/addresses').mkdir(parents=True)
+                (cur / 'derived/geo/addresses/CA.sqlite').write_bytes(b'address index')
+                source = cur if failing == 'current aside' else new
+
+                def replace(src, dst):
+                    if Path(src) == source:
+                        raise PermissionError('in use')
+                    return real(src, dst)
+                with mock.patch.object(install.os, 'replace', replace), self.assertRaises(install.Refused):
+                    install.switch(new, cur)
+                self.assertEqual((cur / 'library-data' / 'catalog.json').read_text(), 'old')
+                self.assertEqual((cur / 'models' / 'model.gguf').read_bytes(), b'model')
+                self.assertEqual((cur / 'derived/geo/addresses/CA.sqlite').read_bytes(), b'address index')
+                self.assertFalse((new / 'models' / 'model.gguf').exists())
+                self.assertFalse((new / 'derived/geo/addresses/CA.sqlite').exists())
+
+    def carried_libraries(self):
+        shutil.rmtree(self.parent, ignore_errors=True)
+        cur = self.lib(self.parent / 'LastbookData', 'old')
+        new = self.lib(self.parent / 'LastbookData.setup' / 'unpack' / 'LastbookData', 'new')
+        (cur / 'models').mkdir()
+        (cur / 'models' / 'model.gguf').write_bytes(b'model')
+        (cur / 'derived/geo/addresses').mkdir(parents=True)
+        (cur / 'derived/geo/addresses/CA.sqlite').write_bytes(b'address index')
+        return cur, new
+
+    def test_failed_carry_puts_back_what_already_moved(self):
+        """#83 review: the model moves, the address index does not; both stay with the library that reopens."""
+        cur, new = self.carried_libraries()
+        real = os.replace
+
+        def replace(src, dst):
+            if Path(src).name == 'CA.sqlite':
+                raise PermissionError('in use')
+            return real(src, dst)
+        with mock.patch.object(install.os, 'replace', replace), self.assertRaises(install.Refused) as e:
+            install.switch(new, cur)
+        self.assertIn('could not move your files', e.exception.message)
+        self.assertEqual((cur / 'library-data' / 'catalog.json').read_text(), 'old')
+        self.assertEqual((cur / 'models' / 'model.gguf').read_bytes(), b'model')
+        self.assertEqual((cur / 'derived/geo/addresses/CA.sqlite').read_bytes(), b'address index')
+        self.assertFalse((new / 'models' / 'model.gguf').exists())
+
+    def test_failed_carry_back_says_where_the_file_is(self):
+        """If a moved file cannot go back either, the error names where it is."""
+        cur, new = self.carried_libraries()
+        real = os.replace
+
+        def replace(src, dst):
+            if Path(src).name == 'CA.sqlite' or Path(src) == new / 'models' / 'model.gguf':
+                raise PermissionError('in use')
+            return real(src, dst)
+        with mock.patch.object(install.os, 'replace', replace), self.assertRaises(install.Refused) as e:
+            install.switch(new, cur)
+        self.assertIn(str(new / 'models' / 'model.gguf'), e.exception.message)
+        self.assertEqual((new / 'models' / 'model.gguf').read_bytes(), b'model')
+        self.assertEqual((cur / 'derived/geo/addresses/CA.sqlite').read_bytes(), b'address index')
+
+    def test_failed_restore_of_the_old_library_says_where_both_are(self):
+        """#83 review: the new library cannot go in place and the old one cannot come back: the error names both folders."""
+        cur, new = self.carried_libraries()
+        real = os.replace
+
+        def replace(src, dst):
+            if Path(dst) == cur:            # any rename into the library's place fails; moving it aside still works
+                raise PermissionError('in use')
+            return real(src, dst)
+        with mock.patch.object(install.os, 'replace', replace), self.assertRaises(install.Refused) as e:
+            install.switch(new, cur)
+        aside = [p for p in self.parent.iterdir() if p.name.startswith('LastbookData.old-')]
+        self.assertEqual(len(aside), 1)
+        self.assertIn(str(aside[0]), e.exception.message)
+        self.assertIn(str(new / 'models' / 'model.gguf'), e.exception.message)
+        self.assertNotIn('moved back', e.exception.message)
+        self.assertEqual((aside[0] / 'library-data' / 'catalog.json').read_text(), 'old')
+        self.assertEqual((new / 'models' / 'model.gguf').read_bytes(), b'model')
+
     def test_ai_only_in_manage_mode(self):
         cur = self.lib(self.parent / 'LastbookData', '{}')
         (cur / 'pack.json').write_text('{"name": "small"}')
@@ -976,6 +1063,118 @@ class Maps(Base):
         api.opened(self.settings, lib, note)
         self.assertFalse((self.parent / 'LastbookData.setup').exists())
         self.assertEqual(self.setup('manage', current=lib, manifest=mf).start(None, False, map_id='CA')['code'], 'nothing')
+
+    def library_with_state_map(self):
+        """#75: a Small library as setup installs it (with its pack-manifest.tsv), then the California map set in place of its own."""
+        files = {'library-data/catalog.json': b'{"records": []}', 'pack.json': b'{"name": "small", "map": "base"}',
+                 'library-data/big.bin': os.urandom(MiB), 'derived/geo/map.sqlite': b'base map'}
+        rows = ['path\tbytes\tsha256\thow\tchanges'] + [f'{k}\t{len(v)}\t{sha(v)}\tclone\t' for k, v in files.items()]
+        files['pack-manifest.tsv'] = ('\n'.join(rows) + '\n').encode()
+        zpath = self.tmp / 'Lastbook-Small.zip'
+        self.installed = make_pack(zpath, files)
+        self.zip = zpath.read_bytes()
+        self.files.data['Lastbook-Small.zip'] = self.zip
+        lib = install.unpack(zpath, self.parent, self.installed, Control(), lambda d, t: None)
+        zpath.unlink()
+        mf, map_files = self.map_manifest()
+        unpacked = install.unpack(self.tmp / 'Lastbook-Map-CA.zip', self.tmp / 'map', None, Control(), lambda d, t: None, allowed=install.map_member)
+        install.replace_map_in(lib, unpacked)
+        self.assertEqual(install.map_name(lib), 'CA')
+        return lib, mf, map_files
+
+    def test_repair_of_another_file_keeps_the_state_map(self):
+        lib, mf, map_files = self.library_with_state_map()
+        (lib / 'library-data' / 'big.bin').unlink()
+        s = self.setup('manage', current=lib, manifest=mf)
+        s.start(repair=True)
+        self.assertEqual(self.wait(s)['state'], 'done')
+        new, _ = api.startup(self.settings)
+        self.assertTrue((new / 'library-data' / 'big.bin').is_file())
+        self.assertEqual(install.map_name(new), 'CA')
+        self.assertEqual((new / 'derived/geo/map.sqlite').read_bytes(), map_files['derived/geo/map.sqlite'])
+
+    def test_repair_fetches_a_missing_state_map_file(self):
+        lib, mf, map_files = self.library_with_state_map()
+        (lib / 'derived/geo/terrain.sqlite').unlink()
+        s = self.setup('manage', current=lib, manifest=mf)
+        j = s.start(repair=True)
+        self.assertEqual([i['kind'] for i in j['items']], ['pack', 'map'])
+        self.assertEqual(self.wait(s)['state'], 'done')
+        self.assertIn('Lastbook-Map-CA.zip', [n for n, _, _ in self.files.log])
+        new, note = api.startup(self.settings)
+        self.assertIsNone(note.get('error'))
+        self.assertEqual(install.map_name(new), 'CA')
+        self.assertEqual((new / 'derived/geo/terrain.sqlite').read_bytes(), map_files['derived/geo/terrain.sqlite'])
+
+    def test_repair_says_when_a_damaged_state_map_cannot_be_fetched(self):
+        lib, mf, _ = self.library_with_state_map()
+        (lib / 'derived/geo/terrain.sqlite').unlink()
+        mf.current['maps'][0]['available'] = False
+        j = self.setup('manage', current=lib, manifest=mf).start(repair=True)
+        self.assertEqual(j.get('code'), 'unavailable', j)
+
+    def library_with_own_map(self):
+        """#88 review: a library like All, whose pack ships its own map set (the whole US) with map-set.json, as setup installs it."""
+        terrain = os.urandom(MiB)
+        files = {'library-data/catalog.json': b'{"records": []}', 'pack.json': b'{"name": "small", "map": "us"}',
+                 'library-data/big.bin': os.urandom(MiB), 'derived/geo/map.sqlite': b'us map', 'derived/geo/terrain.sqlite': terrain}
+        files['map-set.json'] = json.dumps({'name': 'us', 'files': {'derived/geo/map.sqlite': 6, 'derived/geo/terrain.sqlite': MiB}}).encode()
+        rows = ['path\tbytes\tsha256\thow\tchanges'] + [f'{k}\t{len(v)}\t{sha(v)}\tclone\t' for k, v in files.items()]
+        files['pack-manifest.tsv'] = ('\n'.join(rows) + '\n').encode()
+        zpath = self.tmp / 'Lastbook-Small.zip'
+        self.installed = make_pack(zpath, files)
+        self.zip = zpath.read_bytes()
+        self.files.data['Lastbook-Small.zip'] = self.zip
+        lib = install.unpack(zpath, self.parent, self.installed, Control(), lambda d, t: None)
+        zpath.unlink()
+        self.assertEqual(install.map_name(lib), 'us')
+        return lib, terrain
+
+    def test_repair_restores_a_file_of_the_packs_own_map(self):
+        """All's whole-US map comes with the pack, not as a separate download: Repair checks it and fetches it with the pack."""
+        lib, terrain = self.library_with_own_map()
+        (lib / 'derived/geo/terrain.sqlite').unlink()
+        s = self.setup('manage', current=lib, manifest=self.manifest())
+        j = s.start(repair=True)
+        self.assertIsNone(j.get('code'), j)
+        self.assertEqual([i['kind'] for i in j['items']], ['pack'])
+        self.assertEqual(self.wait(s)['state'], 'done')
+        new, note = api.startup(self.settings)
+        self.assertIsNone(note.get('error'))
+        self.assertEqual(install.map_name(new), 'us')
+        self.assertEqual((new / 'derived/geo/terrain.sqlite').read_bytes(), terrain)
+
+    def test_repair_restores_a_changed_map_set_json_of_the_packs_own_map(self):
+        """#88 review: a changed map-set.json of the pack's own map is a damaged pack file, not a separate map to download."""
+        lib, terrain = self.library_with_own_map()
+        listed = (lib / 'map-set.json').read_bytes()
+        with open(lib / 'map-set.json', 'ab') as f:
+            f.write(b'\n')
+        (lib / 'derived/geo/terrain.sqlite').unlink()
+        s = self.setup('manage', current=lib, manifest=self.manifest())
+        j = s.start(repair=True)
+        self.assertIsNone(j.get('code'), j)
+        self.assertEqual([i['kind'] for i in j['items']], ['pack'])
+        self.assertEqual(self.wait(s)['state'], 'done')
+        new, note = api.startup(self.settings)
+        self.assertIsNone(note.get('error'))
+        self.assertEqual((new / 'map-set.json').read_bytes(), listed)
+        self.assertEqual((new / 'derived/geo/terrain.sqlite').read_bytes(), terrain)
+
+    def test_repair_keeps_a_state_map_installed_over_the_packs_own(self):
+        """A state map chosen on a pack that ships its own map set (as on Medium) is still a separate map: Repair keeps it."""
+        lib, _ = self.library_with_own_map()
+        mf, map_files = self.map_manifest()
+        unpacked = install.unpack(self.tmp / 'Lastbook-Map-CA.zip', self.tmp / 'map', None, Control(), lambda d, t: None, allowed=install.map_member)
+        install.replace_map_in(lib, unpacked)
+        (lib / 'library-data' / 'big.bin').unlink()
+        s = self.setup('manage', current=lib, manifest=mf)
+        s.start(repair=True)
+        self.assertEqual(self.wait(s)['state'], 'done')
+        new, _ = api.startup(self.settings)
+        self.assertTrue((new / 'library-data' / 'big.bin').is_file())
+        self.assertEqual(install.map_name(new), 'CA')
+        self.assertEqual((new / 'derived/geo/map.sqlite').read_bytes(), map_files['derived/geo/map.sqlite'])
 
     def test_map_into_a_library_with_another_name(self):
         """Windows 1.1.4 test: a library opened with --data from a folder not called LastbookData got the map in a nested
@@ -1333,7 +1532,7 @@ class Recommend(Base):
 
     def test_hardware_here(self):
         hw = hardware.detect([self.parent])
-        self.assertIn(hw['os'], ('macos', 'windows'))
+        self.assertIn(hw['os'], ('macos', 'windows', 'linux'))
         self.assertGreater(hw['ram_bytes'], 2 ** 30)
         self.assertTrue(hw['disks'] and hw['disks'][0]['free_bytes'] > 0)
 
