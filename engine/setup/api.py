@@ -76,6 +76,7 @@ class _Item:
 
     def progress(self, done, total, state=None):
         d = self.d
+        d.pop('retry_at', None)
         if state and d['state'] != state:
             d['state'] = state
             self.t, self.at, self.rate = time.time(), done, 0.0
@@ -87,6 +88,12 @@ class _Item:
             self.t, self.at = now, done
             d['rate_bps'] = int(self.rate)
             d['eta_s'] = round((total - done) / self.rate) if self.rate > 0 else None
+
+    def waiting(self, seconds):
+        """The server is busy: nothing arrives for `seconds`, so there is no rate, and the time of the next try is kept."""
+        d = self.d
+        d['retry_at'], d['rate_bps'], d['eta_s'] = time.time() + seconds, 0, None
+        self.t, self.at, self.rate = time.time(), d.get('bytes_done', 0), 0.0
 
 
 class Setup:
@@ -144,6 +151,7 @@ class Setup:
                         it['paused_from'] = was       # what it was doing when this program stopped; dropped on resume
                     it['bytes_done'], it['bytes_total'] = self._done_after_restart(job['plan'], it, was)
                 it['rate_bps'], it['eta_s'] = 0, None
+                it.pop('retry_at', None)
         return job
 
     def _checked_job(self, job):
@@ -420,7 +428,13 @@ class Setup:
         with self.lock:
             if not self.job:
                 return None
-            return {k: v for k, v in json.loads(json.dumps(self.job)).items() if k != 'plan'}
+            job = {k: v for k, v in json.loads(json.dumps(self.job)).items() if k != 'plan'}
+        now = time.time()
+        for it in job['items']:      # retry_at becomes seconds from now, shown only while that wait is still ahead
+            at = it.pop('retry_at', None)
+            if at and it['state'] == 'downloading' and at > now:
+                it['retry_in_s'] = round(at - now)
+        return job
 
     # -------------------------------------------------------------------------------------------------- the actions --
     def _parent_for(self, folder):
@@ -923,7 +937,7 @@ class Setup:
             self._set(it, 'downloading')
             d = download.Download(f['url'], dest, f['size'], f['sha256'], control,
                                   lambda done, total, phase: tracker.progress(offset + done, it['bytes_total'], phase),
-                                  allowed=self.allowed, context=self.context)
+                                  allowed=self.allowed, context=self.context, waiting=tracker.waiting)
             try:
                 return d.run(), True
             except download.BadChecksum:
@@ -949,6 +963,7 @@ class Setup:
             with self.lock:
                 it['bytes_total'], it['bytes_done'] = pack['download_bytes'], 0
         staged = work / 'unpack'
+        _fresh_unpack(staged, {'pack': pack['id'], 'revision': pack.get('revision'), 'files': [f['sha256'] for f in pack['files']]})
         got, offset = [], 0
         for f in pack['files']:
             path, ours = self._get_file(it, f, plan, work, control, offset)
@@ -1121,6 +1136,27 @@ def _margin(total):
     """Room left free beyond what an install needs: 5% of the disk, at least 5 GB and at most 20 GB (5% of an 8 TB disk would
     rule out every library)."""
     return max(RECOMMEND_MARGIN, min(int((total or 0) * 0.05), RECOMMEND_MARGIN_MAX))
+
+
+def _fresh_unpack(staged, stamp):
+    """The unpack folder keeps whole files from an earlier run, so a resumed job does not unpack them again. That is only right
+    for the same pack: files left by another pack (or another revision) would be taken as whole when their size matches. So the
+    folder carries a note of what it was unpacked from, and is emptied when that is not what comes next. The new note is written
+    only once the folder is empty: a file that cannot be removed (still open on Windows) stops setup instead of being reused."""
+    note = Path(staged) / 'unpacked-from.json'
+    try:
+        same = json.loads(note.read_text(encoding='utf-8')) == stamp
+    except (OSError, ValueError):
+        same = False
+    if not same and Path(staged).exists():
+        try:
+            note.unlink(missing_ok=True)
+            shutil.rmtree(staged)
+        except OSError as e:
+            raise install.Refused('unpack', f'Lastbook could not clear the files of the previous download ({type(e).__name__}). '
+                                            'Close anything that may be using them, then try again.')
+    Path(staged).mkdir(parents=True, exist_ok=True)
+    install._write_json(note, stamp)
 
 
 def _tree_size(p):
