@@ -117,6 +117,8 @@ issue before any code.
 [REGIONS-CL.md](REGIONS-CL.md) does the same for Chile's 16 regions.
 [REGIONS-AE.md](REGIONS-AE.md) does the same for the United Arab Emirates, proposed as one map for all seven emirates.
 [REGIONS-IN.md](REGIONS-IN.md) does the same for India's 28 states and 8 union territories.
+[REGIONS-PK.md](REGIONS-PK.md) does the same for Pakistan's provinces and territories, with Islamabad and Rawalpindi
+as one map.
 
 ## Checking a map change
 
