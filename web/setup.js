@@ -401,7 +401,7 @@
     main.innerHTML = `<h1>Copy for someone else</h1>
       <p class="lead">Copy the ${esc(p ? p.title : 'Lastbook')} library${need ? ` (${size(need)})` : ''} to ${esc(r.disk || home(r.path || ''))}, with a START-HERE.txt that says how to set it up on another computer.</p>
       <div class="s-have"><div class="s-row">${ico('folder', 's-ri')}<span><b>${esc(home(r.path || ''))}</b><small>${r.free_bytes != null ? size(r.free_bytes) + ' free there' : ''}</small></span></div></div>
-      <p class="s-note">Not copied: your settings, saved things, chats, notes, address search and the local AI. Only the library’s own files go onto the drive, each checked as it is copied.</p>
+      <p class="s-note">Not copied: your settings, saved things, chats, notes, address search and the local AI. Only the library’s own files go onto the drive, and each is read back from the drive to make sure it arrived whole.</p>
       <p class="s-two"><button class="btn big" id="copyGo">Copy</button> <button class="btn big plain" id="copyBack">Back</button></p>
       <p class="s-note" id="haveNote"${note ? '' : ' hidden'}>${esc(note)}</p>`;
     $('#copyBack').onclick = () => go('manage');
@@ -415,7 +415,8 @@
   function copiedView() {
     const r = (S.job && S.job.result) || {};
     main.innerHTML = `<div class="s-done">${ico('ok', 's-big')}<h1>Copied</h1>
-      <p class="lead">The drive now holds the library (${r.files || 0} files${r.bytes ? ', ' + size(r.bytes) : ''}) and START-HERE.txt, which says how to set it up on another computer. Eject the drive before you unplug it.</p>
+      <p class="lead">The drive now holds the library (${r.files || 0} files${r.bytes ? ', ' + size(r.bytes) : ''}, each read back and checked) and ${esc(r.start_here || 'START-HERE.txt')}, which says how to set it up on another computer.</p>
+      <p class="s-note"><b>Eject the drive before you unplug it</b>, so the last files are written.</p>
       <button class="btn big" id="back">Back to Library and local AI</button></div>`;
     live.textContent = 'Copied.';
     S.job = null;
@@ -493,7 +494,7 @@
     else if (it.state === 'paused' && noDownload(it)) t = `${STOPPED[it.paused_from] || 'Stopped'}${it.paused_from === 'unpacking' && it.bytes_done && it.bytes_total ? ` at ${size(it.bytes_done)} of ${size(it.bytes_total)}` : ''}. Nothing to download.`;
     else if ((it.state === 'waiting' || it.state === 'paused') && !it.bytes_done) t = it.bytes_total ? `${size(it.bytes_total)} to download${behind(it) ? ', after the one above' : ''}` : '';
  else if (it.state === 'paused' || it.state === 'waiting' || it.state === 'failed') t = it.bytes_total && it.bytes_done ? `${size(it.bytes_done)} of ${size(it.bytes_total)}` : '';
-    else if (it.kind === 'copy' && (it.state === 'copying' || it.state === 'paused' || it.state === 'failed')) t = [`${size(it.bytes_done)} of ${size(it.bytes_total)} copied`, it.state === 'copying' ? rate(it.rate_bps) : '', it.state === 'copying' ? eta(it.eta_s) : ''].filter(Boolean).join(' · ');
+    else if (it.kind === 'copy' && (it.state === 'copying' || it.state === 'paused' || it.state === 'failed')) t = [`${size(it.bytes_done)} of ${size(it.bytes_total)} copied and checked`, it.state === 'copying' ? rate(it.rate_bps) : '', it.state === 'copying' ? eta(it.eta_s) : ''].filter(Boolean).join(' · ');
     else if (it.state === 'verifying') t = 'Making sure every byte is right';
     else if (it.state === 'unpacking') t = it.bytes_total ? `Unpacking: ${size(it.bytes_done)} of ${size(it.bytes_total)}${it.eta_s != null ? ' · ' + eta(it.eta_s) : ''}` : 'Opening the files into the library folder';
     else if (it.state === 'activating') t = it.kind === 'map' ? 'Switching to the new map' : 'Switching to the new library';

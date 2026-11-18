@@ -1810,6 +1810,103 @@ class Manage(Base):
         self.assertEqual(self.setup().start(copy_to=str(self.tmp))['code'], 'nothing')
         self.assertEqual(sorted(p.name for p in taken.iterdir()), ['something.txt'])
 
+    def test_copy_reads_each_file_back_from_the_drive(self):
+        """A drive that gives back other bytes than were written (a fake-capacity stick) stops the copy, for listed files and a
+        state map's files (which the list has no SHA-256 for) alike, and nothing of that file is left as if whole."""
+        lib = self.installed_library()
+        files = {'derived/geo/map.sqlite': b'state map'}
+        (lib / 'derived' / 'geo').mkdir(parents=True)
+        (lib / 'derived' / 'geo' / 'map.sqlite').write_bytes(b'state map')
+        (lib / 'map-set.json').write_text(json.dumps({'name': 'CA', 'files': {k: len(v) for k, v in files.items()}}))
+        real = api._read_back
+        for lying in ('big.bin.partial', 'map.sqlite.partial'):
+            with self.subTest(lying=lying):
+                drive = self.tmp / ('drive-' + lying)
+                drive.mkdir()
+                fake = lambda path, control, progress, lying=lying: '0' * 64 if Path(path).name == lying else real(path, control, progress)
+                s = self.setup('manage', current=lib)
+                with mock.patch.object(api, '_read_back', fake):
+                    s.start(copy_to=str(drive))
+                    j = self.wait(s)
+                self.assertEqual((j['state'], j['error']['code']), ('failed', 'copy'), j)
+                self.assertIn('The drive gave back different bytes', j['error']['message'])
+                name = lying[:-len('.partial')]
+                self.assertFalse(any(p.name in (name, lying) for p in drive.rglob('*')))   # neither the file nor its .partial
+                self.assertFalse((drive / 'START-HERE.txt').exists())
+
+    def test_copy_refuses_fat_for_a_file_of_4_gb_before_starting(self):
+        lib = self.installed_library()
+        rows = (lib / 'pack-manifest.tsv').read_text().rstrip('\n') + f'\nlibrary-data/collections/big.zim\t{5 * 2 ** 30}\t{"0" * 64}\tclone\t\n'
+        (lib / 'pack-manifest.tsv').write_text(rows)
+        s = self.setup('manage', current=lib)
+        drive = self.drive()
+        with mock.patch.object(hardware, 'disk_of', return_value=(10 ** 12, 10 ** 12)):
+            with mock.patch.object(hardware, 'fs_type', return_value='vfat'):
+                r = s.start(copy_to=str(drive))
+            self.assertEqual(r['code'], 'fat')
+            self.assertIn('exFAT', r['error'])
+            self.assertEqual(list(drive.iterdir()), [])                          # refused before anything was written
+            with mock.patch.object(hardware, 'fs_type', return_value='exfat'):
+                self.assertNotEqual(s.start(copy_to=str(drive)).get('code'), 'fat')
+        s.cancel()
+
+    def test_copy_counts_room_in_the_drives_clusters(self):
+        lib = self.installed_library()
+        s = self.setup('manage', current=lib)
+        drive = self.drive()
+        with mock.patch.object(hardware, 'disk_of', return_value=(2 * 2 ** 30, 10 ** 12)), \
+             mock.patch.object(hardware, 'cluster_size', return_value=2 ** 30):        # each file takes a whole cluster
+            r = s.start(copy_to=str(drive))
+        self.assertEqual(r['code'], 'no_space')
+        self.assertGreater(r['need_bytes'], 4 * 2 ** 30)                           # 4 files and 2 folders of 1 GB clusters, not ~1 MB
+        with mock.patch.object(hardware, 'cluster_size', return_value=4096):
+            s.start(copy_to=str(drive))
+            self.assertEqual(self.wait(s)['state'], 'done')
+
+    def test_copy_keeps_someone_elses_start_here(self):
+        lib = self.installed_library()
+        drive = self.drive()
+        (drive / 'START-HERE.txt').write_text('My camping photos are in DCIM.')
+        s = self.setup('manage', current=lib)
+        s.start(copy_to=str(drive))
+        j = self.wait(s)
+        self.assertEqual(j['result']['start_here'], 'START-HERE (Lastbook).txt')
+        self.assertEqual((drive / 'START-HERE.txt').read_text(), 'My camping photos are in DCIM.')
+        self.assertIn('LastbookData', (drive / 'START-HERE (Lastbook).txt').read_text(encoding='utf-8'))
+        s.job = None
+        (drive / 'START-HERE.txt').unlink()
+        (drive / 'START-HERE (Lastbook).txt').rename(drive / 'START-HERE.txt')     # our own from an earlier copy: replaced
+        shutil.rmtree(drive / 'LastbookData')                                      # a finished copy is not copied over: start afresh
+        s.start(copy_to=str(drive))
+        self.assertEqual(self.wait(s)['result']['start_here'], 'START-HERE.txt')
+
+    def test_copy_refuses_a_link_out_of_the_library(self):
+        lib = self.installed_library()
+        outside = self.tmp / 'outside-catalog.json'
+        outside.write_bytes((lib / 'library-data' / 'catalog.json').read_bytes())    # the same bytes: only the link gives it away
+        (lib / 'library-data' / 'catalog.json').unlink()
+        try:
+            os.symlink(outside, lib / 'library-data' / 'catalog.json')
+        except OSError:
+            self.skipTest('cannot make a symbolic link here')
+        drive = self.drive()
+        r = self.setup('manage', current=lib).start(copy_to=str(drive))
+        self.assertEqual(r['code'], 'copy')
+        self.assertIn('leads outside the library', r['error'])
+        self.assertEqual(list(drive.iterdir()), [])
+
+    def test_fs_type_from_mountinfo(self):
+        info = self.tmp / 'mountinfo'
+        info.write_text('22 1 0:21 / / rw,relatime - btrfs /dev/root rw\n'
+                        '30 22 8:17 / /media/you/MY\\040DRIVE rw,nosuid - vfat /dev/sdb1 rw\n'
+                        '31 22 8:33 / /media/you/MY rw - exfat /dev/sdc1 rw\n')
+        with mock.patch.object(hardware.os.path, 'realpath', side_effect=lambda p: p):
+            self.assertEqual(hardware._linux_fs_type('/media/you/MY DRIVE/folder', info), 'vfat')   # the escaped space, longest match
+            self.assertEqual(hardware._linux_fs_type('/media/you/MY', info), 'exfat')
+            self.assertEqual(hardware._linux_fs_type('/media/you/MYOTHER', info), 'btrfs')           # not inside /media/you/MY
+            self.assertEqual(hardware._linux_fs_type('/srv/x', info), 'btrfs')
+        self.assertIsNone(hardware._linux_fs_type('/x', self.tmp / 'missing'))
+
     def test_cancel_a_copy_keeps_the_library_and_a_waiting_switch(self):
         lib = self.installed_library()
         s = self.setup('manage', current=lib)

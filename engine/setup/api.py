@@ -31,6 +31,7 @@ RECOMMEND_MARGIN = 5 * 10 ** 9     # beyond what the install needs, so the disk 
 RECOMMEND_MARGIN_MAX = 20 * 10 ** 9
 MAX_BODY = 64 * 1024
 ACTIVE = ('waiting', 'downloading', 'verifying', 'unpacking', 'activating', 'copying')
+FAT_MAX = 4 * 2 ** 30 - 1        # the largest file FAT32 can hold
 COPY_MARK = '.lastbook-copy-in-progress'   # in a copy's LastbookData until it is complete: copying there again carries on
 START_HERE = """Lastbook: an offline survival library
 
@@ -73,6 +74,46 @@ def _sha256(path, control, progress):
             done += len(b)
             progress(done, total)
     return h.hexdigest()
+
+
+def _drop_cache(fd):
+    """Ask the system to forget its cached copy of a file just written, so reading it back comes from the drive. Best effort:
+    Linux drops the pages; elsewhere the read-back may come partly from the cache."""
+    try:
+        os.posix_fadvise(fd, 0, 0, os.POSIX_FADV_DONTNEED)
+    except (AttributeError, OSError):
+        pass
+
+
+def _read_back(path, control, progress):
+    """SHA-256 of a file as the drive gives it back. On a Mac the read skips the cache (F_NOCACHE)."""
+    h, done = hashlib.sha256(), 0
+    with open(path, 'rb') as f:
+        if sys.platform == 'darwin':
+            try:
+                import fcntl
+                fcntl.fcntl(f.fileno(), 48, 1)      # F_NOCACHE
+            except (ImportError, OSError):
+                pass
+        _drop_cache(f.fileno())
+        while True:
+            control.check()
+            b = f.read(8 * 1024 * 1024)
+            if not b:
+                break
+            h.update(b)
+            done += len(b)
+            progress(done)
+    return h.hexdigest()
+
+
+def _ours(path):
+    """Is this START-HERE.txt one a Lastbook copy wrote?"""
+    try:
+        with open(path, encoding='utf-8', errors='replace') as f:
+            return f.readline().strip() == START_HERE.splitlines()[0]
+    except OSError:
+        return False
 
 
 def _same_disk(a, b):
@@ -639,9 +680,13 @@ class Setup:
             rows += [(rel, int(size), None) for rel, size in sorted(mp['files'].items()) if install.map_member(rel)]
             rows.append(('map-set.json', (lib / 'map-set.json').stat().st_size, None))
         rows.append(('pack-manifest.tsv', (lib / 'pack-manifest.tsv').stat().st_size, None))
+        root = lib.resolve()
         for rel, _, _ in rows:
             if '..' in Path(rel).parts or Path(rel).is_absolute():
                 raise install.Refused('copy', f'The library lists a file outside itself ({rel[:80]!r}), so it was not copied.')
+            real = (lib / rel).resolve()        # a link inside the library must not bring in a file from elsewhere (as library.real_path)
+            if root not in real.parents:
+                raise install.Refused('copy', f'The library’s {rel[:80]} leads outside the library, so nothing was copied.')
         return rows
 
     def _start_copy(self, where):
@@ -671,10 +716,19 @@ class Setup:
                 return {'error': 'Lastbook cannot save there. Choose a drive you can write to.', 'code': 'folder'}
             try:
                 rows = self.copy_rows(self.current)
-            except (OSError, ValueError, IndexError, install.Refused):
+            except install.Refused as e:
+                return {'error': e.message, 'code': 'copy'}
+            except (OSError, ValueError, IndexError):
                 return {'error': 'This library has no list of its files, so it cannot be copied. Check and repair it first.', 'code': 'unavailable'}
             total = sum(r[1] for r in rows)
-            left = sum(size for rel, size, _ in rows if not ((target / rel).is_file() and (target / rel).stat().st_size == size))
+            if max(r[1] for r in rows) >= FAT_MAX and (hardware.fs_type(target.parent) or '').lower() in hardware.FAT:
+                return {'error': 'That drive cannot hold files larger than 4 GB (it is FAT32), and this library has some. Use a drive formatted as exFAT.',
+                        'code': 'fat'}
+            cluster = hardware.cluster_size(target.parent) or 128 * 1024   # unknown: assume exFAT's usual 128 KB
+            on_disk = lambda n: -(-n // cluster) * cluster                     # every file takes whole clusters
+            dirs = {str(Path(rel).parent) for rel, _, _ in rows}
+            left = sum(on_disk(size) for rel, size, _ in rows if not ((target / rel).is_file() and (target / rel).stat().st_size == size))
+            left += len(dirs) * cluster
             free, _ = hardware.disk_of(target.parent)
             if free < left + 64 * 2 ** 20:
                 return {'error': f'This needs {_gb(left)} free, and that drive has {_gb(free)}. Choose a larger drive.', 'code': 'no_space',
@@ -691,7 +745,9 @@ class Setup:
             return self.public_job()
 
     def _do_copy(self, it, plan, control):
-        """Each file to <target>/<path>.partial, its SHA-256 worked out as it is written, then renamed when it matches the list.
+        """Each file to <target>/<path>.partial, then read back from the drive (past the system's cache where it can) and renamed
+        only when what the drive gives back has the SHA-256 the list says, or, for a state map's files, the one read from the
+        library. A drive that loses data (a fake-capacity stick) is caught here, not by the person with no internet.
         A file already there at its size and SHA-256 (an earlier copy that stopped) is kept. The source is never changed."""
         src, dst = Path(plan['source']), Path(plan['target'])
         rows = self.copy_rows(src)
@@ -702,7 +758,7 @@ class Setup:
         for rel, size, digest in rows:
             control.check()
             a, b = src / rel, dst / rel
-            if b.is_file() and b.stat().st_size == size and (digest is None or _sha256(b, control, lambda d, t: None) == digest):
+            if b.is_file() and b.stat().st_size == size and digest is not None and _read_back(b, control, lambda n: None) == digest:
                 done += size
                 tracker.progress(done, total, 'copying')
                 continue
@@ -711,7 +767,7 @@ class Setup:
             b.parent.mkdir(parents=True, exist_ok=True)
             part = b.with_name(b.name + '.partial')
             plan['partial'] = str(part)
-            h, base = hashlib.sha256(), done
+            h, base, written = hashlib.sha256(), done, 0
             try:
                 with open(a, 'rb') as fa, open(part, 'wb') as fb:
                     while True:
@@ -721,17 +777,25 @@ class Setup:
                             break
                         fb.write(chunk)
                         h.update(chunk)
-                        done += len(chunk)
-                        tracker.progress(done, total, 'copying')
+                        written += len(chunk)
+                        tracker.progress(base + written // 2, total, 'copying')    # writing is half the work, reading it back the other
                     fb.flush()
                     os.fsync(fb.fileno())
+                    _drop_cache(fb.fileno())
             except OSError as e:
-                if e.errno in (errno.EFBIG, errno.EINVAL) and size >= 4 * 2 ** 30:
+                too_big = size > FAT_MAX and written >= FAT_MAX - 64 * 2 ** 20
+                if too_big and e.errno in (errno.EFBIG, errno.EINVAL, errno.ENOSPC):   # Windows says "disk full" at FAT's 4 GB limit
                     raise install.Refused('copy', 'That drive cannot hold files larger than 4 GB (it is probably FAT32). Use a drive formatted as exFAT.')
                 raise
-            if digest is not None and h.hexdigest() != digest:
+            source = h.hexdigest()
+            if digest is not None and source != digest:
                 part.unlink()
                 raise install.Refused('copy', f'The library’s {rel} does not match its published copy, so it was not copied. Check and repair the library, then copy again.')
+            back = _read_back(part, control, lambda n: tracker.progress(base + (size + n) // 2, total, 'copying'))
+            if back != source:
+                part.unlink()
+                raise install.Refused('copy', f'The drive gave back different bytes for {rel} than were written to it. It may be faulty, or smaller '
+                                              'than it claims. Use another drive.')
             os.replace(part, b)
             plan.pop('partial', None)
             done = base + size
@@ -743,14 +807,18 @@ class Setup:
         c = plan.get('copied') or {}
         text = START_HERE.format(title=plan.get('title') or 'Lastbook', size=_gb(c.get('bytes') or 0), files=c.get('files') or 0,
                                  date=time.strftime('%Y-%m-%d'), data=DATA_NAME)
-        tmp = dst.parent / 'START-HERE.txt.partial'
+        name = 'START-HERE.txt'
+        there = dst.parent / name
+        if there.exists() and not _ours(there):     # someone else's file of that name: keep it, use another name
+            name = 'START-HERE (Lastbook).txt'
+        tmp = dst.parent / (name + '.partial')
         tmp.write_text(text, encoding='utf-8', newline='\r\n')      # Windows line ends: every computer's text editor opens it
-        os.replace(tmp, dst.parent / 'START-HERE.txt')
+        os.replace(tmp, dst.parent / name)
         try:
             (dst / COPY_MARK).unlink()
         except FileNotFoundError:
             pass
-        self.job['result'] = {'files': c.get('files'), 'bytes': c.get('bytes'), 'folder': str(dst)}
+        self.job['result'] = {'files': c.get('files'), 'bytes': c.get('bytes'), 'folder': str(dst), 'start_here': name}
 
     def _check_library(self, it, lib, control):
         """Files of the open library that are missing or differ from its pack-manifest.tsv (path, bytes, sha256)."""
