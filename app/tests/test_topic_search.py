@@ -98,6 +98,8 @@ FIRST = {
     'furnace': ['shelter', 'cold'], 'furnace is out': ['shelter', 'cold'], 'frostnip': ['hurt', 'heatcold'],
     'forest fire': ['disaster', 'wildfire'], 'forest fires': ['disaster', 'wildfire'],
     'forest fire smoke': ['disaster', 'smoke'], 'Hydro': ['power', 'first-hours'], 'Frostnip': ['hurt', 'heatcold'],
+    'cold': ['shelter', 'cold'], 'its cold': ['shelter', 'cold'],
+    'house fire': ['disaster', 'home-fire'], 'my house is on fire': ['disaster', 'home-fire'],
 }
 # Searches the new words must not disturb: [guide, choice] that comes first.
 UNDISTURBED = {
@@ -107,6 +109,9 @@ UNDISTURBED = {
     'ice': ['water', 'inhome'], 'micro-hydro': ['energy', None], 'wind': ['disaster', 'hurricane'],
     'winter storm': ['shelter', 'cold'], 'furnace smells like gas': ['power', 'gas'], 'gas furnace': ['power', 'gas'],
     'lost in the forest': ['comms', 'signal'],
+    'cold frame': ['repair', 'build'], 'freezing': ['shelter', 'cold'],
+    'fire alarm': ['disaster', 'home-fire'], 'smoke alarm': ['disaster', 'home-fire'], 'smoke': ['disaster', 'smoke'],
+    'fires after an earthquake': ['disaster', 'earthquake-after'],
 }
 TOPS = sorted({*SAME_AS, *SAME_AS.values(), *SAME_GUIDE, *SAME_GUIDE.values(), *FIRST, *UNDISTURBED})
 
