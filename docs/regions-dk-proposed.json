@@ -547,5 +547,104 @@
     "Shelters (sikringsrum): no public list. A national survey began on 16 September 2026 and is due in 2027 (mssb.dk, opened).",
     "Building heights: neither GeoDanmark nor BBR has one (see buildings).",
     "Crop parcels: Marker 2026 is downloadable without an account, but no licence was found."
-  ]
+  ],
+  "addressing": {
+    "order": "Street name, house number, then floor and door, then postcode and town: 'Rådhuspladsen 1, 1550 København V'. A supplementary town name (supplerende bynavn) goes on its own line between the street line and the postcode line.",
+    "source": "https://danmarksadresser.dk/regler-og-vejledning/adresser",
+    "verified": "2026-11-17",
+    "house_number": "1 to 999, optionally followed by a capital letter A to Z with no space; I, J, O and Q are not used in new numbers.",
+    "floor": "st (ground floor), then 1 to 99; kl for the basement and k2 for the level below it.",
+    "door": "tv (left), th (right) or mf (middle); or 1, 2, 3 numbered from the left; or up to 4 characters from a-z, 0-9 and hyphen.",
+    "postal_code": {
+      "format": "Four digits, 1050 to 9990 in the address data.",
+      "example_pattern": "0000",
+      "relation_to_regions": "Postcodes are set under the Postal Act with 'ingen automatisk sammenhæng' (no automatic connection) to administrative boundaries (danmarksadresser.dk, opened). In the OpenAddresses copy of DAR (27 March 2026; 3,933,406 rows; 1,089 postcodes), 38 postcodes cross a region boundary, for example 7100 Vejle with 921 addresses in Midtjylland and 9500 Hobro with 789. An index per region must be cut by municipality code, not by postcode.",
+      "postal_districts": "Copenhagen, Aarhus, Odense and Aalborg postcodes carry a district letter or two after the town: København K, V, Ø, N, S, NV, SV; Aarhus C, N, V; Odense C, M, NV, SV, SØ, NØ."
+    },
+    "letters": "Street and town names use æ, ø and å, and older spellings write å as aa: 695 street names contain aa and 4,499 contain å, and twenty postal towns use Aa (Aarhus, Aalborg, Aabenraa, Faaborg). Some names also hold ä, ö, ü or é.",
+    "counts": {
+      "rows": 3933406,
+      "with_floor_or_door": 1483234,
+      "with_supplementary_town_name": 970880,
+      "number_digits_only": 3309201,
+      "number_with_letter": 624205,
+      "source": "OpenAddresses sources/dk/countrywide.json, from DAR, 27 March 2026"
+    },
+    "current_code": {
+      "read": "engine/address_search.py, 17 November 2026, by calling its functions",
+      "is_address_query": "Needs the query to start with a digit, so 'Rådhuspladsen 1, 1550 København V' and 'Nørrebrogade 20, 2. th, 2200 København N' are not treated as addresses.",
+      "normalize": "Keeps only a-z and 0-9: 'København' becomes 'k benhavn', 'Århus' becomes 'rhus', 'Ærøskøbing' becomes 'r sk bing'. Århus and Aarhus never meet.",
+      "postcode": "_parts() reads only a five-digit last word; a Danish postcode stays in the street words.",
+      "state_guess": "A last word equal to a US state code is taken for a state: '12 Tomsgårdsvej 2400 København NV' is searched in Nevada. NV is a postal district in København and Odense.",
+      "build": "tools/build_addresses.py keeps only country = 'US'."
+    }
+  },
+  "help_points_osm_counts": {
+    "source": "taginfo for the Geofabrik Denmark extract, data until 2026-11-16T21:17:39Z",
+    "verified": "2026-11-17",
+    "amenity=pharmacy": 546,
+    "amenity=hospital": 193,
+    "amenity=fire_station": 256,
+    "amenity=police": 154,
+    "amenity=drinking_water": 1022,
+    "amenity=shelter": 7844,
+    "emergency=defibrillator": 2775,
+    "emergency=siren": 38,
+    "military=bunker": 2201,
+    "building=bunker": 1628,
+    "amenity=shelter by shelter_type": {
+      "lean_to": 4049,
+      "public_transport": 1841,
+      "picnic_shelter": 1455,
+      "source": "taginfo tag combinations, same data date"
+    },
+    "note": "Over half of the amenity=shelter in Denmark are lean-tos at nature camping sites (shelterpladser), not emergency shelters. tools/build_region_map.py (PR #80) drops the public_transport ones and keeps the rest under one class."
+  },
+  "emergency_numbers": [
+    {
+      "number": "112",
+      "use": "Emergency: ambulance, fire, police",
+      "verified": "opened (politi.dk, rn.dk)"
+    },
+    {
+      "number": "114",
+      "use": "Police, not urgent",
+      "url": "https://politi.dk/om-politiet/kontakt-politiet/service-114",
+      "verified": "opened"
+    },
+    {
+      "number": "1813",
+      "use": "Akuttelefonen, Region Hovedstaden, 24 hours",
+      "verified": "search only"
+    },
+    {
+      "number": "1818",
+      "use": "Lægevagten (out-of-hours doctor), Region Sjælland",
+      "url": "https://www.regionsjaelland.dk/sundhed/akuthjaelp/laegevagten-ring-1818",
+      "verified": "opened"
+    },
+    {
+      "number": "70 11 07 07",
+      "use": "Lægevagten, Region Syddanmark",
+      "verified": "opened"
+    },
+    {
+      "number": "70 11 31 31",
+      "use": "Lægevagten, Region Midtjylland",
+      "url": "https://www.sundhed.rm.dk/akuthjalp/lagevagten/",
+      "verified": "opened"
+    },
+    {
+      "number": "70 15 03 00",
+      "use": "Lægevagten, Region Nordjylland",
+      "url": "https://rn.dk/da/Sundhed/Akut-sygdom/Laegevagten",
+      "verified": "opened"
+    }
+  ],
+  "related": {
+    "pr_84": "eu-dk: all of Denmark from the same extract, boxed by Geofabrik's outline.",
+    "pr_35": "dk-kob: a Copenhagen box cut from the same extract.",
+    "pr_80": "tools/build_region_map.py builds a map from this extract and any of the boxes above with no change.",
+    "issue_31": "The shared design discussion for regions outside the US."
+  }
 }
