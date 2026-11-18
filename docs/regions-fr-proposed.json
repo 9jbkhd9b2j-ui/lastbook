@@ -102,13 +102,13 @@
         "notes": "Edition 2026-09-15, GPKG per département or region. detail_hydrographique holds springs (nature Source and Source captée). Tried for 14, 50 and 61."
       },
       {
-        "dataset": "BD Topage® Métropole 2026",
+        "dataset": "BD Topage® 2026",
         "publisher": "Sandre / OFB, with IGN",
         "url": "https://services.sandre.eaufrance.fr/telechargement/geo/ETH/BDTopage/2026/",
         "licence": "Licence-Ouverte-2.0",
         "verified": "2026-11-17",
         "role": "alternative",
-        "notes": "Metropolitan France only, national files only."
+        "notes": "One file per territory, not per département. The 2026 folder has a shapefile zip for each of metropolitan France (FXX), Guadeloupe (GLP), Martinique (MTQ), Mayotte (MYT) and La Réunion (REU), and none for Guyane (second check)."
       },
       {
         "dataset": "OpenStreetMap waterways and water areas",
@@ -127,7 +127,7 @@
         "licence": "Licence-Ouverte-2.0",
         "verified": "2026-11-17",
         "role": "primary",
-        "notes": "WFS ObstEcoul_FXX, filterable by CdDepartement. River obstacles, not a reservoir inventory: no storage and almost no structure heights. Meaning of CdTypeOuvrage codes not checked. Overseas: Sandre's WFS has ObstEcoul_GLP, _MTQ, _GUF, _REU, _MYT and _all beside _FXX; counts on 2026-11-17 (resultType=hits): 120,038 metropolitan, 113 Guadeloupe, 388 Martinique, 741 Guyane, 140 La Réunion, 156 Mayotte, 125,818 in all (second check, measured)."
+        "notes": "WFS ObstEcoul_FXX, filterable by CdDepartement. River obstacles, not a reservoir inventory: no storage and almost no structure heights. Meaning of CdTypeOuvrage codes not checked. Overseas: Sandre's WFS has ObstEcoul_GLP, _MTQ, _GUF, _REU, _MYT and _all beside _FXX; counts on 2026-11-17 (resultType=hits): 120,038 metropolitan, 113 Guadeloupe, 388 Martinique, 741 Guyane, 140 La Réunion, 156 Mayotte, 125,818 in all (second check, measured). The six territory layers sum to 121,576, and the 4,242 more in _all are rows whose status is \"Gelé\" (frozen); the other 121,576 are \"Validé\" (second check, measured)."
       }
     ],
     "crops": [
@@ -1316,7 +1316,7 @@
         "url": "https://geo.api.gouv.fr/regions/01",
         "verified": "2026-11-17; IGN and BAN files seen in the download feeds and by HEAD only, not tried",
         "overture_addresses_licence": "Licence-Ouverte-2.0: Overture files these rows under FR, with no rows under GP, MQ, GF, RE or YT (second check, measured)",
-        "notes": "Small neighbouring islands (Dominica, Montserrat) are not in the Natural Earth 1:110m outlines; overlap not checked. Saint-Barthélemy and Saint-Martin are not part of this region but use 971xx postcodes. They lie outside the box: BD TOPO's collectivite_territoriale layer puts Saint-Barthélemy at 62.93° to 62.79° W, 17.87° to 17.97° N and Saint-Martin at 63.15° to 62.97° W, 18.05° to 18.13° N, at least 1.2° north and 0.8° west of the padded box, so a Guadeloupe map would not show their streets (second check, measured). Coverage: MNT LiDAR HD planned; BD TOPAGE 2026 and INPE 2023 present; no OSO; CORINE Land Cover 2012 (second check). Geofabrik offers no free GeoPackage or shapefile for this region (\"not available for this region\"); tools/build_map.py reads the free GeoPackage."
+        "notes": "Small neighbouring islands (Dominica, Montserrat) are not in the Natural Earth 1:110m outlines; overlap not checked. Saint-Barthélemy and Saint-Martin are not part of this region but use 971xx postcodes. They lie outside the box: BD TOPO's collectivite_territoriale layer puts Saint-Barthélemy at 62.93° to 62.79° W, 17.87° to 17.97° N and Saint-Martin at 63.15° to 62.97° W, 18.05° to 18.13° N, at least 1.2° north and 0.8° west of the padded box, so a Guadeloupe map would not show their streets (second check, measured). Coverage: MNT LiDAR HD planned; BD TOPAGE 2026 and INPE 2023 present; no OSO; CORINE Land Cover 2018 (second check). Geofabrik offers no free GeoPackage or shapefile for this region (\"not available for this region\"); tools/build_map.py reads the free GeoPackage."
       }
     },
     {
@@ -1377,7 +1377,7 @@
         "url": "https://geo.api.gouv.fr/regions/02",
         "verified": "2026-11-17; IGN and BAN files seen in the download feeds and by HEAD only, not tried",
         "overture_addresses_licence": "Licence-Ouverte-2.0: Overture files these rows under FR, with no rows under GP, MQ, GF, RE or YT (second check, measured)",
-        "notes": "Small neighbouring islands (Dominica, Saint Lucia) are not in the Natural Earth 1:110m outlines; overlap not checked. Geofabrik offers no free GeoPackage or shapefile for this region (\"not available for this region\"); tools/build_map.py reads the free GeoPackage. Coverage: MNT LiDAR HD planned; BD TOPAGE 2026 and INPE 2023 present; no OSO; CORINE Land Cover 2012 (second check)."
+        "notes": "Small neighbouring islands (Dominica, Saint Lucia) are not in the Natural Earth 1:110m outlines; overlap not checked. Geofabrik offers no free GeoPackage or shapefile for this region (\"not available for this region\"); tools/build_map.py reads the free GeoPackage. Coverage: MNT LiDAR HD planned; BD TOPAGE 2026 and INPE 2023 present; no OSO; CORINE Land Cover 2018 (second check)."
       }
     },
     {
@@ -1438,7 +1438,7 @@
         "url": "https://geo.api.gouv.fr/regions/03",
         "verified": "2026-11-17; IGN and BAN files seen in the download feeds and by HEAD only, not tried",
         "overture_addresses_licence": "Licence-Ouverte-2.0: Overture files these rows under FR, with no rows under GP, MQ, GF, RE or YT (second check, measured)",
-        "notes": "The box covers parts of Suriname and Brazil (Natural Earth 1:110m test). Coverage: MNT LiDAR HD excludes Guyane; INPE 2023 has no Guyane file (its record says \"in progress\"); BD TOPAGE 2026 not found for Guyane, from the State catalogue's listing and two guessed file names that returned 404, which is not proof; no OSO; CORINE Land Cover 2012 (second check)."
+        "notes": "The box covers parts of Suriname and Brazil (Natural Earth 1:110m test). Coverage: MNT LiDAR HD excludes Guyane; INPE 2023 has no Guyane file (its record says \"in progress\"); BD TOPAGE 2026 not found for Guyane: Sandre's 2026 folder lists files for FXX, GLP, MTQ, MYT and REU and none for Guyane (one listing, not a statement by the publisher); no OSO; CORINE Land Cover 2018 (second check)."
       }
     },
     {
@@ -1499,7 +1499,7 @@
         "url": "https://geo.api.gouv.fr/regions/04",
         "verified": "2026-11-17; IGN and BAN files seen in the download feeds and by HEAD only, not tried",
         "overture_addresses_licence": "Licence-Ouverte-2.0: Overture files these rows under FR, with no rows under GP, MQ, GF, RE or YT (second check, measured)",
-        "notes": "No other land within the padded box in the Natural Earth 1:110m outlines; small islands not checked. Geofabrik offers no free GeoPackage or shapefile for this region (\"not available for this region\"); tools/build_map.py reads the free GeoPackage. Coverage: MNT LiDAR HD planned; BD TOPAGE 2026 and INPE 2023 present; no OSO; CORINE Land Cover 2012 (second check)."
+        "notes": "No other land within the padded box in the Natural Earth 1:110m outlines; small islands not checked. Geofabrik offers no free GeoPackage or shapefile for this region (\"not available for this region\"); tools/build_map.py reads the free GeoPackage. Coverage: MNT LiDAR HD planned; BD TOPAGE 2026 and INPE 2023 present; no OSO; CORINE Land Cover 2018 (second check)."
       }
     },
     {
@@ -1560,7 +1560,7 @@
         "url": "https://geo.api.gouv.fr/regions/06",
         "verified": "2026-11-17; IGN and BAN files seen in the download feeds and by HEAD only, not tried",
         "overture_addresses_licence": "Licence-Ouverte-2.0: Overture files these rows under FR, with no rows under GP, MQ, GF, RE or YT (second check, measured)",
-        "notes": "INSEE's population de référence 2023 tables cover France excluding Mayotte. Overlap with the Comoros not checked (not in the Natural Earth 1:110m outlines). Geofabrik offers no free GeoPackage or shapefile for this region (\"not available for this region\"); tools/build_map.py reads the free GeoPackage. Coverage: MNT LiDAR HD planned; BD TOPAGE 2026 and INPE 2023 present; no OSO; CORINE Land Cover 2012 (second check)."
+        "notes": "INSEE's population de référence 2023 tables cover France excluding Mayotte. Overlap with the Comoros not checked (not in the Natural Earth 1:110m outlines). Geofabrik offers no free GeoPackage or shapefile for this region (\"not available for this region\"); tools/build_map.py reads the free GeoPackage. Coverage: MNT LiDAR HD planned; BD TOPAGE 2026 and INPE 2023 present; no OSO; CORINE Land Cover 2018 (second check)."
       }
     }
   ]

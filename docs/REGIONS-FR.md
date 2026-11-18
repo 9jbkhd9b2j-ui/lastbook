@@ -221,8 +221,9 @@ for Guadeloupe, UTM 40 South with REUN89 for La Réunion), and Corsica's BD ALTI
 Lambert-93 conversion does not apply as it is. The ROE layer is named for metropolitan France (`ObstEcoul_FXX`), but
 Sandre's WFS has one layer per territory beside it, `_GLP`, `_MTQ`, `_GUF`, `_REU` and `_MYT`, and `_all`. Counts on 17
 November (`resultType=hits`): 120,038 in metropolitan France, 113 in Guadeloupe, 388 in Martinique, 741 in Guyane, 140
-in La Réunion, 156 in Mayotte, 125,818 in all (second check, measured). Overture files the overseas rows under `FR`
-(see "How addresses are written"). OSM coverage overseas was not checked.
+in La Réunion, 156 in Mayotte, 125,818 in all (second check, measured). The six sum to 121,576, and the 4,242 more in
+`_all` are rows whose status is "Gelé" (frozen); the other 121,576 are "Validé" (second check, measured). Overture files
+the overseas rows under `FR` (see "How addresses are written"). OSM coverage overseas was not checked.
 
 Coverage of the five overseas regions differs by dataset (second check; opened unless marked):
 
@@ -231,13 +232,13 @@ Coverage of the five overseas regions differs by dataset (second check; opened u
 | BD ALTI, BD TOPO, RPG 2025 (as above); RGE ALTI, cadastre; ROE, Overture addresses (measured) | yes | yes | yes | yes | yes | yes |
 | MNT LiDAR HD | planned "by 2026", progress not read | planned | planned | **excluded** | planned | planned |
 | Copernicus GLO-30 | sample tiles | sample tile | sample tile | sample tiles | sample tile | sample tile |
-| BD TOPAGE 2026, INPE 2023 | yes | yes | yes | **no** (INPE), **not found** (TOPAGE) | yes | yes |
+| BD TOPAGE 2026, INPE 2023 | yes | yes | yes | **no** (INPE), **no file listed** (TOPAGE) | yes | yes |
 | OSO (crops) | yes, Corsica included | no | no | no | no | no |
-| CORINE Land Cover | 2018 | 2012 | 2012 | 2012 | 2012 | 2012 |
+| CORINE Land Cover | 2018 | 2018 | 2018 | 2018 | 2018 | 2018 |
 | GeoNames postcode files | `FR.zip`, without 971 to 976 | `GP.zip` | `MQ.zip` | `GF.zip` | `RE.zip` | `YT.zip` |
 
-TOPAGE's absence in Guyane rests on the State catalogue's listing and two guessed file names that returned 404 (not
-proof); INPE's record says Guyane is "in progress".
+TOPAGE's absence in Guyane rests on Sandre's 2026 folder, which lists files for FXX, GLP, MTQ, MYT and REU and none for
+Guyane (one listing, not a statement by the publisher); INPE's record says Guyane is "in progress".
 
 Notes:
 
