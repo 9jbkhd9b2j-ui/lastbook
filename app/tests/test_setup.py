@@ -51,6 +51,8 @@ class Files:
         self.ignore_range = set()
         self.ignore_once = {}     # name -> how many more Range requests get a 200 with the whole file
         self.redirect = {}        # name -> Location
+        self.answers = {}         # name -> answers to give in turn: (status, Retry-After or None), 'whole' (a 200 with the whole
+                                  # file, even to a Range, that leaves cut_after for the next) or None (served as usual)
         self.pace = 0             # seconds to sleep per 64 KiB
         self.lock = threading.Lock()
 
@@ -72,6 +74,15 @@ class Handler(http.server.BaseHTTPRequestHandler):
             self.send_header('Content-Length', '0')
             self.end_headers()
             return
+        with F.lock:
+            answer = F.answers[name].pop(0) if F.answers.get(name) else None
+        if isinstance(answer, tuple):
+            self.send_response(answer[0])
+            if answer[1] is not None:
+                self.send_header('Retry-After', str(answer[1]))
+            self.send_header('Content-Length', '0')
+            self.end_headers()
+            return
         if name not in F.data:
             self.send_response(404)
             self.send_header('Content-Length', '0')
@@ -83,9 +94,9 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 F.corrupt[name] -= 1
                 body = bytes([body[0] ^ 0xff]) + body[1:]
         start, rng = 0, self.headers.get('Range')
-        once = False
+        once = answer == 'whole'
         with F.lock:
-            if rng and F.ignore_once.get(name):
+            if rng and not once and F.ignore_once.get(name):
                 F.ignore_once[name] -= 1
                 once = True
         if rng and name not in F.ignore_range and not once:     # like R2: If-Range is ignored
@@ -100,7 +111,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
         self.end_headers()
         cut = None
         with F.lock:
-            if F.cut_after.get(name):
+            if F.cut_after.get(name) and answer != 'whole':
                 cut = F.cut_after[name].pop(0)
         sent = start
         try:
@@ -175,7 +186,7 @@ class Base(unittest.TestCase):
 
     def setUp(self):
         F = self.files
-        F.data.clear(); F.etag.clear(); F.log.clear(); F.cut_after.clear(); F.corrupt.clear(); F.ignore_range.clear(); F.ignore_once.clear(); F.redirect.clear()
+        F.data.clear(); F.etag.clear(); F.log.clear(); F.cut_after.clear(); F.corrupt.clear(); F.ignore_range.clear(); F.ignore_once.clear(); F.redirect.clear(); F.answers.clear()
         F.pace = 0
         self.tmp = shorttemp.mkdtemp('lastbook-setup-')
         self.home = self.tmp / 'home'
@@ -226,8 +237,17 @@ class Base(unittest.TestCase):
         self.fail(f'job never reached {states}: {s.public_job()}')
 
 
-def fast_backoff():
-    return mock.patch.object(download, 'BACKOFF', (0.05,) * 6)
+class fast_backoff:
+    """Waits between tries shortened to 0.05 s, for broken connections and for a busy server alike."""
+
+    def __enter__(self):
+        self.p = [mock.patch.object(download, 'BACKOFF', (0.05,) * 6), mock.patch.object(download, 'BUSY_BACKOFF', (0.05,) * 6)]
+        for x in self.p:
+            x.start()
+
+    def __exit__(self, *a):
+        for x in self.p:
+            x.stop()
 
 
 # ----------------------------------------------------------------------------------------------------------- tests --
@@ -317,6 +337,84 @@ class Downloads(Base):
         self.assertEqual(ranges[0], None)
         self.assertTrue(all(r and r.startswith('bytes=') for r in ranges[1:]), ranges)
         self.assertEqual(len(ranges), 3)
+
+    def test_busy_server_is_waited_out(self):
+        """downloads.lastbook.org cut a 388 GB download, then answered its resume with 503 for minutes: more 503s in a row than
+        NETWORK_TRIES. A busy server is waited on longer, and the download finishes from where it was cut."""
+        self.files.cut_after['model.gguf'] = [700_000]
+        self.files.answers['model.gguf'] = [None] + [(503, None)] * (download.NETWORK_TRIES + 2) + [(429, None)]   # None: served (and cut)
+        with fast_backoff():
+            p = self.dl('model.gguf').run()
+        self.assertEqual(Path(p).read_bytes(), self.model)
+        ranges = [r for n, r, _ in self.files.log if n == 'model.gguf']
+        self.assertEqual(ranges[0], None)
+        self.assertEqual(set(ranges[1:]), {'bytes=700000-'})                          # every retry resumed, nothing started over
+
+    def test_busy_server_gives_up_as_server(self):
+        """A server busy for good fails with 'server', not 'network': the person's internet is fine. The waits add up to
+        BUSY_LIMIT, however long a Retry-After the server asks for."""
+        for retry_after in (None, 600):
+            with self.subTest(retry_after=retry_after):
+                self.files.log.clear()
+                self.files.answers['model.gguf'] = [(503, retry_after)] * 30
+                waits, d = [], self.dl('model.gguf')
+                d.control.sleep = waits.append
+                with self.assertRaises(download.Failed) as e:
+                    d.run()
+                self.assertEqual(e.exception.code, 'server')
+                self.assertEqual(sum(waits), download.BUSY_LIMIT)
+                self.assertEqual(len(self.files.log), len(waits) + 1)      # one last ask after the last wait
+
+    def test_progress_renews_the_busy_budget(self):
+        """Bytes that arrive before a connection breaks are progress, so the busy waits before them no longer count against
+        BUSY_LIMIT. Before, only the broken-connection count was reset there, and this ran out of budget on the fourth ask."""
+        self.files.cut_after['model.gguf'] = [700_000]
+        self.files.answers['model.gguf'] = [(503, None), None, (503, None), (503, None)]
+        waits, d = [], self.dl('model.gguf')
+        d.control.sleep = waits.append
+        with mock.patch.object(download, 'BUSY_BACKOFF', (10,) * 6), mock.patch.object(download, 'BUSY_LIMIT', 20), \
+                mock.patch.object(download, 'BACKOFF', (0,) * 6):
+            p = d.run()
+        self.assertEqual(Path(p).read_bytes(), self.model)
+        self.assertEqual(waits, [10, 0, 10, 10])
+        self.assertEqual(self.files.log[-1][1], 'bytes=700000-')
+
+    def test_progress_renews_the_stray_200_allowance(self):
+        """A 200 to a resume is asked about once more before starting over. After progress that allowance is there again, so a
+        second passing 200 hours into a large download does not throw away what is downloaded."""
+        self.files.cut_after['model.gguf'] = [500_000, 1_000_000]
+        self.files.answers['model.gguf'] = [None, 'whole', None, 'whole']
+        with fast_backoff():
+            p = self.dl('model.gguf').run()
+        self.assertEqual(Path(p).read_bytes(), self.model)
+        self.assertEqual([r for _, r, _ in self.files.log], [None, 'bytes=500000-', 'bytes=500000-', 'bytes=1000000-', 'bytes=1000000-'])
+
+    def test_pause_during_busy_wait_then_resume(self):
+        """Pause wakes a wait on a busy server at once, the bytes already downloaded are kept, and the next run resumes from them."""
+        self.files.cut_after['model.gguf'] = [700_000]
+        self.files.answers['model.gguf'] = [None, (503, 300)]
+        control, waits = download.Control(), []
+        d = download.Download(f'{self.base}/model.gguf', self.tmp / 'dl' / 'model.gguf', len(self.model), sha(self.model), control,
+                              allowed=ALLOWED, context=self.ctx, waiting=waits.append)
+        threading.Timer(0.5, control.stop, ['paused']).start()
+        t0 = time.time()
+        with fast_backoff(), self.assertRaises(download.Stopped):
+            d.run()
+        self.assertLess(time.time() - t0, 5)                                   # not the 300 s the server asked for
+        self.assertEqual(waits, [300])
+        self.assertEqual(os.path.getsize(d.part), 700_000)
+        p = self.dl('model.gguf').run()
+        self.assertEqual(Path(p).read_bytes(), self.model)
+        self.assertEqual(self.files.log[-1][1], 'bytes=700000-')
+
+    def test_retry_after_is_honoured(self):
+        waits = []
+        self.files.answers['model.gguf'] = [(503, 7), (503, 'Wed, 21 Oct 2015 07:28:00 GMT'), (503, 99999)]
+        d = self.dl('model.gguf')
+        d.control.sleep = waits.append
+        with fast_backoff():
+            d.run()
+        self.assertEqual(waits, [7, 0.05, download.MAX_RETRY_AFTER])
 
     def test_etag_changed_starts_over(self):
         """R2 answers 206 whatever If-Range says, so the ETag is compared here."""
@@ -568,6 +666,26 @@ class Jobs(Base):
         self.assertEqual(j['error']['code'], 'cancelled')
         self.assertFalse((self.parent / 'LastbookData.setup' / 'downloads').exists())
         self.assertFalse((self.parent / 'LastbookData').exists())
+
+    def test_job_shows_busy_wait(self):
+        """While the server is busy, the item says when the next try is, with no rate. Pausing then drops it, and resume finishes."""
+        self.files.cut_after['Lastbook-Small.zip'] = [700_000]
+        self.files.answers['Lastbook-Small.zip'] = [None, (503, 300)]
+        s = self.setup()
+        s.start('small', False)
+        t0 = time.time()
+        while time.time() - t0 < 10 and not s.public_job()['items'][0].get('retry_in_s'):
+            time.sleep(0.02)
+        it = s.public_job()['items'][0]
+        self.assertEqual((it['state'], it['rate_bps'], it['eta_s']), ('downloading', 0, None))
+        self.assertTrue(295 <= it['retry_in_s'] <= 300, it['retry_in_s'])
+        j = s.pause()
+        self.assertEqual(j['state'], 'paused')
+        self.assertNotIn('retry_in_s', j['items'][0])
+        self.assertEqual(j['items'][0]['bytes_done'], 700_000)
+        s.resume()
+        self.assertEqual(self.wait(s)['state'], 'done')
+        self.assertEqual([r for n, r, _ in self.files.log if n == 'Lastbook-Small.zip'][-1], 'bytes=700000-')
 
     def test_rate_and_eta(self):
         self.files.pace = 0.06
@@ -1615,7 +1733,7 @@ class Recommend(Base):
 
     def test_hardware_here(self):
         hw = hardware.detect([self.parent])
-        self.assertIn(hw['os'], ('macos', 'windows', 'linux'))
+        self.assertIn(hw['os'], ('macos', 'windows'))
         self.assertGreater(hw['ram_bytes'], 2 ** 30)
         self.assertTrue(hw['disks'] and hw['disks'][0]['free_bytes'] > 0)
 
