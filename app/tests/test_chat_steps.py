@@ -77,6 +77,37 @@ class Steps(unittest.TestCase):
         self.assertEqual(got[3], 'Read , page 2')
         self.assertEqual(got[5], 'Searched “&lt;b&gt;x&lt;/b&gt;” (videos) — 1 passage')
 
+    def test_encyclopedia_steps_are_escaped(self):
+        got = self.text([
+            {'name': 'search_encyclopedia', 'args': {'query': 'cholera'}, 'summary': {'count': 2}},
+            {'name': 'search_encyclopedia', 'args': {'query': '<b>x</b>'}, 'summary': {'count': 1}},
+            {'name': 'read_encyclopedia', 'args': {'article': 'zim/mdwiki.zim/Cholera'}, 'summary': {'title': 'Cholera'}},
+            {'name': 'read_encyclopedia', 'args': {'article': '<img src=x>'}, 'summary': {'error': 'unknown'}},
+            {'name': 'read_encyclopedia', 'args': {'article': '"><svg onload=alert(1)>'}, 'summary': {'title': '"><svg onload=alert(1)>'}},
+        ])
+        for t in got:
+            self.assertFalse(t.startswith('THROW'), t)
+            self.assertNotIn('<', t)
+        self.assertEqual(got[0], 'Searched the encyclopedias for “cholera” — 2 articles')
+        self.assertEqual(got[1], 'Searched the encyclopedias for “&lt;b&gt;x&lt;/b&gt;” — 1 article')
+        self.assertEqual(got[2], 'Read the encyclopedia article “Cholera”')
+        self.assertEqual(got[3], 'Tried to read an unknown encyclopedia article')
+        self.assertEqual(got[4], 'Read the encyclopedia article “&quot;&gt;&lt;svg onload=alert(1)&gt;”')
+
+    def test_encyclopedia_odd_argument_shapes(self):
+        bad = {'toString': 'x'}
+        got = self.text([
+            {'name': 'search_encyclopedia', 'args': {'query': bad}, 'summary': {'count': 0}},
+            {'name': 'read_encyclopedia', 'args': {'article': bad}, 'summary': {}},
+            {'name': 'search_encyclopedia', 'args': 'not an object', 'summary': {'count': 0}},
+        ])
+        for t in got:
+            self.assertFalse(t.startswith('THROW'), t)
+            self.assertNotIn('<', t)
+        self.assertEqual(got[0], 'Searched the encyclopedias for “” — 0 articles')
+        self.assertEqual(got[1], 'Read the encyclopedia article “”')
+        self.assertEqual(got[2], 'Searched the encyclopedias for “” — 0 articles')
+
 
 if __name__ == '__main__':
     unittest.main()

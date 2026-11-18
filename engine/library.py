@@ -335,25 +335,16 @@ class Handler(http.server.SimpleHTTPRequestHandler):
    self.send_data(json.dumps(result).encode());return
   if url.path=='/api/collection-search':
    try:
-    from libzim.reader import Archive
-    from libzim.search import Searcher,Query
-    params=urllib.parse.parse_qs(url.query);q=params.get('q',[''])[0];hits=[];tried=failed=0
-    for path in (ROOT/'collections').glob('*.zim'):
-     try:zim_file(path.name)
-     except ValueError:continue
-     tried+=1
-     try:
-      with ZIM_LOCK:
-       if path.name not in ZIMS:ZIMS[path.name]=Archive(path)
-       arc=ZIMS[path.name]
-      if not arc.has_fulltext_index:continue
-      result=Searcher(arc).search(Query().set_query(q))
-      for p in result.getResults(0,8):
-       entry=arc.get_entry_by_path(p)
-       hits.append({'title':entry.title,'collection':path.stem,'path':'zim/'+urllib.parse.quote(path.name)+'/'+urllib.parse.quote(p,safe='/')})
-     except Exception as e:  # one damaged file must not cost the answers from the others
-      failed+=1;print(f'collection search skipped {path.name}: {type(e).__name__}',flush=True)
-    if tried and failed==tried:raise ValueError('no collection could be searched')
+    _repo=Path(__file__).resolve().parents[1]
+    if str(_repo) not in sys.path:
+     sys.path.insert(0,str(_repo))
+    from engine import encyclopedias
+    params=urllib.parse.parse_qs(url.query);q=params.get('q',[''])[0]
+    # Same JSON as before: title, collection, path. Text excerpts stay inside Chat, not this UI search.
+    # root=ROOT: this process may have been started with LASTBOOK_LIBRARY, which is
+    # the library-data folder itself. encyclopedias.search defaults to engine.paths.LIB.
+    found=encyclopedias.search(q, read_text=False, excerpt=0, root=ROOT)
+    hits=[{'title':h['title'],'collection':h['collection'],'path':h['path']} for h in found]
     self.send_data(json.dumps(hits).encode())
    except CLIENT_GONE:pass
    except Exception:self.send_data(json.dumps({'error':'Encyclopedia search failed.'}).encode(),status=500)
