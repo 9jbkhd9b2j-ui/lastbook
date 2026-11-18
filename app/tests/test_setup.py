@@ -827,6 +827,93 @@ class Switching(Base):
         self.assertEqual((cur / 'library-data' / 'catalog.json').read_text(), 'old')
         self.assertEqual(sorted(p.name for p in self.parent.iterdir()), ['LastbookData', 'LastbookData.setup'])
 
+    def test_failed_rename_keeps_carried_files(self):
+        """#74: when either rename fails, the model and address indexes stay with the library that reopens."""
+        real = os.replace
+        for failing in ('current aside', 'staged into place'):
+            with self.subTest(failing=failing):
+                shutil.rmtree(self.parent, ignore_errors=True)
+                cur = self.lib(self.parent / 'LastbookData', 'old')
+                new = self.lib(self.parent / 'LastbookData.setup' / 'unpack' / 'LastbookData', 'new')
+                (cur / 'models').mkdir()
+                (cur / 'models' / 'model.gguf').write_bytes(b'model')
+                (cur / 'derived/geo/addresses').mkdir(parents=True)
+                (cur / 'derived/geo/addresses/CA.sqlite').write_bytes(b'address index')
+                source = cur if failing == 'current aside' else new
+
+                def replace(src, dst):
+                    if Path(src) == source:
+                        raise PermissionError('in use')
+                    return real(src, dst)
+                with mock.patch.object(install.os, 'replace', replace), self.assertRaises(install.Refused):
+                    install.switch(new, cur)
+                self.assertEqual((cur / 'library-data' / 'catalog.json').read_text(), 'old')
+                self.assertEqual((cur / 'models' / 'model.gguf').read_bytes(), b'model')
+                self.assertEqual((cur / 'derived/geo/addresses/CA.sqlite').read_bytes(), b'address index')
+                self.assertFalse((new / 'models' / 'model.gguf').exists())
+                self.assertFalse((new / 'derived/geo/addresses/CA.sqlite').exists())
+
+    def carried_libraries(self):
+        shutil.rmtree(self.parent, ignore_errors=True)
+        cur = self.lib(self.parent / 'LastbookData', 'old')
+        new = self.lib(self.parent / 'LastbookData.setup' / 'unpack' / 'LastbookData', 'new')
+        (cur / 'models').mkdir()
+        (cur / 'models' / 'model.gguf').write_bytes(b'model')
+        (cur / 'derived/geo/addresses').mkdir(parents=True)
+        (cur / 'derived/geo/addresses/CA.sqlite').write_bytes(b'address index')
+        return cur, new
+
+    def test_failed_carry_puts_back_what_already_moved(self):
+        """#83 review: the model moves, the address index does not; both stay with the library that reopens."""
+        cur, new = self.carried_libraries()
+        real = os.replace
+
+        def replace(src, dst):
+            if Path(src).name == 'CA.sqlite':
+                raise PermissionError('in use')
+            return real(src, dst)
+        with mock.patch.object(install.os, 'replace', replace), self.assertRaises(install.Refused) as e:
+            install.switch(new, cur)
+        self.assertIn('could not move your files', e.exception.message)
+        self.assertEqual((cur / 'library-data' / 'catalog.json').read_text(), 'old')
+        self.assertEqual((cur / 'models' / 'model.gguf').read_bytes(), b'model')
+        self.assertEqual((cur / 'derived/geo/addresses/CA.sqlite').read_bytes(), b'address index')
+        self.assertFalse((new / 'models' / 'model.gguf').exists())
+
+    def test_failed_carry_back_says_where_the_file_is(self):
+        """If a moved file cannot go back either, the error names where it is."""
+        cur, new = self.carried_libraries()
+        real = os.replace
+
+        def replace(src, dst):
+            if Path(src).name == 'CA.sqlite' or Path(src) == new / 'models' / 'model.gguf':
+                raise PermissionError('in use')
+            return real(src, dst)
+        with mock.patch.object(install.os, 'replace', replace), self.assertRaises(install.Refused) as e:
+            install.switch(new, cur)
+        self.assertIn(str(new / 'models' / 'model.gguf'), e.exception.message)
+        self.assertEqual((new / 'models' / 'model.gguf').read_bytes(), b'model')
+        self.assertEqual((cur / 'derived/geo/addresses/CA.sqlite').read_bytes(), b'address index')
+
+    def test_failed_restore_of_the_old_library_says_where_both_are(self):
+        """#83 review: the new library cannot go in place and the old one cannot come back: the error names both folders."""
+        cur, new = self.carried_libraries()
+        real = os.replace
+
+        def replace(src, dst):
+            if Path(dst) == cur:            # any rename into the library's place fails; moving it aside still works
+                raise PermissionError('in use')
+            return real(src, dst)
+        with mock.patch.object(install.os, 'replace', replace), self.assertRaises(install.Refused) as e:
+            install.switch(new, cur)
+        aside = [p for p in self.parent.iterdir() if p.name.startswith('LastbookData.old-')]
+        self.assertEqual(len(aside), 1)
+        self.assertIn(str(aside[0]), e.exception.message)
+        self.assertIn(str(new / 'models' / 'model.gguf'), e.exception.message)
+        self.assertNotIn('moved back', e.exception.message)
+        self.assertEqual((aside[0] / 'library-data' / 'catalog.json').read_text(), 'old')
+        self.assertEqual((new / 'models' / 'model.gguf').read_bytes(), b'model')
+
     def test_ai_only_in_manage_mode(self):
         cur = self.lib(self.parent / 'LastbookData', '{}')
         (cur / 'pack.json').write_text('{"name": "small"}')
