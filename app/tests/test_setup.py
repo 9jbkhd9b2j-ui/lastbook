@@ -1057,6 +1057,38 @@ class Maps(Base):
         self.assertEqual(install.map_name(new), 'us')
         self.assertEqual((new / 'derived/geo/terrain.sqlite').read_bytes(), terrain)
 
+    def test_repair_restores_a_changed_map_set_json_of_the_packs_own_map(self):
+        """#88 review: a changed map-set.json of the pack's own map is a damaged pack file, not a separate map to download."""
+        lib, terrain = self.library_with_own_map()
+        listed = (lib / 'map-set.json').read_bytes()
+        with open(lib / 'map-set.json', 'ab') as f:
+            f.write(b'\n')
+        (lib / 'derived/geo/terrain.sqlite').unlink()
+        s = self.setup('manage', current=lib, manifest=self.manifest())
+        j = s.start(repair=True)
+        self.assertIsNone(j.get('code'), j)
+        self.assertEqual([i['kind'] for i in j['items']], ['pack'])
+        self.assertEqual(self.wait(s)['state'], 'done')
+        new, note = api.startup(self.settings)
+        self.assertIsNone(note.get('error'))
+        self.assertEqual((new / 'map-set.json').read_bytes(), listed)
+        self.assertEqual((new / 'derived/geo/terrain.sqlite').read_bytes(), terrain)
+
+    def test_repair_keeps_a_state_map_installed_over_the_packs_own(self):
+        """A state map chosen on a pack that ships its own map set (as on Medium) is still a separate map: Repair keeps it."""
+        lib, _ = self.library_with_own_map()
+        mf, map_files = self.map_manifest()
+        unpacked = install.unpack(self.tmp / 'Lastbook-Map-CA.zip', self.tmp / 'map', None, Control(), lambda d, t: None, allowed=install.map_member)
+        install.replace_map_in(lib, unpacked)
+        (lib / 'library-data' / 'big.bin').unlink()
+        s = self.setup('manage', current=lib, manifest=mf)
+        s.start(repair=True)
+        self.assertEqual(self.wait(s)['state'], 'done')
+        new, _ = api.startup(self.settings)
+        self.assertTrue((new / 'library-data' / 'big.bin').is_file())
+        self.assertEqual(install.map_name(new), 'CA')
+        self.assertEqual((new / 'derived/geo/map.sqlite').read_bytes(), map_files['derived/geo/map.sqlite'])
+
     def test_map_into_a_library_with_another_name(self):
         """Windows 1.1.4 test: a library opened with --data from a folder not called LastbookData got the map in a nested
         LastbookData. The job must target the open library as it is."""

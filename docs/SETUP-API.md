@@ -180,6 +180,6 @@ Built by setup-backend (2026-11-12):
 - `found[]` also lists a `Lastbook-Map-*.zip` already on this computer (`kind: "map"`); `use` on it starts the map job
   in manage mode, or is used by the next `start` in first-run setup.
 - Repair checks the pack's own map set (All's `us`) with the pack's other files and fetches it with the pack. A state
-  map installed apart (its `map-set.json` is not the one `pack-manifest.tsv` lists) is checked against its
+  map installed apart (its name is not `pack.json`'s `map`, or `pack-manifest.tsv` lists no `map-set.json`) is checked against its
   `map-set.json` instead: one that checks out is kept when the pack is fetched again for other files; one that does
   not is repaired with its own `map` item, or Repair answers `{code: "unavailable"}` when that map is not offered.

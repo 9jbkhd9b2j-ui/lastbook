@@ -1136,20 +1136,20 @@ def _tree_size(p):
 
 def _separate_map(lib):
     """Does the library hold a map set installed apart from its pack (a state map), rather than the pack's own (All's whole US)?
-    The pack's own set is the one whose map-set.json is listed, with the same sha256, in pack-manifest.tsv: its files are in that
-    list too, so they are checked and fetched with the pack."""
+    The pack's own set is named by pack.json's `map`, and its map-set.json is listed in pack-manifest.tsv with its other files,
+    so they are checked and fetched with the pack. Ownership never depends on map-set.json's contents being whole: a damaged one
+    of the pack's own then shows up as a damaged pack file."""
     lib = Path(lib)
-    if not install.map_set(lib):
+    d = install.map_set(lib)
+    if not d:
         return False
     try:
-        for line in (lib / 'pack-manifest.tsv').read_text(encoding='utf-8').splitlines()[1:]:
-            cols = line.split('\t')
-            if cols[0] == 'map-set.json':
-                with open(lib / 'map-set.json', 'rb') as f:
-                    return hashlib.sha256(f.read()).hexdigest() != cols[2]
-    except (OSError, IndexError):
-        pass
-    return True
+        own = json.loads((lib / 'pack.json').read_text(encoding='utf-8')).get('map')
+        listed = any(line.split('\t', 1)[0] == 'map-set.json'
+                     for line in (lib / 'pack-manifest.tsv').read_text(encoding='utf-8').splitlines()[1:])
+    except (OSError, ValueError, AttributeError):
+        return True
+    return not (listed and d.get('name') == own)
 
 
 # ------------------------------------------------------------------------------------------------ startup and the app --
