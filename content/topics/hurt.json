@@ -392,7 +392,7 @@
   {
    "id": "sudden",
    "label": "Chest pain, stroke signs, seizure or diabetic emergency",
-   "hint": "Crushing chest pain, face drooping, fit or convulsion, diabetic acting confused",
+   "hint": "Crushing chest pain or heart attack, face drooping, fit or convulsion, diabetic acting confused",
    "read": [
     {
      "doc": "med-443ae5cfaa6ecc68",
