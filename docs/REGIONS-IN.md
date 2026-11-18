@@ -57,14 +57,14 @@ Every database file inside `derived/geo/` requires an open, legally permissible 
 
 | Layer (File) | Current US Source | Proposed Source for India | Publisher | Licence & Link | Status / Verification |
 |---|---|---|---|---|---|
-| **Base Map** (`national.sqlite`, `map.sqlite`) | OpenStreetMap US extract | Geofabrik India OSM extract (`india-latest.osm.pbf` or zonal extracts) | OpenStreetMap contributors via Geofabrik | [ODbL 1.0](https://opendatacommons.org/licenses/odbl/1-0/) | **Verified.** Standard pipeline via `tools/build_map.py` & `tools/build_coast.py`. |
-| **Points of Interest** (`poi` table) | OpenStreetMap US POIs | OpenStreetMap India POIs (`amenity=hospital`, `pharmacy`, `police`, `fire_station`, `fuel`, `water_point`, `shelter`) | OpenStreetMap contributors | [ODbL 1.0](https://opendatacommons.org/licenses/odbl/1-0/) | **Verified.** Active mapping in Indian urban and semi-urban hubs. |
-| **Gazetteer / Places** (`places.sqlite`) | USGS GNIS, US Census Gazetteers | OSM named places (`place=city`, `town`, `village`, `suburb`) + India Post PIN Code directory ([data.gov.in](https://data.gov.in)) + OCHA COD-AB | OSM; India Post / NIC; OCHA | [ODbL 1.0](https://opendatacommons.org/licenses/odbl/1-0/); [GODL India](https://data.gov.in/government-open-data-license-india); [CC BY-IGO](https://data.humdata.org/dataset/cod-ab-ind) | **Verified.** Supports searching towns, districts, villages, and 6-digit postal PIN codes in `/api/places`. |
-| **Terrain & Elevation** (`terrain.sqlite`) | USGS 3DEP (10–30 m) | Copernicus DEM GLO-30 (30 m global raster) or NASA SRTM / NASADEM | ESA / Airbus; NASA | [Copernicus WorldDEM-30](https://spacedata.copernicus.eu/documents/20123/122407/Copernicus_WorldDEM_30m_License.pdf); [Public Domain](https://earthdata.nasa.gov/data/open-data) | **Verified.** Global 30 m elevation tiles for hillshading, contours, and 3D terrain rendering via `tools/build_terrain.py`. |
-| **Buildings** (`buildings.sqlite`) | Microsoft US Footprints + OSM heights | Microsoft Global ML Building Footprints (India) or Google Open Buildings (South Asia) | Microsoft; Google | [CDLA Permissive 2.0](https://github.com/microsoft/GlobalMLBuildingFootprints); [CC BY 4.0](https://sites.research.google/open-buildings/) | **Verified.** Millions of footprints across India; compiled via `tools/build_buildings.py`. |
-| **Water & Reservoirs** (`water.sqlite`) | USACE NID & USGS NHD | OSM water layers (`natural=water`, `water=reservoir`, `waterway=dam`, `waterway=river`) + Central Water Commission register | OSM contributors; CWC India | [ODbL 1.0](https://opendatacommons.org/licenses/odbl/1-0/); Government data | **Partial / Pending verification.** Major dams and water bodies exist in OSM. Dedicated CWC machine-readable open reuse terms are pending verification. |
-| **Crops & Land Cover** (`crops.sqlite`) | USDA Cropland Data Layer (CDL) | ESA WorldCover 2021 (10 m global land cover) | ESA WorldCover consortium | [CC BY 4.0](https://worldcover2021.esa.int/) | **Verified (Partial replacement).** Global land cover delineates cropland and vegetation, but lacks crop-specific distinction (e.g. vineyards vs orchards). |
-| **Address Indexes** (`addresses/<ID>.sqlite`) | Overture Maps address theme | Overture Maps (where present) + OSM address tags | Overture Maps Foundation; OSM contributors | [CDLA Permissive 2.0](https://docs.overturemaps.org/attribution/); [ODbL 1.0](https://opendatacommons.org/licenses/odbl/1-0/) | **Pending verification / Data gap.** Door-to-door address numbers are sparse in open data. Locality and town search via `/api/places` is the primary mechanism. |
+| **Base Map** (`national.sqlite`, `map.sqlite`) | OpenStreetMap US extract | Geofabrik India OSM extract (`india-latest.osm.pbf` or zonal extracts) | OpenStreetMap contributors via Geofabrik | [ODbL 1.0](https://opendatacommons.org/licenses/odbl/1-0/) | **Verified.** Geofabrik India extract and ODbL 1.0 licence checked. |
+| **Points of Interest** (`poi` table) | OpenStreetMap US POIs | OpenStreetMap India POIs (`amenity=hospital`, `pharmacy`, `police`, `fire_station`, `fuel`, `water_point`, `shelter`) | OpenStreetMap contributors | [ODbL 1.0](https://opendatacommons.org/licenses/odbl/1-0/) | **Verified.** OSM POI tags and ODbL 1.0 licence checked. |
+| **Gazetteer / Places** (`places.sqlite`) | USGS GNIS, US Census Gazetteers | OSM named places (`place=city`, `town`, `village`, `suburb`) + India Post PIN Code directory ([All India Pincode Directory](https://data.gov.in/resource/all-india-pincode-directory-till-last-month)) + OCHA COD-AB | OSM contributors; India Post / NIC; OCHA | [ODbL 1.0](https://opendatacommons.org/licenses/odbl/1-0/); [GODL India](https://data.gov.in/government-open-data-license-india); pending (OCHA COD-AB) | **Proposed / pending verification.** Would let `/api/places` find towns, districts, villages and 6-digit PIN codes once the shared postcode design (section 4) is implemented. |
+| **Terrain & Elevation** (`terrain.sqlite`) | USGS 3DEP (10–30 m) | Copernicus DEM GLO-30 (30 m global raster) or NASA SRTM / NASADEM | ESA / Airbus; NASA | [Copernicus WorldDEM-30](https://spacedata.copernicus.eu/documents/20123/122407/Copernicus_WorldDEM_30m_License.pdf); [Public Domain](https://earthdata.nasa.gov/data/open-data) | **Verified.** Copernicus DEM GLO-30 source and licence checked (Copernicus WorldDEM-30). |
+| **Buildings** (`buildings.sqlite`) | Microsoft US Footprints + OSM heights | Microsoft Global ML Building Footprints (India) or Google Open Buildings (South Asia) | Microsoft; Google | [CDLA Permissive 2.0](https://github.com/microsoft/GlobalMLBuildingFootprints); [CC BY 4.0](https://sites.research.google/open-buildings/) | **Verified.** Microsoft Global ML Building Footprints repository and CDLA Permissive 2.0 licence checked. |
+| **Water & Reservoirs** (`water.sqlite`) | USACE NID & USGS NHD | OSM water layers (`natural=water`, `water=reservoir`, `waterway=dam`, `waterway=river`) + Central Water Commission register | OSM contributors; CWC India | [ODbL 1.0](https://opendatacommons.org/licenses/odbl/1-0/); Government data (pending) | **Partial / Pending verification.** OSM water features and ODbL 1.0 licence checked; dedicated CWC machine-readable open reuse terms are pending verification. |
+| **Crops & Land Cover** (`crops.sqlite`) | USDA Cropland Data Layer (CDL) | ESA WorldCover 2021 (10 m global land cover) | ESA WorldCover consortium | [CC BY 4.0](https://worldcover2021.esa.int/) | **Verified (Partial replacement).** ESA WorldCover source and CC BY 4.0 licence checked; distinguishes vegetation and cropland, but lacks individual crop distinction. |
+| **Address Indexes** (`addresses/<ID>.sqlite`) | Overture Maps address theme | Overture Maps (where present) + OSM address tags | Overture Maps Foundation; OSM contributors | Per source, pending ([Overture Attribution](https://docs.overturemaps.org/attribution/)); [ODbL 1.0](https://opendatacommons.org/licenses/odbl/1-0/) | **Pending verification / Data gap.** Door-to-door address numbers are sparse in open data. Locality and town search via `/api/places` is the primary mechanism. |
 
 ---
 
@@ -74,7 +74,7 @@ Detailed UI changes and parser refactoring are left to the shared internationali
 
 ### Core Requirement: Six-Digit PIN Support with US ZIP Preservation
 * **Indian PIN Codes:** India's Postal Index Number (PIN) system uses **6 digits** (e.g., `110001` New Delhi, `400001` Mumbai, `560001` Bengaluru, `600001` Chennai).
-* **Preserving US ZIPs:** The current address search engine in `[engine/address_search.py](../engine/address_search.py)` expects 5-digit US ZIP codes (`\b\d{5}\b`).
+* **Preserving US ZIPs:** The current address search engine in [engine/address_search.py](../engine/address_search.py) expects 5-digit US ZIP codes (`\b\d{5}\b`).
 * **Design Requirement:** Address search and gazetteer regexes must support 6-digit Indian PIN codes while fully preserving existing 5-digit US ZIP behavior without ambiguity or regressions.
 
 ### Address Structure in Practice
@@ -90,8 +90,8 @@ As Lastbook expands internationally, handling disputed or sensitive internationa
 
 ### Context & Primary Sources
 In India, the depiction of external national boundaries (particularly in Jammu & Kashmir, Ladakh, and Arunachal Pradesh) is subject to specific statutory guidelines:
-* **Criminal Law Amendment Act, 1961** (Section 2: Questioning territorial integrity or borders).
-* **National Geospatial Policy (2022)**, Department of Science and Technology, Government of India.
+* **The Criminal Law Amendment Act, 1961 (Act No. 23 of 1961):** [Primary text via Indian Kanoon](https://indiankanoon.org/doc/1446733/) (Section 2: Questioning territorial integrity or frontiers). Its current statutory status, subsequent amendment history, and practical enforcement scope regarding offline international software distributions have not been independently confirmed; it is cited here as reference context rather than an established technical requirement.
+* **National Geospatial Policy (2022):** [Department of Science and Technology (DST) Notification PDF](https://dst.gov.in/sites/default/files/National%20Geospatial%20Policy.pdf), Government of India.
 * **Survey of India Boundary Guidelines & Official Maps:** [Survey of India Portal](https://surveyofindia.gov.in).
 
 ### Open Decision for Maintainers
@@ -104,7 +104,7 @@ In India, the depiction of external national boundaries (particularly in Jammu &
 
 ## 6. Licences & Required Attributions
 
-Redistribution within Lastbook requires adding attribution notices in `[THIRD_PARTY_NOTICES.md](../THIRD_PARTY_NOTICES.md)` and the app's *Sources & Permissions* screen:
+Redistribution within Lastbook requires adding attribution notices in [THIRD_PARTY_NOTICES.md](../THIRD_PARTY_NOTICES.md) and the app's *Sources & Permissions* screen:
 * **OpenStreetMap Data:** `© OpenStreetMap contributors, ODbL 1.0` (https://opendatacommons.org/licenses/odbl/1-0/)
 * **Copernicus DEM GLO-30:** `Produced using Copernicus WorldDEM-30 © DLR e.V. 2010–2014 and © Airbus Defence and Space GmbH 2014–2018 provided under COPERNICUS by the European Union and ESA.`
 * **Microsoft Global ML Footprints:** `Microsoft Open Data, licensed under CDLA Permissive 2.0 / ODbL.`

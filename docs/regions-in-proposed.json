@@ -91,10 +91,32 @@
       "verified": "2026-11-18"
     },
     "places": {
-      "dataset": "OSM named places (place=city, town, village) + India Post PIN Code directory + OCHA COD-AB levels 0-3",
-      "licence": "ODbL-1.0; Government Open Data Licence (GODL) India; CC-BY-IGO",
-      "licence_url": "https://data.gov.in/government-open-data-license-india",
-      "verified": "2026-11-18"
+      "sources": [
+        {
+          "dataset": "OSM named places (place=city, town, village, suburb)",
+          "publisher": "OpenStreetMap contributors",
+          "licence": "ODbL-1.0",
+          "licence_url": "https://opendatacommons.org/licenses/odbl/1-0/",
+          "verified": "2026-11-18"
+        },
+        {
+          "dataset": "India Post All India Pincode Directory",
+          "publisher": "Department of Posts / India Post",
+          "url": "https://data.gov.in/resource/all-india-pincode-directory-till-last-month",
+          "licence": "Government Open Data Licence (GODL) India",
+          "licence_url": "https://data.gov.in/government-open-data-license-india",
+          "verified": "2026-11-18"
+        },
+        {
+          "dataset": "OCHA COD-AB administrative boundaries (levels 0-3)",
+          "publisher": "OCHA",
+          "url": "https://data.humdata.org/dataset/cod-ab-ind",
+          "licence": "pending",
+          "status": "pending verification"
+        }
+      ],
+      "status": "proposed / pending verification",
+      "note": "Would let /api/places find towns, districts, villages and 6-digit PIN codes once the shared postcode design (section 4) is implemented."
     },
     "terrain": {
       "dataset": "Copernicus DEM GLO-30 (30 m global raster)",
@@ -127,12 +149,14 @@
     },
     "addresses": {
       "dataset": "Overture Maps Foundation address theme (where present) / OSM address tags",
+      "licence": "per source, pending",
+      "licence_url": "https://docs.overturemaps.org/attribution/",
       "status": "pending verification / data gap",
       "note": "Descriptive, landmark-based addressing format. Exact civic house numbers are sparse; locality, town, and 6-digit PIN code search via /api/places is prioritized."
     }
   },
   "open_questions": {
-    "disputed_boundaries": "Depiction of external borders under Indian statutory guidelines (Criminal Law Amendment Act 1961, National Geospatial Policy 2022). Open decision for maintainers on clipping to Survey of India polygons vs displaying disclaimer notices.",
+    "disputed_boundaries": "Depiction of external borders under Indian statutory context (Criminal Law Amendment Act 1961 - status unconfirmed, National Geospatial Policy 2022). Open decision for maintainers on clipping to Survey of India polygons vs displaying disclaimer notices.",
     "postcode_parsing": "Support 6-digit Indian PIN codes while fully preserving existing 5-digit US ZIP behavior in engine/address_search.py."
   },
   "related": {
