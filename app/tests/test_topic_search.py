@@ -109,7 +109,7 @@ UNDISTURBED = {
     'lost in the forest': ['comms', 'signal'],
 }
 # A search that names a sign of a life-threatening emergency shows that choice, even if another choice in the guide
-# matches more words. The last four only mention breathing, or not at all, and keep their choice.
+# matches more words. The rest don't say the person isn't breathing or is unconscious, and keep their choice.
 URGENT = {
     'burn and not breathing': ['hurt', 'breathing'], 'broken leg and not breathing': ['hurt', 'breathing'],
     'cut and not breathing': ['hurt', 'breathing'], 'fractured neck and not breathing': ['hurt', 'breathing'],
@@ -117,6 +117,9 @@ URGENT = {
     "he isn't breathing": ['hurt', 'breathing'], 'choking': ['hurt', 'breathing'],
     'allergic reaction trouble breathing': ['hurt', 'allergy'], "can't breathe after a bee sting": ['hurt', 'allergy'],
     'gas burn': ['hurt', 'burn'], 'broken leg stuck under rubble': ['hurt', 'bone'],
+    'wound infection not responding to antibiotics': ['hurt', 'bleeding'],
+    'allergic reaction not responding to epinephrine': ['hurt', 'allergy'],
+    'allergic reaction choking': ['hurt', 'allergy'], 'burn and choking on smoke': ['hurt', 'burn'],
 }
 TOPS = sorted({*SAME_AS, *SAME_AS.values(), *SAME_GUIDE, *SAME_GUIDE.values(), *FIRST, *UNDISTURBED, *URGENT})
 
