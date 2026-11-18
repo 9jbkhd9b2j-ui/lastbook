@@ -110,7 +110,7 @@ class Route(unittest.TestCase):
         def end_headers(self): pass
 
     def test_only_this_computer(self):
-        h = self.H('192.168.1.20')
+        h = self.H('192.0.2.20')
         hardware.handle_battery(h)
         self.assertEqual(h.status, 403)
         self.assertNotIn(b'percent', h.wfile.getvalue())
