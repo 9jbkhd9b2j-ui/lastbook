@@ -217,9 +217,10 @@ Not proposed:
   station may be the contact point. Each municipality decides this itself, and no national list was found. Lower
   Austria's civil protection association tells people to ask their municipality (search only).
 - **Hospitals from the ministry.** The health ministry publishes "Liste der Krankenanstalten in Österreich" (XLSX, as of
-  18 September 2026, opened). The page calls it a voluntary service and names no licence. Whether it has coordinates
-  was not checked. Like Germany's register, it could cross-check OSM's 223 hospitals, but not replace them without
-  permission.
+  18 September 2026, opened). The page says the list "steht zur Weiterverarbeitung als Download zur Verfügung", so
+  reuse is invited, but it calls the list a voluntary service and names no licence or credit line. Whether it has
+  coordinates was not checked. Like Germany's register, it could cross-check OSM's 223 hospitals; replacing them would
+  need the ministry to name the terms.
 
 ## Licence notes and attribution
 
