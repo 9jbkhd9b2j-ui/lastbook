@@ -1,7 +1,10 @@
 const assert = require("node:assert/strict");
+const { readFileSync } = require("node:fs");
+const { resolve } = require("node:path");
 const { test } = require("node:test");
 const { runInNewContext } = require("node:vm");
 const createI18n = require("../../web/i18n-core.js");
+const applyI18n = require("../../web/i18n-dom.js");
 
 const catalogs = {
   en: {
@@ -150,6 +153,28 @@ test("exact plural integers reject unsafe precision and cover the safe boundary"
   assert.match(i18n.t("n", { count: 1e21 }), /^other /);
 });
 
+test("Arabic plural categories, script direction and bidi isolation", () => {
+  const forms = Object.fromEntries(["zero", "one", "two", "few", "many", "other"].map(form => [form, form + " {count}"]));
+  const i18n = createI18n({ locale: "ar", catalogs: { en: { greeting: "Hello {name}", n: forms, fallback: "English" }, ar: { greeting: "مرحبا {name}", n: forms } } });
+  for (const [count, form] of [[0, "zero"], [1, "one"], [2, "two"], [3, "few"], [11, "many"], [100, "other"], [1.5, "other"]]) {
+    assert.equal(i18n.t("n", { count }), form + " \u2068" + new Intl.NumberFormat("ar").format(count) + "\u2069");
+  }
+  assert.equal(i18n.t("greeting", { name: "Ana / file.txt" }), "مرحبا \u2068Ana / file.txt\u2069");
+  for (const tag of ["ar", "fa", "he", "az-Arab", "en-Arab"]) assert.equal(i18n.direction(tag), "rtl");
+  for (const tag of ["en", "es-UY", "az-Latn", "ar-Latn"]) assert.equal(i18n.direction(tag), "ltr");
+  const arabic = new FakeElement({ "data-i18n": "greeting" });
+  const english = new FakeElement({ "data-i18n": "fallback", dir: "rtl" });
+  const untouched = new FakeElement({}, "Unmarked English");
+  const container = new FakeElement({ "data-i18n-aria-label": "greeting" }, "", [untouched]);
+  applyI18n(new FakeElement({}, "", [arabic, english, container]), i18n, () => ({ name: "Ana" }));
+  assert.equal(arabic.getAttribute("dir"), "rtl");
+  assert.equal(english.getAttribute("dir"), "ltr");
+  assert.equal(english.getAttribute("lang"), "en");
+  assert.equal(container.getAttribute("dir"), null);
+  assert.equal(container.getAttribute("lang"), null);
+  assert.equal(untouched.textContent, "Unmarked English");
+});
+
 test("catalogs have explicit contracts and reject accessors or unexpected shapes", () => {
   const bad = [
     { en: { hello: "Hello, {name}" }, es: { hello: "Hola, {persona}" } },
@@ -187,6 +212,103 @@ test("number and date formatting use the selected locale", () => {
   assert.equal(i18n.date(date, options), new Intl.DateTimeFormat("es-UY", options).format(date));
 });
 
+class FakeElement {
+  constructor(attrs = {}, content = "", children = []) {
+    this.attrs = { ...attrs };
+    this.textContent = content;
+    this.children = children;
+    this.nodeType = 1;
+  }
+  get childElementCount() { return this.children.length; }
+  getAttribute(name) { return this.attrs[name] ?? null; }
+  setAttribute(name, value) { this.attrs[name] = value; }
+  matches(selector) {
+    return selector.split(",").some(part => this.getAttribute(part.slice(1, -1)) !== null);
+  }
+  querySelectorAll(selector) {
+    const found = [];
+    function visit(parent) {
+      for (const child of parent.children) {
+        if (child.matches(selector)) found.push(child);
+        visit(child);
+      }
+    }
+    visit(this);
+    return found;
+  }
+}
+
+test("DOM adapter updates only opted-in leaf text and safe attributes", () => {
+  const leaf = new FakeElement({ "data-i18n": "greeting" }, "Hello, Ana");
+  const image = new FakeElement({ "data-i18n-alt": "caption" });
+  const search = new FakeElement({
+    "data-i18n-placeholder": "greeting", "data-i18n-title": "fallback",
+  });
+  const icon = new FakeElement();
+  const parent = new FakeElement({
+    "data-i18n": "greeting", "data-i18n-aria-label": "greeting",
+  }, "Untouched", [icon]);
+  const untouched = new FakeElement({}, "Library content");
+  const root = new FakeElement({}, "", [leaf, image, search, parent, untouched]);
+  const paramsFor = (element, key) => key === "greeting" ? { name: "Ana" } : { position: 4 };
+  const i18n = translator("es-UY");
+  applyI18n(root, i18n, paramsFor);
+  assert.equal(leaf.textContent, "Hola, Ana");
+  assert.equal(leaf.getAttribute("lang"), "es-419");
+  assert.equal(image.getAttribute("alt"), "Imagen 4");
+  assert.equal(search.getAttribute("placeholder"), "Hola, Ana");
+  assert.equal(search.getAttribute("title"), "English only");
+  assert.equal(parent.textContent, "Untouched");
+  assert.equal(parent.children[0], icon);
+  assert.equal(parent.getAttribute("aria-label"), "Hola, Ana");
+  assert.equal(untouched.textContent, "Library content");
+  i18n.setLocale("en");
+  applyI18n(leaf, i18n, paramsFor);
+  assert.equal(leaf.textContent, "Hello, Ana");
+  assert.equal(leaf.getAttribute("lang"), "en");
+});
+
+test("parameter providers survive reapply, stay per engine/element/key and can be cleared", () => {
+  const first = translator("en"), second = translator("en");
+  const leaf = new FakeElement({ "data-i18n": "greeting" });
+  const root = new FakeElement({}, "", [leaf]);
+  let name = "Ana";
+  applyI18n(root, first, () => ({ name }));
+  name = "Bea";
+  first.setLocale("es-UY");
+  applyI18n(root, first);
+  assert.equal(leaf.textContent, "Hola, Bea");
+  applyI18n(leaf, second);
+  assert.equal(leaf.textContent, "Hello, {name}");
+  applyI18n(root, first, () => ({ name: "New" }));
+  assert.equal(leaf.textContent, "Hola, New");
+  applyI18n(root, first, null);
+  assert.equal(leaf.textContent, "Hola, {name}");
+  const fresh = new FakeElement({ "data-i18n": "greeting" });
+  root.children = [fresh];
+  applyI18n(root, first);
+  assert.equal(fresh.textContent, "Hola, {name}");
+  assert.throws(() => applyI18n(root, first, {}), TypeError);
+});
+
+test("narrow provider updates preserve siblings and marker changes release old bindings", () => {
+  const first = new FakeElement({ "data-i18n": "greeting" });
+  const second = new FakeElement({ "data-i18n": "greeting" });
+  const root = new FakeElement({}, "", [first, second]);
+  const i18n = translator("en");
+  applyI18n(root, i18n, () => ({ name: "Ana" }));
+  applyI18n(first, i18n, () => ({ name: "Bea" }));
+  i18n.setLocale("es-UY");
+  applyI18n(root, i18n);
+  assert.equal(first.textContent, "Hola, Bea");
+  assert.equal(second.textContent, "Hola, Ana");
+  first.setAttribute("data-i18n", "fallback");
+  applyI18n(first, i18n);
+  first.setAttribute("data-i18n", "greeting");
+  applyI18n(first, i18n);
+  assert.equal(first.textContent, "Hola, {name}");
+});
+
 test("cyclic fallback routes terminate and invalid catalogs never execute accessors", () => {
   const i18n = createI18n({ catalogs, locale: "es-UY", fallbacks: { ...inheritance, "es-419": ["es-UY"] } });
   assert.equal(i18n.t("greeting", { name: "Ana" }), "Hola, Ana");
@@ -195,6 +317,31 @@ test("cyclic fallback routes terminate and invalid catalogs never execute access
   const symbol = { [Symbol("key")]: "Hi" };
   const inherited = Object.create({ greeting: "Hi" });
   for (const en of [hidden, symbol, inherited]) assert.throws(() => createI18n({ catalogs: { en } }), TypeError);
+});
+
+test("older Intl runtimes retain ordinary RTL scripts", () => {
+  const context = { Intl: {
+    getCanonicalLocales: Intl.getCanonicalLocales, NumberFormat: Intl.NumberFormat,
+    PluralRules: Intl.PluralRules, DateTimeFormat: Intl.DateTimeFormat,
+  } };
+  runInNewContext(readFileSync(resolve(__dirname, "../../web/i18n-core.js"), "utf8"), context);
+  assert.equal(runInNewContext('createI18n({ catalogs: { en: { hello: "Hello" } } }).direction("ar")', context), "rtl");
+  assert.equal(runInNewContext('createI18n({ catalogs: { en: { hello: "Hello" } } }).direction("az-Arab")', context), "rtl");
+});
+
+test("injected parameters are plain text in both text and attribute sinks", () => {
+  const text = new FakeElement({ "data-i18n": "greeting" });
+  const attr = new FakeElement({ "data-i18n-aria-label": "greeting" }, "", [new FakeElement()]);
+  Object.defineProperty(text, "innerHTML", { set: () => assert.fail("HTML sink used") });
+  const markup = '<img src=x onerror="boom()">';
+  applyI18n(new FakeElement({}, "", [text, attr]), translator("es-UY"), () => ({ name: markup }));
+  assert.equal(text.textContent, "Hola, " + markup);
+  assert.equal(attr.getAttribute("aria-label"), "Hola, " + markup);
+  assert.equal(text.childElementCount, 0);
+  assert.equal(attr.getAttribute("lang"), null);
+  attr.setAttribute("data-i18n-lang", "");
+  applyI18n(attr, translator("es-UY"), () => ({ name: markup }));
+  assert.equal(attr.getAttribute("lang"), "es-419");
 });
 
 test("prototype-named keys and plural forms stay isolated from the source catalogue", () => {
