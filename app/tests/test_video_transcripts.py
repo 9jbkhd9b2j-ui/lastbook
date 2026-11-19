@@ -68,6 +68,41 @@ class VideoTranscripts(unittest.TestCase):
             with self.subTest(route=route):
                 self.assertEqual(text, spoken)
 
+    def test_webvtt_identifier_after_header_keeps_its_payload(self):
+        first = 'This first caption describes the label on the example container.'
+        second = 'This later caption belongs to the cue whose identifier starts with WEBVTT.'
+        data = ('WEBVTT\n\n00:01.000 --> 00:05.000\n' + first +
+                '\n\nWEBVTT\n00:20.000 --> 00:25.000\n' + second + '\n').encode()
+        for route, text in self.texts(data).items():
+            with self.subTest(route=route):
+                self.assertEqual(text, first + ' ' + second)
+        with patch.object(server, 'LIB', self.root):
+            self.assertEqual(server.vtt_cues('captions.vtt'),
+                             [{'t': 1, 'text': first}, {'t': 20, 'text': second}])
+
+    def test_whitespace_payload_lines_keep_words_and_rolling_cue_start(self):
+        first = 'This first caption describes the label on the example container.'
+        second = 'The next words explain how this label belongs with the rest of the example.'
+        for whitespace in (' ', '\t', ' \t '):
+            fixtures = {
+                'inside cue': '00:20.000 --> 00:25.000\n' + first + '\n' + whitespace + '\n' + second + '\n',
+                'rolling cue': ('00:02.000 --> 00:04.000 align:start position:0%\n' + whitespace + '\n' + first +
+                                '\n\n00:04.000 --> 00:06.000 align:start position:0%\n' + first + '\n' + second + '\n'),
+            }
+            for fixture, payload in fixtures.items():
+                data = ('WEBVTT\n\n' + payload).encode()
+                for route, text in self.texts(data).items():
+                    with self.subTest(whitespace=repr(whitespace), fixture=fixture, route=route):
+                        # Consumers format whitespace differently; all spoken words must survive in order.
+                        self.assertEqual(text.split(), (first + ' ' + second).split())
+                expected_start = 2 if fixture == 'rolling cue' else 20
+                with patch.object(server, 'LIB', self.root):
+                    starts = {'reader': server.vtt_cues('captions.vtt')[0]['t'],
+                              'retrieval': retrieval.vtt_windows(self.path)[0][0]}
+                for route, start in starts.items():
+                    with self.subTest(whitespace=repr(whitespace), fixture=fixture, route=route + ' timestamp'):
+                        self.assertEqual(start, expected_start)
+
     def test_line_endings_bom_and_final_cue_without_blank_line(self):
         spoken = 'This final caption is complete even without a trailing blank line.'
         for newline in ('\n', '\r\n', '\r'):
