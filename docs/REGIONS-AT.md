@@ -69,8 +69,8 @@ checked in the files: each state's file holds only its own key.
 - **Lake Constance (Bodensee).** BEV's boundary data has no lake polygons: Vorarlberg's boundary follows the shore, and
   its box ends at 47.60° N. Germany's VG250 does carry the lake ([REGIONS-DE.md](REGIONS-DE.md), "Still undecided"). The
   lake's border has never been agreed, so this belongs with the disputed boundaries question in REGIONS.md.
-- **The boxes overlap a lot.** Austria is long and narrow and its states interlock, so most boxes reach into two or three
-  neighbours. Because a state map holds every row inside its box, that is extra data, not missing data.
+- **The boxes overlap a lot.** Austria is long and narrow and its states interlock, so most boxes reach into two or
+  three neighbours. Because a state map holds every row inside its box, that is extra data, not missing data.
 
 ### Boxes
 
@@ -80,15 +80,17 @@ The boxes were computed from BEV's **Verwaltungsgrenzen (VGD) BEV Stichtag 01.04
 SHA-256 of each file used is in the JSON. Each file holds the state's cadastral municipalities (Katastralgemeinden),
 7,850 in all.
 
-Every vertex, about 6.5 million, was transformed from MGI / Austria Lambert (EPSG:31287; the files' `.prj` gives the same
-parameters) to WGS 84 with pyproj 3.8.0 and PROJ 9.8.1. PROJ chose "MGI to WGS 84 (3)", with a stated accuracy of
+Every vertex, about 6.5 million, was transformed from MGI / Austria Lambert (EPSG:31287; the files' `.prj` gives the
+same parameters) to WGS 84 with pyproj 3.8.0 and PROJ 9.8.1. PROJ chose "MGI to WGS 84 (3)", with a stated accuracy of
 1.5 m. Each box was then widened by 0.15° and rounded outward to 0.01°, the same margin `map_sets.state` uses for US
 states.
 
 As a check, the outer edges fall in the municipalities that hold Austria's known extreme points: Nofels in Feldkirch in
-the west (9.53° E), Deutsch Jahrndorf in the east (17.16° E), Rottal in Haugschlag in the north (49.02° N) and Bad Vellach
-in Eisenkappel-Vellach in the south (46.37° N). The state areas, computed on the WGS 84 ellipsoid, add up to
-83,927 km²; Statistik Austria's published figures were not compared.
+the west (9.53° E), Deutsch Jahrndorf in the east (17.16° E), Rottal in Haugschlag in the north (49.02° N) and Bad
+Vellach in Eisenkappel-Vellach in the south (46.37° N). The state areas, computed on the WGS 84 ellipsoid, add up to
+83,927 km², 43 km² more than the official 83,884 km² (BEV and Statistik Austria, as of 1 January 2025, in WKO's table
+"Fläche und Benützungsarten"; Statistik Austria's "Österreich. Zahlen. Daten. Fakten" 2024/25 gives 83,883.87 km²;
+both opened on 19 November 2026).
 
 | Code | `BL_KZ` | Name | Box (west, south, east, north) | Box with 0.15° margin | Area (km²) |
 |---|---|---|---|---|---|
@@ -154,7 +156,8 @@ Notes:
 
 - **Terrain.** All three models are bare earth, so contours follow the ground in forest and towns, which Copernicus
   GLO-30 does not. The geoland 10 m model is the practical choice: one download, already close to the app's 30 m, from
-  laser scanning. Its data.gv.at record was last updated on 15 April 2021, and its download size was not measured. BEV's
+  laser scanning. Its data.gv.at record was last updated on 15 April 2021, and its download is one ZIP of
+  1,938,031,542 bytes (about 1.9 GB, file dated 18 June 2019, read from the server on 19 November 2026). BEV's
   1 m model is newer, but one of its 55 tiles alone is 7.6 GB. BEV's 25 m raster is the smallest single file, but BEV
   says it comes from aerial photographs and has not been updated since 2020.
 - **Water.** GGN is the federal network used for the EU Water Framework Directive (its keywords say so). From version 19
@@ -163,8 +166,8 @@ Notes:
   Whether DLM Gewässer also carries lakes was not checked: its description lists flowing waters only.
 - **Dams.** The Umweltbundesamt also runs a "Dashboard Große Stauanlagen". Whether the XLSX list has coordinates, and
   under what terms it can be reused, was not checked. OSM has 1,258 `waterway=dam` objects in Austria.
-- **Crops.** This is where Austria is richer than the US. Instead of a 30 m raster class, every field carries a crop name
-  (`snar_bezeichnung`) and code (`snar_code`). AMA's API was sampled in three areas on 17 November 2026 (800 fields
+- **Crops.** This is where Austria is richer than the US. Instead of a 30 m raster class, every field carries a crop
+  name (`snar_bezeichnung`) and code (`snar_code`). AMA's API was sampled in three areas on 17 November 2026 (800 fields
   each): `WEIN` (901) was the most common crop in the Wachau and Seewinkel samples (a later, smaller Seewinkel
   sample disagreed, so this is a sample result, not a regional fact), and the samples also hold `MARILLEN`
   (813, apricots), `TAFELÄPFEL` (817), `TAFELBIRNEN` (818) and `ZWETSCHKEN` (820, plums). Three things to know:
@@ -203,10 +206,10 @@ Austria has one kind of help point worth a decision:
 - **Police stations as blackout contact points.** The federal portal oesterreich.gv.at says, on a page by the interior
   ministry (last updated 16 February 2026, opened), that in a blackout "bleiben alle Polizeiinspektionen bundesweit
   personell besetzt", as contact points for the public. The same ministry publishes the locations and areas of all
-  police offices as open data: "Polizeidienststellen Österreich (BMI)", CSV and GeoPackage, files dated 11 November 2026, CC BY 4.0 (opened on
-  data.gv.at; the portal shows a wrong "updated" date for this record and says so itself). A help point backed by an
-  official, complete list and an official promise is exactly what Lastbook is for. The map could say so in the
-  ministry's words and cite the page.
+  police offices as open data: "Polizeidienststellen Österreich (BMI)", CSV and GeoPackage, files dated
+  11 November 2026, CC BY 4.0 (opened on data.gv.at; the portal shows a wrong "updated" date for this record and
+  says so itself). A help point backed by an official, complete list and an official promise is exactly what
+  Lastbook is for. The map could say so in the ministry's words and cite the page.
   - **Only the inspections.** The promise names *Polizeiinspektionen*, the local stations, but the list holds every
     kind of office. Of its 924 rows (`ArtLang`, counted on 19 November 2026), 744 are `Polizeiinspektion`. The rest are
     76 district commands, 32 motorway inspections, 25 city commands, 13 traffic inspections, 9 state directorates, 6
@@ -311,6 +314,9 @@ REGIONS-DE.md.
 - Seen only in search results: the ISO 3166-2:AT codes (Umweltbundesamt list and Wikipedia; the ISO site was not
   opened); the GGN lakes record; Lower Austria's civil protection advice; the Umweltbundesamt dam dashboard.
 - Not checked: INVEKOS's full crop code list; whether DLM Gewässer has lakes; the dam list's contents and terms; the
-  hospital list's columns; the credit wording BEV, geoland.at, BMLUK and BMI ask for; the size of the geoland 10 m
-  download; how Overture fills the region field for Austrian addresses; Statistik Austria's published areas; the
-  road access of the Kleinwalsertal and Jungholz.
+  hospital list's columns; the credit wording BEV, geoland.at, BMLUK and BMI ask for; how Overture fills the region
+  field for Austrian addresses; the road access of the Kleinwalsertal and Jungholz.
+- Checked again on 19 November 2026: Overture's attribution page; the health ministry's hospital list page;
+  oesterreich.gv.at's blackout page; BMI's police CSV (downloaded, rows counted by `ArtLang`); Carinthia's VGD file
+  (same checksum, box recomputed); Austrian Post's "Richtig adressieren" (the duplicate-address section); the geoland
+  10 m download's size; WKO's area table and Statistik Austria's "Österreich. Zahlen. Daten. Fakten" 2024/25.

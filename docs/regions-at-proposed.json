@@ -42,7 +42,7 @@
         "licence": "CC-BY-4.0",
         "verified": "2026-11-17",
         "role": "primary",
-        "notes": "Bare earth. ZIP with GeoTIFF. Record last updated 2021-04-15. Download size not measured."
+        "notes": "Bare earth. ZIP with GeoTIFF. Record last updated 2021-04-15. Download 1,938,031,542 bytes (about 1.9 GB), file dated 2019-06-18, read 2026-11-19."
       },
       {
         "dataset": "ALS DTM Höhenraster 1 m, Stichtag 15.09.2025",
@@ -260,6 +260,25 @@
       "padded_note": "west, south, east, north plus or minus 0.15°, rounded outward to 0.01°, the same margin map_sets.state uses for US states"
     },
     "area_km2": 83927,
+    "area_official": {
+      "area_km2": 83884,
+      "sources": [
+        {
+          "dataset": "Fläche und Benützungsarten (BEV, Statistik Austria), 83,884 km²",
+          "publisher": "WKO",
+          "url": "https://www.wko.at/oe/statistik/bundesland/flaecheben.pdf",
+          "as_of": "2025-01-01",
+          "verified": "2026-11-19"
+        },
+        {
+          "dataset": "Österreich. Zahlen. Daten. Fakten 2024/25, 83,883.87 km²",
+          "publisher": "Statistik Austria",
+          "url": "https://www.statistik.at/fileadmin/publications/OZDF-DE-24-25.pdf",
+          "verified": "2026-11-19"
+        }
+      ],
+      "notes": "The computed area is 43 km² more."
+    },
     "extremes": {
       "west": "KG Nofels, Feldkirch",
       "east": "KG Deutsch Jahrndorf",
