@@ -219,7 +219,8 @@
         "verified": "2026-11-17",
         "role": "proposed new kind",
         "claim_url": "https://www.oesterreich.gv.at/de/themen/notfaelle_unfaelle_und_kriminalitaet/katastrophenfaelle/1/Seite.29500329",
-        "notes": "CSV and GeoPackage, files dated 2026-11-11. BMI says all police stations stay staffed in a blackout as contact points (oesterreich.gv.at, last updated 2026-02-16)."
+        "notes": "CSV and GeoPackage, files dated 2026-11-11. BMI says all Polizeiinspektionen stay staffed in a blackout as contact points (oesterreich.gv.at, last updated 2026-02-16). The list has 924 rows of every office kind; only ArtLang = Polizeiinspektion (744 rows, counted 2026-11-19) carries that promise.",
+        "filter": "ArtLang = Polizeiinspektion"
       },
       {
         "dataset": "Liste der Krankenanstalten in Österreich (XLSX, Stand 18.09.2026)",

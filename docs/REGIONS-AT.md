@@ -198,12 +198,18 @@ Counts from taginfo for Geofabrik's Austria extract, data until 16 November 2026
 Austria has one kind of help point worth a decision:
 
 - **Police stations as blackout contact points.** The federal portal oesterreich.gv.at says, on a page by the interior
-  ministry (last updated 16 February 2026, opened), that all police stations nationwide stay staffed during a blackout,
-  as contact points for the public. The same ministry publishes the locations and areas of all police stations as open
-  data: "Polizeidienststellen Österreich (BMI)", CSV and GeoPackage, files dated 11 November 2026, CC BY 4.0 (opened on
+  ministry (last updated 16 February 2026, opened), that in a blackout "bleiben alle Polizeiinspektionen bundesweit
+  personell besetzt", as contact points for the public. The same ministry publishes the locations and areas of all
+  police offices as open data: "Polizeidienststellen Österreich (BMI)", CSV and GeoPackage, files dated 11 November 2026, CC BY 4.0 (opened on
   data.gv.at; the portal shows a wrong "updated" date for this record and says so itself). A help point backed by an
   official, complete list and an official promise is exactly what Lastbook is for. The map could say so in the
   ministry's words and cite the page.
+  - **Only the inspections.** The promise names *Polizeiinspektionen*, the local stations, but the list holds every
+    kind of office. Of its 924 rows (`ArtLang`, counted on 19 November 2026), 744 are `Polizeiinspektion`. The rest are
+    76 district commands, 32 motorway inspections, 25 city commands, 13 traffic inspections, 9 state directorates, 6
+    border inspections and 19 special or combined units. The map should take only `ArtLang = Polizeiinspektion`, so
+    that no row promises more than the ministry does. Whether the motorway, border and other inspection kinds count as
+    *Polizeiinspektionen* in the ministry's sense is for BMI to say.
 
 Not proposed:
 
@@ -280,7 +286,8 @@ REGIONS-DE.md.
 6. **Crops.** Rasterising the INVEKOS fields or reading them as vectors, the mapping from AMA's crop codes to the app's
    orchard, vineyard and berry kinds, and how the map says that only subsidised fields are shown.
 7. **Address search.** Four-digit postcodes, slash house numbers, and "postcode town" as a place query.
-8. **Police stations** as a help point that says it is staffed in a blackout, citing the ministry.
+8. **Police stations** as a help point that says it is staffed in a blackout, citing the ministry, limited to
+   `Polizeiinspektion` rows; whether motorway and border inspections belong too.
 9. **Lake Constance**, with Germany's question in REGIONS-DE.md.
 
 ## What was checked, and what was not
