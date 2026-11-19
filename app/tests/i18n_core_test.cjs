@@ -357,3 +357,30 @@ test("prototype-named keys and plural forms stay isolated from the source catalo
   assert.equal(i18n.t("toString"), undefined);
   assert.throws(() => createI18n({ catalogs: JSON.parse('{"en":{"__proto__":"invalid"}}') }), TypeError);
 });
+
+test("a failing binding or provider leaves its element alone and the rest still translates", () => {
+  const bad = new FakeElement({ "data-i18n": "greeting" }, "Hello, bad");
+  const good = new FakeElement({ "data-i18n": "greeting", "data-i18n-title": "files" }, "Hello, good");
+  const plural = new FakeElement({ "data-i18n": "files" }, "files");
+  const root = new FakeElement({}, "", [bad, good, plural]);
+  const i18n = translator("es-419");
+  const provider = element => {
+    if (element === bad) throw new Error("provider failed");
+    return { name: "Ana", count: 2 };
+  };
+  assert.doesNotThrow(() => applyI18n(root, i18n, provider));
+  assert.equal(bad.textContent, "Hello, bad");
+  assert.equal(bad.getAttribute("lang"), null);
+  assert.equal(good.textContent, "Hola, Ana");
+  assert.equal(good.getAttribute("title"), "2 archivos");
+  assert.equal(plural.textContent, "2 archivos");
+  // A resolve() failure inside one binding must not stop the element's other bindings.
+  const broken = { ...i18n, resolve(key, params) {
+    if (key === "greeting") throw new Error("resolve failed");
+    return i18n.resolve(key, params);
+  } };
+  const both = new FakeElement({ "data-i18n": "greeting", "data-i18n-title": "files" }, "Hello");
+  assert.doesNotThrow(() => applyI18n(new FakeElement({}, "", [both]), broken, () => ({ name: "Ana", count: 1 })));
+  assert.equal(both.textContent, "Hello");
+  assert.equal(both.getAttribute("title"), "1 archivo");
+});

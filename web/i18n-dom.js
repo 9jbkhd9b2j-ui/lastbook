@@ -28,38 +28,45 @@
     if (root.nodeType === 1 && root.matches(selector)) elements.unshift(root);
 
     for (const element of elements) {
-      const previous = stored.get(element);
-      if (previous) {
-        const active = new Set(bindings.map(([marker]) => element.getAttribute(marker)));
-        for (const key of previous.keys()) if (!active.has(key)) previous.delete(key);
+      // One broken binding or provider must not leave the rest of the page
+      // half translated. The element keeps whatever it already shows.
+      try { bind(element, i18n, paramsFor, stored); } catch { /* keep the current text */ }
+    }
+  }
+
+  function bind(element, i18n, paramsFor, stored) {
+    const previous = stored.get(element);
+    if (previous) {
+      const active = new Set(bindings.map(([marker]) => element.getAttribute(marker)));
+      for (const key of previous.keys()) if (!active.has(key)) previous.delete(key);
+    }
+    let language;
+    for (const [marker, target] of bindings) {
+      const key = element.getAttribute(marker);
+      if (!key) continue;
+      // Never erase SVGs, nested controls or other child markup.
+      if (target === null && element.childElementCount !== 0) continue;
+      if (paramsFor !== undefined) {
+        if (!stored.has(element)) stored.set(element, new Map());
+        if (paramsFor === null) stored.get(element).delete(key);
+        else stored.get(element).set(key, paramsFor);
       }
-      let language;
-      for (const [marker, target] of bindings) {
-        const key = element.getAttribute(marker);
-        if (!key) continue;
-        // Never erase SVGs, nested controls or other child markup.
-        if (target === null && element.childElementCount !== 0) continue;
-        if (paramsFor !== undefined) {
-          if (!stored.has(element)) stored.set(element, new Map());
-          if (paramsFor === null) stored.get(element).delete(key);
-          else stored.get(element).set(key, paramsFor);
-        }
-        const provider = stored.get(element)?.get(key);
-        const result = i18n.resolve(key, provider?.(element, key));
-        if (!result) continue;  // Original English remains readable.
-        if (target === null) {
-          if (element.textContent !== result.text) element.textContent = result.text;
-        } else if (element.getAttribute(target) !== result.text) element.setAttribute(target, result.text);
-        if (!language) language = result.locale;
-      }
-      // An attribute on a container must not change its unmarked descendants'
-      // language/direction unless the container explicitly opts in (e.g. an
-      // icon-only button). In mixed-language controls use marked leaves.
-      if (language && (element.childElementCount === 0 || element.getAttribute("data-i18n-lang") !== null)) {
-        const dir = i18n.direction(language);
-        if (element.getAttribute("lang") !== language) element.setAttribute("lang", language);
-        if (element.getAttribute("dir") !== dir) element.setAttribute("dir", dir);
-      }
+      const provider = stored.get(element)?.get(key);
+      let result;
+      try { result = i18n.resolve(key, provider?.(element, key)); } catch { continue; }  // this binding keeps its text
+      if (!result) continue;  // Original English remains readable.
+      if (target === null) {
+        if (element.textContent !== result.text) element.textContent = result.text;
+      } else if (element.getAttribute(target) !== result.text) element.setAttribute(target, result.text);
+      if (!language) language = result.locale;
+    }
+    // An attribute on a container must not change its unmarked descendants'
+    // language/direction unless the container explicitly opts in (e.g. an
+    // icon-only button). In mixed-language controls use marked leaves.
+    if (language && (element.childElementCount === 0 || element.getAttribute("data-i18n-lang") !== null)) {
+      const dir = i18n.direction(language);
+      if (element.getAttribute("lang") !== language) element.setAttribute("lang", language);
+      if (element.getAttribute("dir") !== dir) element.setAttribute("dir", dir);
     }
   }
 
