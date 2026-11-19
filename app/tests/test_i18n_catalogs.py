@@ -75,6 +75,40 @@ class Catalogues(unittest.TestCase):
         literal = js.split(' = JSON.parse(', 1)[1].removesuffix(');\n')
         self.assertEqual(json.loads(json.loads(literal)), {'es-419': messages})
 
+    def test_source_staging_and_missing_or_stale_assets(self):
+        generated = catalogues.generate()
+        catalogues.check_assets(ROOT / 'web', generated)
+        stage = self.work / 'stage'
+        subprocess.run([sys.executable, '-I', '-B', str(ROOT / 'packaging' / 'ship_app_files.py'), str(stage)],
+                       check=True, capture_output=True)
+        web = stage / 'web'
+        catalogues.check_assets(web, generated)
+        self.assertFalse((stage / 'translations').exists())
+        for name in ('i18n-en.js', 'i18n-locales.js', 'i18n-app.js', 'app.js'):
+            with self.subTest(name=name):
+                (web / name).unlink()
+                with self.assertRaisesRegex(ValueError, 'required localization asset missing'):
+                    catalogues.check_assets(web, generated)
+                shutil.copyfile(ROOT / 'web' / name, web / name)
+        (web / 'setup.html').write_text('<!doctype html><title>Old Setup</title>', encoding='utf-8')
+        with self.assertRaisesRegex(ValueError, 'missing or misordered localization scripts'):
+            catalogues.check_assets(web, generated)
+        setup = (ROOT / 'web' / 'setup.html').read_text(encoding='utf-8')
+        script = next(line for line in setup.splitlines() if 'src="/ui/i18n-app.js' in line)
+        for bad in ('<!--' + script + '-->', script.replace('src=', 'data-src='), script.replace('<script ', '<script defer ')):
+            with self.subTest(script=bad):
+                (web / 'setup.html').write_text(setup.replace(script, bad), encoding='utf-8')
+                with self.assertRaisesRegex(ValueError, 'missing or misordered localization scripts'):
+                    catalogues.check_assets(web, generated)
+        shutil.copyfile(ROOT / 'web' / 'setup.html', web / 'setup.html')
+        (web / 'app.js').write_bytes(b'// old controller\n')
+        with self.assertRaisesRegex(ValueError, 'packaged web asset differs from source'):
+            catalogues.check_assets(web, generated)
+        shutil.copyfile(ROOT / 'web' / 'app.js', web / 'app.js')
+        (web / 'i18n-locales.js').write_bytes(b'// stale\n')
+        with self.assertRaisesRegex(ValueError, 'stale catalogue'):
+            catalogues.check_assets(web, generated)
+
 
 class SpanishWording(unittest.TestCase):
     """The shipped es-419 catalogue keeps the terms docs/i18n.md#sample-locale-wording-es-419 asks for."""
