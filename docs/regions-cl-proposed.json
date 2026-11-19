@@ -92,6 +92,13 @@
       "share_alike": true,
       "verified": "as for the US map"
     },
+    "CDLA-Permissive-2.0": {
+      "name": "Community Data License Agreement - Permissive, Version 2.0",
+      "url": "https://cdla.dev/permissive-2-0/",
+      "attribution": "None required; the text of the licence must be made available with shared data.",
+      "share_alike": false,
+      "verified": "2026-11-18"
+    },
     "Copernicus-WorldDEM-30": {
       "name": "Copernicus WorldDEM-30 licence",
       "url": "see docs/regions-proposed.json",
@@ -269,10 +276,10 @@
         "dataset": "Microsoft Global ML Building Footprints",
         "publisher": "Microsoft",
         "url": "https://minedbuildings.z5.web.core.windows.net/global-buildings/dataset-links.csv",
-        "licence": "ODbL-1.0",
-        "verified": "2026-11-17",
+        "licence": "CDLA-Permissive-2.0",
+        "verified": "2026-11-18",
         "role": "gap filler",
-        "notes": "330 files for Chile."
+        "notes": "330 files for Chile. ODbL applies only if the footprints are taken through Overture's buildings theme."
       },
       {
         "dataset": "OpenStreetMap building heights",

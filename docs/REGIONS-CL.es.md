@@ -136,7 +136,7 @@ Rapa Nui sería mucho más chico; eso es parte de la decisión de arriba.
 | Embalses | NID | Catastro de Embalses (1.370 embalses, con uso y, para algunos, altura del muro; "actualizado a diciembre de 2015") | Dirección de Obras Hidráulicas (DOH) con la DGA, MOP | términos de GeoMOP | abierta (conteo por API) |
 | Cultivos (`crops.sqlite`) | USDA Cropland Data Layer | Catastro Frutícola: polígonos de plantaciones frutales por especie, berries incluidos, 94.731 polígonos en 14 regiones | CIREN (IDE Minagri) | **no declarada** | abierta (conteos por API) |
 | Cultivos, respaldo abierto | | MapBiomas Chile, Colección 2 (cobertura anual del suelo) | MapBiomas Chile | CC BY 4.0 | abierta (términos) |
-| Edificios (`buildings.sqlite`) | huellas de Microsoft para EE.UU., alturas de OSM | Google Open Buildings v3; Microsoft Global ML Building Footprints (330 archivos para Chile) para llenar vacíos; alturas de OSM | Google; Microsoft; colaboradores de OSM | CC BY 4.0 u ODbL (a elección del usuario); ODbL; ODbL | abierta (listas de países); cobertura no medida |
+| Edificios (`buildings.sqlite`) | huellas de Microsoft para EE.UU., alturas de OSM | Google Open Buildings v3; Microsoft Global ML Building Footprints (330 archivos para Chile) para llenar vacíos; alturas de OSM | Google; Microsoft; colaboradores de OSM | CC BY 4.0 u ODbL (a elección del usuario); CDLA Permissive 2.0; ODbL | abierta (listas de países); cobertura no medida |
 | Lugares (`places.sqlite`) | GNIS, nomencladores del Censo, OSM | Censo 2017: ciudades (270), pueblos (289), aldeas (727) y caseríos (3.669); Censo 2024: topónimos de localidad (9.378 puntos) y entidades (28.415); topónimos del IGM de las cartas 1:50.000 (105.440 puntos); lugares con nombre de OSM | INE; IGM; colaboradores de OSM | "Datos de uso público" (2017); no declarada (2024, IGM); ODbL | abierta (conteos por API) |
 | Caminos (mapa base) | OSM | OSM, como hoy; Red Vial Chile (14.266 tramos con rol y carpeta, actualizada cerca de 2017) para llenar vacíos rurales | colaboradores de OSM; Dirección de Vialidad, MOP | ODbL; términos de GeoMOP | abierta (conteo por API) |
 | Direcciones (`addresses/<code>.sqlite`) | direcciones de Overture | direcciones de Overture: 4.199.023 filas chilenas del INE, distribuidas por AddressForAll (también en OpenAddresses) | Overture Maps Foundation / INE | CC BY 4.0 según Overture (ver "Notas sobre licencias") | abierta; contada |
@@ -215,7 +215,10 @@ Notas:
   sirve para paquetes gratuitos, pero un paquete que la contenga no se podría vender, ni siquiera por un tercero.
 - **CC BY 4.0** (MapBiomas Chile, Google Open Buildings): citar al publicador, enlazar la licencia y decir si se
   modificó.
-- **ODbL** (OSM, huellas de Microsoft según las lista Overture): igual que para el mapa de Estados Unidos.
+- **ODbL** (OSM, y huellas de Microsoft si se toman del tema de edificios de Overture): igual que para el mapa de
+  Estados Unidos.
+- **CDLA Permissive 2.0** (huellas de Microsoft descargadas directamente de su lista de archivos): un paquete que las
+  comparta debe poner a disposición el texto de la licencia junto con ellas.
 - **INE.** Los términos de datos abiertos del INE ponen el contenido de su sitio bajo **CC BY-SA 4.0** (abierta). El
   "compartir igual" obligaría a cualquier base de datos construida con él. Las capas del Censo 2017 dicen solo "Datos
   de uso público", y las de 2024 no dicen nada. Cuál de estas aplica a cada capa es una pregunta para el INE; el

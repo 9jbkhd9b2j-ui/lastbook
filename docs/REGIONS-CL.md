@@ -126,7 +126,7 @@ smaller; that is part of the decision above.
 | Dams | NID | Catastro de Embalses (1,370 reservoirs, with use and, for some, wall height; "updated to December 2015") | Dirección de Obras Hidráulicas (DOH) with DGA, MOP | GeoMOP terms | opened (API count) |
 | Crops (`crops.sqlite`) | USDA Cropland Data Layer | Catastro Frutícola: fruit plantation polygons by species, including berries, 94,731 polygons in 14 regions | CIREN (IDE Minagri) | **none stated** | opened (API counts) |
 | Crops, open fallback | | MapBiomas Chile, Collection 2 (annual land cover) | MapBiomas Chile | CC BY 4.0 | opened (terms) |
-| Buildings (`buildings.sqlite`) | Microsoft US footprints, OSM heights | Google Open Buildings v3; Microsoft Global ML Building Footprints (330 files for Chile) to fill gaps; OSM heights | Google; Microsoft; OSM contributors | CC BY 4.0 or ODbL (at the user's choice); ODbL; ODbL | opened (country lists); coverage not measured |
+| Buildings (`buildings.sqlite`) | Microsoft US footprints, OSM heights | Google Open Buildings v3; Microsoft Global ML Building Footprints (330 files for Chile) to fill gaps; OSM heights | Google; Microsoft; OSM contributors | CC BY 4.0 or ODbL (at the user's choice); CDLA Permissive 2.0; ODbL | opened (country lists); coverage not measured |
 | Places (`places.sqlite`) | GNIS, Census gazetteers, OSM | Census 2017 cities (270), towns (289), villages (727) and hamlets (3,669); Census 2024 locality names (9,378 points) and entities (28,415); IGM place names from the 1:50,000 maps (105,440 points); OSM named places | INE; IGM; OSM contributors | "Datos de uso público" (2017); none stated (2024, IGM); ODbL | opened (API counts) |
 | Roads (base map) | OSM | OSM, as today; Red Vial Chile (14,266 road segments with route number and surface, updated to about 2017) to fill rural gaps | OSM contributors; Dirección de Vialidad, MOP | ODbL; GeoMOP terms | opened (API count) |
 | Addresses (`addresses/<code>.sqlite`) | Overture addresses | Overture addresses: 4,199,023 Chilean rows from INE, distributed by AddressForAll (also in OpenAddresses) | Overture Maps Foundation / INE | CC BY 4.0 as Overture lists it (see "Licence notes") | opened; counted |
@@ -200,7 +200,9 @@ Notes:
   terms in REGIONS-AR.md ("free and at no cost, commercial use only in derivative works"): fine for free packs, but a
   pack holding it could not be sold, even by someone else.
 - **CC BY 4.0** (MapBiomas Chile, Google Open Buildings): credit the publisher, link the licence, say if changed.
-- **ODbL** (OSM, Microsoft footprints as Overture lists them): as for the US map.
+- **ODbL** (OSM, and Microsoft footprints if taken through Overture's buildings theme): as for the US map.
+- **CDLA Permissive 2.0** (Microsoft footprints downloaded directly from its dataset list): a pack that shares them
+  must make the text of the licence available with them.
 - **INE.** INE's open-data terms put its site's content under **CC BY-SA 4.0** (opened). Share-alike would bind any
   database built from it. INE's 2017 census layers say only "Datos de uso público", and its 2024 layers state nothing.
   Which of these applies to each layer is a question for INE; the JSON assigns CC BY-SA 4.0 to no layer yet.
