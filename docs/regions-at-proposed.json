@@ -239,7 +239,7 @@
       "format": "Four digits.",
       "example_pattern": "0000"
     },
-    "order": "Street, then house number/staircase/door, then postcode and town (\"Grünwaldweg 16/13/5, 2283 Obersiebenbrunn\", Austrian Post, Richtig adressieren, February 2020).",
+    "order": "Street, then house number/staircase/door, then postcode and town (\"Grünwaldweg 16/13/5, 2283 Obersiebenbrunn\", Austrian Post, Richtig adressieren, February 2020). Where an address occurs twice in one municipality, the locality replaces the municipality or goes on its own line before the postcode.",
     "notes": "normalize() and norm() keep only a-z and 0-9 (\"Grünwaldweg\" becomes \"gr nwaldweg\"); is_address_query() needs a number first and stops at a slash, so \"16/13/5 Grünwaldweg\" is not an address; \"1060 Wien\" is read as house number 1060 on a street called \"wien\"; _parts() reads only a five-digit postcode as the last word; tools/build_addresses.py keeps only country = 'US'. Tried in this repository on 2026-11-17."
   },
   "whole_country": {
@@ -346,7 +346,7 @@
       "bbox": {
         "west": 12.6568,
         "south": 46.3723,
-        "east": 15.0652,
+        "east": 15.0651,
         "north": 47.1313,
         "source": {
           "dataset": "Verwaltungsgrenzen (VGD) BEV Stichtag 01.04.2026, one shapefile per state, cadastral municipality polygons with state key BL_KZ; every vertex transformed from EPSG:31287 to EPSG:4326",
@@ -539,7 +539,7 @@
       },
       "area_km2": 12648,
       "layers": "country_layers",
-      "notes": "North and East Tyrol do not touch; the box spans parts of Salzburg and of South Tyrol (Italy). Jungholz lies inside it."
+      "notes": "North and East Tyrol do not touch; the box spans parts of Salzburg and of South Tyrol (Italy), and its edges take in parts of Vorarlberg, Carinthia, Bavaria and Switzerland. Jungholz lies inside it."
     },
     {
       "code": "AT-8",

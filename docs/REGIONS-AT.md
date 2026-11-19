@@ -60,8 +60,9 @@ checked in the files: each state's file holds only its own key.
   Vienna's streets and help points without any extra rule. Address search reads one index per state, so a Lower Austria
   map would not find Vienna addresses unless the index is cut by box, not by state. This is the same decision as Berlin
   inside Brandenburg in [REGIONS-DE.md](REGIONS-DE.md).
-- **Tyrol is in two parts.** North Tyrol and East Tyrol do not touch, so the `AT-7` box spans the land between them,
-  including parts of Salzburg and of South Tyrol in Italy. A Tyrol map would carry those rows too.
+- **Tyrol is in two parts.** North Tyrol and East Tyrol do not touch, so the `AT-7` box spans the land between them
+  in Salzburg and South Tyrol (Italy), and its edges also take in parts of Vorarlberg, Carinthia, Bavaria and
+  Switzerland. A Tyrol map would carry those rows too.
 - **Kleinwalsertal and Jungholz.** The cadastral municipality of Mittelberg in the Kleinwalsertal sets Vorarlberg's east
   edge (10.24° E). Jungholz lies inside the `AT-7` box. Both are reached by road through Germany (from general
   knowledge, not checked); for a map that matters only in that the nearest help may be across the border.
@@ -92,7 +93,7 @@ in Eisenkappel-Vellach in the south (46.37° N). The state areas, computed on th
 | Code | `BL_KZ` | Name | Box (west, south, east, north) | Box with 0.15° margin | Area (km²) |
 |---|---|---|---|---|---|
 | `AT-1` | 1 | Burgenland | 15.9962, 46.8306, 17.1608, 48.1187 | 15.84, 46.68, 17.32, 48.27 | 3,964 |
-| `AT-2` | 2 | Kärnten (Carinthia) | 12.6568, 46.3723, 15.0652, 47.1313 | 12.50, 46.22, 15.22, 47.29 | 9,543 |
+| `AT-2` | 2 | Kärnten (Carinthia) | 12.6568, 46.3723, 15.0651, 47.1313 | 12.50, 46.22, 15.22, 47.29 | 9,543 |
 | `AT-3` | 3 | Niederösterreich (Lower Austria) | 14.4526, 47.4222, 17.0688, 49.0205 | 14.30, 47.27, 17.22, 49.18 | 19,195 |
 | `AT-4` | 4 | Oberösterreich (Upper Austria) | 12.7492, 47.4611, 14.9922, 48.7726 | 12.59, 47.31, 15.15, 48.93 | 11,985 |
 | `AT-5` | 5 | Salzburg | 12.0761, 46.9439, 13.9961, 48.0415 | 11.92, 46.79, 14.15, 48.20 | 7,161 |
@@ -164,7 +165,8 @@ Notes:
   under what terms it can be reused, was not checked. OSM has 1,258 `waterway=dam` objects in Austria.
 - **Crops.** This is where Austria is richer than the US. Instead of a 30 m raster class, every field carries a crop name
   (`snar_bezeichnung`) and code (`snar_code`). AMA's API was sampled in three areas on 17 November 2026 (800 fields
-  each): `WEIN` (901) is the most common crop in the Wachau and the Seewinkel, and the samples also hold `MARILLEN`
+  each): `WEIN` (901) was the most common crop in the Wachau and Seewinkel samples (a later, smaller Seewinkel
+  sample disagreed, so this is a sample result, not a regional fact), and the samples also hold `MARILLEN`
   (813, apricots), `TAFELÄPFEL` (817), `TAFELBIRNEN` (818) and `ZWETSCHKEN` (820, plums). Three things to know:
   - `tools/build_crops.py` reads the USDA raster, so this needs either rasterising the fields or a vector path.
   - The code list was not read, so berry codes were not found in the samples.
@@ -251,9 +253,10 @@ Austrian Post's guide "Richtig adressieren" (February 2020, opened) gives the fo
 - **Order.** Street, then house number, then postcode and town: "Grünwaldweg 16/13/5, 2283 Obersiebenbrunn".
 - **Staircase and door.** Where a house has several entrances or flats, block, staircase (Stiege) and door number follow
   the house number, separated by slashes: `16/13/5`.
-- **Locality and postal town.** The locality can be written on its own line before the postcode and postal town, as in
-  the guide's "Elisabethgasse 3, Weidling, 3400 Klosterneuburg", so the town after the postcode is not always the place
-  where the house is.
+- **Locality, where an address repeats.** When the same address occurs twice in one postcode area and municipality,
+  the guide writes the locality that tells them apart, either in place of the municipality ("Elisabethgasse 3, 3400
+  Weidling") or on its own line before the postcode ("Elisabethgasse 3, Weidling, 3400 Klosterneuburg"). So for those
+  addresses the town after the postcode may be the locality rather than the municipality.
 - **Postcode.** Four digits.
 - **Street words.** Mostly single compound words or two words ending in *-straße* (often *-str.*), *-gasse*, *-weg* or
   *-platz*, as in German. *ß* and umlauts raise the same typing problems as in Germany.
