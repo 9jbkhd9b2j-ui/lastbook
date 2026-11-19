@@ -167,6 +167,17 @@ class VideoTranscripts(unittest.TestCase):
         result = saved_pages.rewrite(page, lambda src: vtt if src == 'captions.vtt' else None)
         self.assertIn(b'<p>The label reads 12 litres.</p>', result)
 
+    def test_trailing_whitespace_does_not_repeat_saved_course_caption(self):
+        page = b'<html><body><video><track src="captions.vtt"></video></body></html>'
+        expected = 'hello everyone today we compare water filters'
+        for whitespace in (' ', '\t', ' \t ', '\u00a0'):
+            with self.subTest(whitespace=repr(whitespace)):
+                vtt = ('WEBVTT\n\n00:02.000 --> 00:04.000\nhello everyone\n' + whitespace +
+                       '\n\n00:04.000 --> 00:06.000\nhello everyone\ntoday we compare water filters\n').encode()
+                self.assertEqual(saved_pages.transcript_text(vtt), expected)
+                result = saved_pages.rewrite(page, lambda src: vtt if src == 'captions.vtt' else None)
+                self.assertIn(('<p>' + expected + '</p>').encode(), result)
+
     def test_empty_cue_does_not_consume_the_next_identifier(self):
         spoken = 'The next nonempty caption still belongs to its own timestamp.'
         data = ('WEBVTT\n\n00:00.000 --> 00:01.000\n\n'
