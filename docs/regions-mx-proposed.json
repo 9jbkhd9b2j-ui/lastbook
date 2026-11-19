@@ -180,9 +180,9 @@
         "publisher": "Overture Maps Foundation, from INEGI through OpenAddresses",
         "url": "https://docs.overturemaps.org/attribution/",
         "licence": "INEGI-Libre-Uso",
-        "verified": "opened and rows counted 2026-11-18 (Overture address guide)",
+        "verified": "opened 2026-11-18 (Overture address guide; counts are the publisher's, not a count made for this proposal)",
         "role": "primary",
-        "notes": "Release 2026-11-18.0: 30,726,687 MX rows, the second-largest country after the US (126,202,222). Source: 'INEGI, Censos Económicos. Términos de Libre Uso. Distributed by OpenAddresses. Accessed: 2026-11-17.' Per-state counts not computed for this proposal; would need a DuckDB query by state."
+        "notes": "Release 2026-11-18.0, publisher's address-guide counts: 30,726,687 MX rows, third after the US (126,202,222) and Brazil (89,887,635). Source: 'INEGI, Censos Económicos. Términos de Libre Uso. Distributed by OpenAddresses. Accessed: 2026-11-17.' Per-state counts not computed. Splitting on the first two postcode digits as the INEGI state code would assign rows to the wrong state (Aguascalientes starts at 20000, Zacatecas at 98000). Left as future work (state polygon, or a CP-to-state table whose rights are checked)."
       }
     ],
     "pois": [
@@ -219,7 +219,7 @@
   ],
   "addressing": {
     "postal_code": {
-      "format": "Five digits (CP, código postal); the first two are the state (01-32), so leading zeros are common (01xxx Aguascalientes, 32xxx Zacatecas). Same shape as a US ZIP code.",
+      "format": "Five digits (CP, código postal), the same shape as a US ZIP code. Kept as text because leading zeros occur (for example 06600 Ciudad de México). The first two digits are not the INEGI state code: Aguascalientes (INEGI 01) starts at 20000 and Zacatecas (INEGI 32) at 98000. A per-state split is future work (state polygon, or a CP-to-state table whose rights are checked).",
       "example_pattern": "00000"
     },
     "order": "Street type, street name, then number, then postcode and town: \"Av. Reforma, 123, 06600 Ciudad de México\". The type comes first (Avenida, Calle, Boulevard, Privada, Andador) and is often abbreviated (Av., C., Blvd., Priv., And.).",
@@ -247,9 +247,9 @@
           "verified": "2026-11-18 (shapefile downloaded through CONABIO mirror, which is INEGI data)"
         },
         "padded_0_15": [
-          -103.02,
+          -103.03,
           21.47,
-          -101.69,
+          -101.68,
           22.61
         ],
         "padded_note": "west, south, east, north plus or minus 0.15°, rounded outward to 0.01°, the same margin map_sets.state uses for US states"
@@ -280,7 +280,7 @@
         "padded_0_15": [
           -118.52,
           27.85,
-          -112.15,
+          -112.14,
           32.87
         ],
         "padded_note": "west, south, east, north plus or minus 0.15°, rounded outward to 0.01°, the same margin map_sets.state uses for US states"
@@ -403,14 +403,14 @@
         },
         "padded_0_15": [
           -114.91,
-          18.19,
-          -103.34,
-          19.66
+          18.18,
+          -103.33,
+          19.67
         ],
         "padded_note": "west, south, east, north plus or minus 0.15°, rounded outward to 0.01°, the same margin map_sets.state uses for US states"
       },
       "layers": "country_layers",
-      "notes": "Box includes the Revillagigedo Islands (Socorro, San Benedicto, Clarión, Roca Partida), about 720 km offshore, which belong to Colima."
+      "notes": "Box includes the Revillagigedo Islands (Socorro, San Benedicto, Clarión, Roca Partida), which belong to Colima. The western edge at about -114.76 is Isla Clarión (about 18.36 N, 114.73 W), about 700 km from the mainland, not Socorro (about 18.78 N, 110.98 W)."
     },
     {
       "code": "MX-CHP",
@@ -464,10 +464,10 @@
           "verified": "2026-11-18 (shapefile downloaded through CONABIO mirror, which is INEGI data)"
         },
         "padded_0_15": [
-          -109.22,
-          25.41,
-          -103.16,
-          31.93
+          -109.23,
+          25.4,
+          -103.15,
+          31.94
         ],
         "padded_note": "west, south, east, north plus or minus 0.15°, rounded outward to 0.01°, the same margin map_sets.state uses for US states"
       },
@@ -495,15 +495,15 @@
           "verified": "2026-11-18 (shapefile downloaded through CONABIO mirror, which is INEGI data)"
         },
         "padded_0_15": [
-          -99.51,
-          18.9,
+          -99.52,
+          18.89,
           -98.79,
-          19.74
+          19.75
         ],
         "padded_note": "west, south, east, north plus or minus 0.15°, rounded outward to 0.01°, the same margin map_sets.state uses for US states"
       },
       "layers": "country_layers",
-      "notes": "Fully surrounded by MX-MEX; the smallest region by area."
+      "notes": "Borders MX-MEX to the north, east and west and MX-MOR to the south, so not fully surrounded by MX-MEX. Smallest region by area (about 1,500 km²; INEGI 2024 geographic compendium, on the December 2023 framework, gives 1,494.3 km²), smaller than MX-TLA. Box overlaps MX-MEX. Do not split addresses by treating the first two postcode digits as the INEGI code; that split is future work."
     },
     {
       "code": "MX-DUR",
@@ -526,10 +526,10 @@
           "verified": "2026-11-18 (shapefile downloaded through CONABIO mirror, which is INEGI data)"
         },
         "padded_0_15": [
-          -107.36,
-          22.2,
+          -107.37,
+          22.19,
           -102.32,
-          26.99
+          27.0
         ],
         "padded_note": "west, south, east, north plus or minus 0.15°, rounded outward to 0.01°, the same margin map_sets.state uses for US states"
       },
@@ -588,9 +588,9 @@
           "verified": "2026-11-18 (shapefile downloaded through CONABIO mirror, which is INEGI data)"
         },
         "padded_0_15": [
-          -102.33,
-          16.17,
-          -97.86,
+          -102.34,
+          16.16,
+          -97.85,
           19.04
         ],
         "padded_note": "west, south, east, north plus or minus 0.15°, rounded outward to 0.01°, the same margin map_sets.state uses for US states"
@@ -620,7 +620,7 @@
         },
         "padded_0_15": [
           -100.01,
-          19.45,
+          19.44,
           -97.83,
           21.55
         ],
@@ -651,9 +651,9 @@
         },
         "padded_0_15": [
           -105.85,
-          18.78,
+          18.77,
           -101.36,
-          22.9
+          22.91
         ],
         "padded_note": "west, south, east, north plus or minus 0.15°, rounded outward to 0.01°, the same margin map_sets.state uses for US states"
       },
@@ -681,9 +681,9 @@
           "verified": "2026-11-18 (shapefile downloaded through CONABIO mirror, which is INEGI data)"
         },
         "padded_0_15": [
-          -100.76,
-          18.22,
-          -98.45,
+          -100.77,
+          18.21,
+          -98.44,
           20.44
         ],
         "padded_note": "west, south, east, north plus or minus 0.15°, rounded outward to 0.01°, the same margin map_sets.state uses for US states"
@@ -715,7 +715,7 @@
           -103.89,
           17.76,
           -99.91,
-          20.54
+          20.55
         ],
         "padded_note": "west, south, east, north plus or minus 0.15°, rounded outward to 0.01°, the same margin map_sets.state uses for US states"
       },
@@ -743,10 +743,10 @@
           "verified": "2026-11-18 (shapefile downloaded through CONABIO mirror, which is INEGI data)"
         },
         "padded_0_15": [
-          -99.64,
+          -99.65,
           18.18,
           -98.48,
-          19.28
+          19.29
         ],
         "padded_note": "west, south, east, north plus or minus 0.15°, rounded outward to 0.01°, the same margin map_sets.state uses for US states"
       },
@@ -777,7 +777,7 @@
           -106.84,
           20.45,
           -103.57,
-          23.23
+          23.24
         ],
         "padded_note": "west, south, east, north plus or minus 0.15°, rounded outward to 0.01°, the same margin map_sets.state uses for US states"
       },
@@ -836,9 +836,9 @@
           "verified": "2026-11-18 (shapefile downloaded through CONABIO mirror, which is INEGI data)"
         },
         "padded_0_15": [
-          -98.7,
-          15.51,
-          -93.72,
+          -98.71,
+          15.5,
+          -93.71,
           18.82
         ],
         "padded_note": "west, south, east, north plus or minus 0.15°, rounded outward to 0.01°, the same margin map_sets.state uses for US states"
@@ -867,7 +867,7 @@
           "verified": "2026-11-18 (shapefile downloaded through CONABIO mirror, which is INEGI data)"
         },
         "padded_0_15": [
-          -99.22,
+          -99.23,
           17.71,
           -96.57,
           20.99
@@ -899,7 +899,7 @@
         },
         "padded_0_15": [
           -100.75,
-          19.87,
+          19.86,
           -98.89,
           21.82
         ],
@@ -962,8 +962,8 @@
         "padded_0_15": [
           -102.45,
           21.01,
-          -98.18,
-          24.64
+          -98.17,
+          24.65
         ],
         "padded_note": "west, south, east, north plus or minus 0.15°, rounded outward to 0.01°, the same margin map_sets.state uses for US states"
       },
@@ -991,10 +991,10 @@
           "verified": "2026-11-18 (shapefile downloaded through CONABIO mirror, which is INEGI data)"
         },
         "padded_0_15": [
-          -109.59,
-          22.32,
+          -109.6,
+          22.31,
           -105.24,
-          27.19
+          27.2
         ],
         "padded_note": "west, south, east, north plus or minus 0.15°, rounded outward to 0.01°, the same margin map_sets.state uses for US states"
       },
@@ -1022,10 +1022,10 @@
           "verified": "2026-11-18 (shapefile downloaded through CONABIO mirror, which is INEGI data)"
         },
         "padded_0_15": [
-          -115.2,
-          26.15,
+          -115.21,
+          26.14,
           -108.27,
-          32.64
+          32.65
         ],
         "padded_note": "west, south, east, north plus or minus 0.15°, rounded outward to 0.01°, the same margin map_sets.state uses for US states"
       },
@@ -1055,8 +1055,8 @@
         "padded_0_15": [
           -94.28,
           17.1,
-          -90.84,
-          18.8
+          -90.83,
+          18.81
         ],
         "padded_note": "west, south, east, north plus or minus 0.15°, rounded outward to 0.01°, the same margin map_sets.state uses for US states"
       },
@@ -1084,8 +1084,8 @@
           "verified": "2026-11-18 (shapefile downloaded through CONABIO mirror, which is INEGI data)"
         },
         "padded_0_15": [
-          -100.29,
-          22.06,
+          -100.3,
+          22.05,
           -96.99,
           27.83
         ],
@@ -1116,14 +1116,14 @@
         },
         "padded_0_15": [
           -98.86,
-          18.96,
-          -97.48,
+          18.95,
+          -97.47,
           19.88
         ],
         "padded_note": "west, south, east, north plus or minus 0.15°, rounded outward to 0.01°, the same margin map_sets.state uses for US states"
       },
       "layers": "country_layers",
-      "notes": "Fully surrounded by MX-PUE."
+      "notes": "Borders MX-PUE, MX-HID and MX-MEX, so not fully surrounded by MX-PUE. About 4,000 km², larger than MX-CMX. Do not split addresses by treating the first two postcode digits as the INEGI code."
     },
     {
       "code": "MX-VER",
@@ -1146,10 +1146,10 @@
           "verified": "2026-11-18 (shapefile downloaded through CONABIO mirror, which is INEGI data)"
         },
         "padded_0_15": [
-          -98.83,
-          16.99,
-          -93.46,
-          22.62
+          -98.84,
+          16.98,
+          -93.45,
+          22.63
         ],
         "padded_note": "west, south, east, north plus or minus 0.15°, rounded outward to 0.01°, the same margin map_sets.state uses for US states"
       },
@@ -1208,7 +1208,7 @@
           "verified": "2026-11-18 (shapefile downloaded through CONABIO mirror, which is INEGI data)"
         },
         "padded_0_15": [
-          -104.5,
+          -104.51,
           20.89,
           -100.59,
           25.28

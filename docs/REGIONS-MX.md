@@ -20,8 +20,9 @@ Each source carries one of three marks:
 
 ## Why Mexico is a useful case
 
-Mexico is close to the US in the way its data is organised, and it is the country with the second-largest address set
-in Overture after the US (30,726,687 rows). One national mapping agency (INEGI) publishes nationwide elevation,
+Mexico is close to the US in the way its data is organised. In the Overture addresses guide it is third by address
+count, after the United States (126,202,222) and Brazil (89,887,635), with 30,726,687 Mexican rows (the publisher's
+guide counts, not a count made for this proposal). One national mapping agency (INEGI) publishes nationwide elevation,
 hydrography, names, boundaries, land use and the statistical framework under one licence, the "Términos de Libre Uso
 de la Información del INEGI" (INEGI Libre Uso), which permits copying, redistribution, adaptation and commercial use
 with attribution and no share-alike. Overture already carries a nationwide address set from INEGI. Two things are
@@ -38,8 +39,10 @@ different from the US and worth deciding once, because other Latin American coun
 Mexico has 32 states (*entidades federativas*): 31 states and Mexico City (Ciudad de México, which was the Federal
 District until 2016). The proposal is one region per state, 32 in all. A state is the level closest to a US state in
 size and in what it runs (health, civil protection, most open data portals): the largest, Chihuahua (about 247,000
-km²), is about the size of Idaho; the smallest, Tlaxcala (about 4,000 km²), is a little smaller than Delaware (areas
-not reopened for this change).
+km²), is about the size of Idaho; the smallest is Mexico City (about 1,500 km²). INEGI's 2024 geographic compendium,
+drawn on the December 2023 Marco Geoestadístico, gives Mexico City 1,494.3 km² and ranks it 32nd. Tlaxcala (about
+4,000 km²) is the next smallest and a little smaller than Delaware; the Chihuahua and Tlaxcala areas were not
+reopened for this change.
 
 ### Codes
 
@@ -62,56 +65,61 @@ polygon feature. Every vertex of every polygon was read; the bounding box was th
 outward to 0.01°, the same margin `map_sets.state` uses for US states.
 
 As a check, the outer edges match Mexico's known extreme points: Isla de Guadalupe (29.09° N, 118.28° W) in the
-northwest, the coast of Quintana Roo (21.61° N, 86.71° W) in the east, Chiampeho in the south (14.53° N), and the
-US border in the north (32.72° N). The Revillagigedo Islands (Socorro at 18.84° N, 112.47° W) belong to Colima and
-stretch that state's box far into the Pacific.
+northwest, the coast of Quintana Roo (21.61° N, 86.71° W) in the east, the mouth of the Suchiate River in Chiapas
+(about 14.53° N) in the south, and the US border in the north (32.72° N). That southern latitude is the Chiapas
+south edge in this table (14.5321° N). Published coordinates for the river mouth sit next to it (about 14.53° N;
+one extreme-points list gives 14°32′27″ N, about 14.54° N). The Revillagigedo Islands belong to Colima. Colima's
+west edge at -114.76° is Isla Clarión (about 18.36° N, 114.73° W), not Socorro (about 18.78° N, 110.98° W).
 
 | Code | INEGI | Name | Box (west, south, east, north) | Box with 0.15° margin |
 |---|---|---|---|---|
-| `MX-AGU` | 01 | Aguascalientes | -102.8742, 21.6223, -101.8353, 22.4596 | -103.02, 21.47, -101.69, 22.61 |
-| `MX-BCN` | 02 | Baja California | -118.3653, 28.0000, -112.2968, 32.7187 | -118.52, 27.85, -112.15, 32.87 |
+| `MX-AGU` | 01 | Aguascalientes | -102.8742, 21.6223, -101.8353, 22.4596 | -103.03, 21.47, -101.68, 22.61 |
+| `MX-BCN` | 02 | Baja California | -118.3653, 28.0000, -112.2968, 32.7187 | -118.52, 27.85, -112.14, 32.87 |
 | `MX-BCS` | 03 | Baja California Sur | -115.7661, 22.8717, -109.4131, 28.0000 | -115.92, 22.72, -109.26, 28.15 |
 | `MX-CAM` | 04 | Campeche | -92.4688, 17.8129, -89.1212, 20.8483 | -92.62, 17.66, -88.97, 21.00 |
 | `MX-COA` | 05 | Coahuila de Zaragoza | -103.9600, 24.5427, -99.8431, 29.8800 | -104.11, 24.39, -99.69, 30.03 |
-| `MX-COL` | 06 | Colima | -114.7595, 18.3389, -103.4863, 19.5125 | -114.91, 18.19, -103.34, 19.66 |
+| `MX-COL` | 06 | Colima | -114.7595, 18.3389, -103.4863, 19.5125 | -114.91, 18.18, -103.33, 19.67 |
 | `MX-CHP` | 07 | Chiapas | -94.1392, 14.5321, -90.3702, 17.9853 | -94.29, 14.38, -90.22, 18.14 |
-| `MX-CHH` | 08 | Chihuahua | -109.0749, 25.5588, -103.3068, 31.7845 | -109.22, 25.41, -103.16, 31.93 |
-| `MX-CMX` | 09 | Ciudad de México | -99.3649, 19.0482, -98.9403, 19.5928 | -99.51, 18.90, -98.79, 19.74 |
-| `MX-DUR` | 10 | Durango | -107.2101, 22.3451, -102.4727, 26.8449 | -107.36, 22.20, -102.32, 26.99 |
+| `MX-CHH` | 08 | Chihuahua | -109.0749, 25.5588, -103.3068, 31.7845 | -109.23, 25.40, -103.15, 31.94 |
+| `MX-CMX` | 09 | Ciudad de México | -99.3649, 19.0482, -98.9403, 19.5928 | -99.52, 18.89, -98.79, 19.75 |
+| `MX-DUR` | 10 | Durango | -107.2101, 22.3451, -102.4727, 26.8449 | -107.37, 22.19, -102.32, 27.00 |
 | `MX-GUA` | 11 | Guanajuato | -102.0970, 19.9128, -99.6713, 21.8394 | -102.25, 19.76, -99.52, 21.99 |
-| `MX-GRO` | 12 | Guerrero | -102.1844, 16.3160, -98.0073, 18.8878 | -102.33, 16.17, -97.86, 19.04 |
-| `MX-HID` | 13 | Hidalgo | -99.8595, 19.5978, -97.9849, 21.3985 | -100.01, 19.45, -97.83, 21.55 |
-| `MX-JAL` | 14 | Jalisco | -105.6954, 18.9259, -101.5105, 22.7502 | -105.85, 18.78, -101.36, 22.90 |
-| `MX-MEX` | 15 | México | -100.6131, 18.3669, -98.5969, 20.2859 | -100.76, 18.22, -98.45, 20.44 |
-| `MX-MIC` | 16 | Michoacán de Ocampo | -103.7381, 17.9134, -100.0630, 20.3946 | -103.89, 17.76, -99.91, 20.54 |
-| `MX-MOR` | 17 | Morelos | -99.4944, 18.3324, -98.6329, 19.1317 | -99.64, 18.18, -98.48, 19.28 |
-| `MX-NAY` | 18 | Nayarit | -106.6877, 20.6032, -103.7209, 23.0845 | -106.84, 20.45, -103.57, 23.23 |
+| `MX-GRO` | 12 | Guerrero | -102.1844, 16.3160, -98.0073, 18.8878 | -102.34, 16.16, -97.85, 19.04 |
+| `MX-HID` | 13 | Hidalgo | -99.8595, 19.5978, -97.9849, 21.3985 | -100.01, 19.44, -97.83, 21.55 |
+| `MX-JAL` | 14 | Jalisco | -105.6954, 18.9259, -101.5105, 22.7502 | -105.85, 18.77, -101.36, 22.91 |
+| `MX-MEX` | 15 | México | -100.6131, 18.3669, -98.5969, 20.2859 | -100.77, 18.21, -98.44, 20.44 |
+| `MX-MIC` | 16 | Michoacán de Ocampo | -103.7381, 17.9134, -100.0630, 20.3946 | -103.89, 17.76, -99.91, 20.55 |
+| `MX-MOR` | 17 | Morelos | -99.4944, 18.3324, -98.6329, 19.1317 | -99.65, 18.18, -98.48, 19.29 |
+| `MX-NAY` | 18 | Nayarit | -106.6877, 20.6032, -103.7209, 23.0845 | -106.84, 20.45, -103.57, 23.24 |
 | `MX-NLE` | 19 | Nuevo León | -101.2068, 23.1627, -98.4216, 27.7991 | -101.36, 23.01, -98.27, 27.95 |
-| `MX-OAX` | 20 | Oaxaca | -98.5527, 15.6569, -93.8674, 18.6697 | -98.70, 15.51, -93.72, 18.82 |
-| `MX-PUE` | 21 | Puebla | -99.0705, 17.8609, -96.7247, 20.8400 | -99.22, 17.71, -96.57, 20.99 |
-| `MX-QUE` | 22 | Querétaro | -100.5965, 20.0150, -99.0431, 21.6700 | -100.75, 19.87, -98.89, 21.82 |
+| `MX-OAX` | 20 | Oaxaca | -98.5527, 15.6569, -93.8674, 18.6697 | -98.71, 15.50, -93.71, 18.82 |
+| `MX-PUE` | 21 | Puebla | -99.0705, 17.8609, -96.7247, 20.8400 | -99.23, 17.71, -96.57, 20.99 |
+| `MX-QUE` | 22 | Querétaro | -100.5965, 20.0150, -99.0431, 21.6700 | -100.75, 19.86, -98.89, 21.82 |
 | `MX-ROO` | 23 | Quintana Roo | -89.2966, 17.8940, -86.7104, 21.6055 | -89.45, 17.74, -86.56, 21.76 |
-| `MX-SLP` | 24 | San Luis Potosí | -102.2960, 21.1602, -98.3260, 24.4915 | -102.45, 21.01, -98.18, 24.64 |
-| `MX-SIN` | 25 | Sinaloa | -109.4447, 22.4671, -105.3922, 27.0423 | -109.59, 22.32, -105.24, 27.19 |
-| `MX-SON` | 26 | Sonora | -115.0530, 26.2970, -108.4243, 32.4939 | -115.20, 26.15, -108.27, 32.64 |
-| `MX-TAB` | 27 | Tabasco | -94.1300, 17.2509, -90.9875, 18.6510 | -94.28, 17.10, -90.84, 18.80 |
-| `MX-TAM` | 28 | Tamaulipas | -100.1450, 22.2070, -97.1443, 27.6791 | -100.29, 22.06, -96.99, 27.83 |
-| `MX-TLA` | 29 | Tlaxcala | -98.7084, 19.1051, -97.6254, 19.7289 | -98.86, 18.96, -97.48, 19.88 |
-| `MX-VER` | 30 | Veracruz de Ignacio de la Llave | -98.6815, 17.1370, -93.6079, 22.4718 | -98.83, 16.99, -93.46, 22.62 |
+| `MX-SLP` | 24 | San Luis Potosí | -102.2960, 21.1602, -98.3260, 24.4915 | -102.45, 21.01, -98.17, 24.65 |
+| `MX-SIN` | 25 | Sinaloa | -109.4447, 22.4671, -105.3922, 27.0423 | -109.60, 22.31, -105.24, 27.20 |
+| `MX-SON` | 26 | Sonora | -115.0530, 26.2970, -108.4243, 32.4939 | -115.21, 26.14, -108.27, 32.65 |
+| `MX-TAB` | 27 | Tabasco | -94.1300, 17.2509, -90.9875, 18.6510 | -94.28, 17.10, -90.83, 18.81 |
+| `MX-TAM` | 28 | Tamaulipas | -100.1450, 22.2070, -97.1443, 27.6791 | -100.30, 22.05, -96.99, 27.83 |
+| `MX-TLA` | 29 | Tlaxcala | -98.7084, 19.1051, -97.6254, 19.7289 | -98.86, 18.95, -97.47, 19.88 |
+| `MX-VER` | 30 | Veracruz de Ignacio de la Llave | -98.6815, 17.1370, -93.6079, 22.4718 | -98.84, 16.98, -93.45, 22.63 |
 | `MX-YUC` | 31 | Yucatán | -92.3263, 19.5512, -87.5331, 22.5860 | -92.48, 19.40, -87.38, 22.74 |
-| `MX-ZAC` | 32 | Zacatecas | -104.3535, 21.0419, -100.7423, 25.1252 | -104.50, 20.89, -100.59, 25.28 |
+| `MX-ZAC` | 32 | Zacatecas | -104.3535, 21.0419, -100.7423, 25.1252 | -104.51, 20.89, -100.59, 25.28 |
 
 Notes:
 
 - **The Baja California peninsula** is split between `MX-BCN` (north) and `MX-BCS` (south) at the 28° N line. Both
   are long, narrow peninsulas with coast on both sides, so each must be its own region.
 - **Colima's box** stretches far into the Pacific because it includes the Revillagigedo Islands (Socorro, San
-  Benedicto, Clarión, Roca Partida), about 720 km offshore. The mainland part of Colima is a small coastal state
-  around -103.5° W.
-- **Mexico City (MX-CMX)** is fully surrounded by the State of Mexico (MX-MEX), the smallest region by area. The two
-  boxes overlap heavily; an address index cut by state would need the postcode prefix (MX-CMX is 00xxx-16xxx, MX-MEX
-  is 50xxx-59xxx) rather than the box.
-- **Tlaxcala (MX-TLA)** is fully surrounded by Puebla (MX-PUE). The same postcode-prefix rule would separate them.
+  Benedicto, Clarión, Roca Partida). The western edge, -114.76°, is Isla Clarión, about 700 km from the mainland,
+  not Socorro. The mainland part of Colima is a small coastal state around -103.5° W.
+- **Mexico City (MX-CMX)** borders the State of Mexico (MX-MEX) to the north, east and west and Morelos (MX-MOR) to
+  the south, so it is not fully surrounded by MX-MEX. It is the smallest region by area (about 1,500 km²), smaller
+  than Tlaxcala. The Mexico City and State of Mexico boxes overlap heavily. An address index cannot be cut by
+  reading the first two postcode digits as the INEGI state code; that split is future work (a state polygon, or a
+  CP→state table whose rights are checked).
+- **Tlaxcala (MX-TLA)** borders Puebla (MX-PUE), Hidalgo (MX-HID) and the State of Mexico (MX-MEX), so it is not
+  fully surrounded by Puebla. The same postcode caveat applies.
 - **Sonora and Chihuahua** are the two largest by area; their northern edges reach the US border (Arizona, New Mexico
   and Texas).
 - **Quintana Roo** includes Cozumel and Isla Mujeres; it is the easternmost region.
@@ -152,24 +160,29 @@ Notes:
 - **Buildings.** Google Open Buildings V3 provides 1.8 billion building footprints across Africa, Latin America,
   the Caribbean, South Asia and SE Asia, including all of Mexico. Each footprint has a confidence score [0.65–1.0],
   an area and a Plus Code. The licence is CC BY 4.0 and ODbL; the user may choose either. Microsoft Global ML Building
-  Footprints also covered Mexico but the repository was archived in October 2026; the data is still available but
-  will not be updated. OSM has building footprints in urban areas but coverage is thinner in rural Mexico.
+  Footprints also covers Mexico and remains an alternative. The repository is public and not archived (GitHub API,
+  19 November 2026; last push 18 November 2026). The README's direct licence for the data is CDLA-Permissive-2.0
+  (README opened the same day; an update entry is dated 12 November 2026). OSM has building footprints in urban
+  areas but coverage is thinner in rural Mexico.
 - **Places.** INEGI's Marco Geoestadístico is the national framework: states (AGEE, 32), municipalities (AGEM,
   ~2,467), and localities (urban and rural). It is updated yearly; the December 2023 version was used for the boxes
   in this proposal, and the December 2025 version is available. The shapefile was downloaded through CONABIO's
   mirror (`dest23gw.zip`), which is INEGI data. The framework is in Lambert Conformal Conic (CCL) but available in
   geographic coordinates (WGS84) as well.
 
-## Addresses in Overture, measured
+## Addresses in Overture, from the publisher's guide
 
-The Mexican rows of Overture release `2026-11-18.0` were read from the address guide on 18 November 2026:
+The Mexican rows of Overture release `2026-11-18.0` were read from the address guide on 18 November 2026. The counts
+below are the publisher's, not a measurement made for this proposal:
 
-- **30,726,687 addresses**, the second-largest country after the US (126,202,222). One source: "INEGI, Censos
-  Económicos. TÉRMINOS DE LIBRE USO DE LA INFORMACIÓN DEL INEGI. Distributed by OpenAddresses. Accessed: 2026-11-17."
-  (Overture attribution page, opened).
-- Per-state counts were not computed for this proposal. They would need a DuckDB query with `country = 'MX'` and a
-  split by the first two postcode digits (the INEGI state code), the same method used for Spain's provinces. The
-  total is about a quarter of the US total and more than any European country in the guide.
+- **30,726,687 addresses**, third after the United States (126,202,222) and Brazil (89,887,635). One source: "INEGI,
+  Censos Económicos. TÉRMINOS DE LIBRE USO DE LA INFORMACIÓN DEL INEGI. Distributed by OpenAddresses. Accessed:
+  2026-11-17." (Overture attribution page, opened).
+- Per-state counts were not computed. Splitting on the first two postcode digits as if they were the INEGI state
+  code would put addresses in the wrong state: Aguascalientes (INEGI 01) starts at 20000, and Zacatecas (INEGI 32)
+  at 98000. The state split is left as future work, for example by state polygon, or by a CP→state table whose
+  rights are checked. The national total in the guide is about a quarter of the US total and larger than any
+  European country listed there.
 
 ## Help points
 
@@ -234,8 +247,10 @@ where the maintainers keep data licences.
 - **Order.** Street type, street name, then the number, then postcode and town: "Av. Reforma, 123, 06600 Ciudad de
   México". The type comes first (*Avenida*, *Calle*, *Boulevard*, *Privada*, *Andador*, *Calzada*) and is often
   abbreviated (*Av.*, *C.*, *Blvd.*, *Priv.*, *And.*).
-- **Postcode.** Five digits (*código postal*, CP), the same shape as a US ZIP code. The first two are the INEGI state
-  code (01–32), so leading zeros are common (01xxx Aguascalientes, 32xxx Zacatecas) and a postcode must stay text.
+- **Postcode.** Five digits (*código postal*, CP), the same shape as a US ZIP code. A postcode must stay text,
+  because leading zeros occur (for example 06600 Ciudad de México). The first two digits are not the INEGI state
+  code: Aguascalientes (INEGI 01) starts at 20000 and Zacatecas (INEGI 32) at 98000. A per-state split of those
+  codes is future work.
 - **Spanish characters.** Street names carry accents (á, é, í, ó, ú) and ñ. `normalize()` in
   `engine/address_search.py` and `norm()` in `tools/build_addresses.py` keep only `a-z` and `0-9`, so "Reforma"
   matches but "Niños Héroes" becomes "ni os" and "Privada de la Cañada" becomes "privada de la ca ada". Accent and ñ
@@ -264,8 +279,10 @@ the other proposals.
    "Términos de Libre Uso" framework as INEGI.
 6. **Google Open Buildings vs. Overture buildings.** Whether to use Google Open Buildings (CC BY 4.0 / ODbL) or
    wait for Overture buildings, which may include Mexico.
-7. **Mexico City and State of Mexico.** The two boxes overlap heavily; whether an index per region can be cut by
-   postcode prefix (00xxx–16xxx for MX-CMX, 50xxx–59xxx for MX-MEX) or whether the box overlap is acceptable.
+7. **Overlapping boxes.** Mexico City's box overlaps the State of Mexico, and Mexico City also borders Morelos.
+   Tlaxcala borders Puebla, Hidalgo and the State of Mexico. Whether an index per region can be cut by state
+   polygon, or by a CP→state table whose rights are checked, or whether the box overlap is acceptable. The first
+   two postcode digits are not the INEGI state code, so they are not that cut.
 8. **The map credit line.** INEGI's terms ask for attribution at the source of the work; whether "a pie de mapa" (at
    the foot of the map) is required, as for IGN in Spain, should be confirmed.
 
@@ -275,7 +292,15 @@ the other proposals.
   Marco Geoestadístico page and shapefile (through CONABIO's mirror, which is INEGI data, in geographic WGS84
   coordinates); the CONAGUA dam catalog page; the Google Open Buildings V3 page; the Overture address guide and
   attribution page; Geofabrik's taginfo for Mexico (API).
-- Computed on 18 November 2026: the 32 boxes, from the INEGI Marco Geoestadístico AGEE shapefile as described above.
+- Computed on 18 November 2026: the 32 tight boxes, from the INEGI Marco Geoestadístico AGEE shapefile as described
+  above. On 19 November 2026 the 0.15° margins were recomputed from those tight bounds, rounding outward (floor for
+  west and south, ceiling for east and north) to 0.01°.
+- Checked on 19 November 2026, for the review: the Overture address guide's per-country counts (US, Brazil, Mexico);
+  the Microsoft Global ML Building Footprints repository (public, not archived; README licence CDLA-Permissive-2.0);
+  INEGI's 2024 geographic compendium for Mexico City (1,494.3 km²; borders the State of Mexico and Morelos); INEGI's
+  *Conociendo Tlaxcala* for Tlaxcala's borders (Hidalgo, Puebla and the State of Mexico); published coordinates for
+  Isla Clarión, Isla Socorro and the mouth of the Suchiate. The SEPOMEX catalogue file was not re-downloaded; the
+  Aguascalientes 20000 and Zacatecas 98000 examples were read from Correos de México's published state ranges.
 - Seen only in search results: the INEGI hydrography page; the CONAGUA Ríos Principales WMS/WFS; the INEGI land-use
   and vegetation series; the CONAGUA dam count (~210) from search results of the catalog CSV.
 - Not checked: the CONAGUA dam catalog CSV (redirect loop on `sih.conagua.gob.mx`); the CONAGUA licence; the INEGI

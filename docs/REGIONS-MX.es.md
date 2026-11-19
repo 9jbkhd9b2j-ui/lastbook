@@ -24,9 +24,11 @@ de los datos mismos, como se describe en cada sección. Cada fuente lleva una de
 
 ## Por qué México es un caso útil
 
-México se parece a Estados Unidos en la forma en que organiza sus datos, y es el país con el segundo conjunto de
-direcciones más grande en Overture después de EE. UU. (30.726.687 filas). Un instituto nacional de mapeo (INEGI) publica
-elevación, hidrografía, nombres, límites, uso del suelo y el marco geoestadístico bajo una sola licencia, los "Términos
+México se parece a Estados Unidos en la forma en que organiza sus datos. En la guía de direcciones de Overture es el
+tercero por número de direcciones, después de Estados Unidos (126.202.222) y Brasil (89.887.635), con 30.726.687 filas
+mexicanas (conteos de la guía del editor, no un conteo hecho para esta propuesta). Un instituto nacional de
+mapeo (INEGI) publica elevación, hidrografía, nombres, límites, uso del suelo y el marco geoestadístico bajo una
+sola licencia, los "Términos
 de Libre Uso de la Información del INEGI" (INEGI Libre Uso), que permite copia, distribución, adaptación y uso comercial
 con atribución y sin compartir-igual (share-alike). Overture ya contiene un conjunto nacional de direcciones proveniente
 de INEGI. Dos cosas difieren de EE. UU. y conviene decidirlas ahora, porque otros países latinoamericanos las plantearán:
@@ -44,8 +46,10 @@ de INEGI. Dos cosas difieren de EE. UU. y conviene decidirlas ahora, porque otro
 México tiene 32 estados (*entidades federativas*): 31 estados y la Ciudad de México (que fue el Distrito Federal hasta
 2016). La propuesta es una región por estado, 32 en total. Un estado es el nivel más cercano a un estado de EE. UU. en
 tamaño y en lo que gestiona (salud, protección civil, la mayoría de los portales de datos abiertos): el más grande,
-Chihuahua (aprox. 247.000 km²), es del tamaño de Idaho; el más pequeño, Tlaxcala (aprox. 4.000 km²), es un poco más
-pequeño que Delaware (las áreas no se volvieron a abrir para este cambio).
+Chihuahua (aprox. 247.000 km²), es del tamaño de Idaho; el más pequeño es la Ciudad de México (aprox. 1.500 km²). El
+compendio geográfico 2024 del INEGI, sobre el Marco Geoestadístico de diciembre de 2023, da a la Ciudad de México
+1.494,3 km² y la ubica en el lugar 32. Tlaxcala (aprox. 4.000 km²) es el siguiente más pequeño y un poco más pequeño
+que Delaware; las áreas de Chihuahua y Tlaxcala no se volvieron a abrir para este cambio.
 
 ### Códigos
 
@@ -69,56 +73,62 @@ se tomó como un polígono. Se leyeron todos los vértices de cada polígono; la
 redondeó hacia afuera a 0.01°, el mismo margen que `map_sets.state` usa para los estados de EE. UU.
 
 Como verificación, los bordes exteriores coinciden con los puntos extremos conocidos de México: la Isla de Guadalupe
-(29.09° N, 118.28° W) al noroeste, la costa de Quintana Roo (21.61° N, 86.71° W) al este, la costa de Chiapas (14.53° N)
-al sur, y la frontera con EE. UU. (32.72° N) al norte. Las Islas Revillagigedo (Socorro a 18.84° N, 112.47° W) pertenecen
-a Colima y extienden la caja de ese estado lejos hacia el Pacífico.
+(29.09° N, 118.28° W) al noroeste, la costa de Quintana Roo (21.61° N, 86.71° W) al este, la desembocadura del río
+Suchiate en Chiapas (aprox. 14.53° N) al sur, y la frontera con EE. UU. (32.72° N) al norte. Esa latitud sur es el
+borde sur de Chiapas en esta tabla (14.5321° N). Las coordenadas publicadas de la desembocadura quedan junto a ella
+(aprox. 14.53° N; una lista de puntos extremos da 14°32′27″ N, aprox. 14.54° N). Las Islas Revillagigedo pertenecen
+a Colima. El borde oeste de la caja de ese estado, -114.76°, es la Isla Clarión (aprox. 18.36° N, 114.73° W), no
+Socorro (aprox. 18.78° N, 110.98° W).
 
 | Código | INEGI | Nombre | Caja (oeste, sur, este, norte) | Caja con margen 0.15° |
 |---|---|---|---|---|
-| `MX-AGU` | 01 | Aguascalientes | -102.8742, 21.6223, -101.8353, 22.4596 | -103.02, 21.47, -101.69, 22.61 |
-| `MX-BCN` | 02 | Baja California | -118.3653, 28.0000, -112.2968, 32.7187 | -118.52, 27.85, -112.15, 32.87 |
+| `MX-AGU` | 01 | Aguascalientes | -102.8742, 21.6223, -101.8353, 22.4596 | -103.03, 21.47, -101.68, 22.61 |
+| `MX-BCN` | 02 | Baja California | -118.3653, 28.0000, -112.2968, 32.7187 | -118.52, 27.85, -112.14, 32.87 |
 | `MX-BCS` | 03 | Baja California Sur | -115.7661, 22.8717, -109.4131, 28.0000 | -115.92, 22.72, -109.26, 28.15 |
 | `MX-CAM` | 04 | Campeche | -92.4688, 17.8129, -89.1212, 20.8483 | -92.62, 17.66, -88.97, 21.00 |
 | `MX-COA` | 05 | Coahuila de Zaragoza | -103.9600, 24.5427, -99.8431, 29.8800 | -104.11, 24.39, -99.69, 30.03 |
-| `MX-COL` | 06 | Colima | -114.7595, 18.3389, -103.4863, 19.5125 | -114.91, 18.19, -103.34, 19.66 |
+| `MX-COL` | 06 | Colima | -114.7595, 18.3389, -103.4863, 19.5125 | -114.91, 18.18, -103.33, 19.67 |
 | `MX-CHP` | 07 | Chiapas | -94.1392, 14.5321, -90.3702, 17.9853 | -94.29, 14.38, -90.22, 18.14 |
-| `MX-CHH` | 08 | Chihuahua | -109.0749, 25.5588, -103.3068, 31.7845 | -109.22, 25.41, -103.16, 31.93 |
-| `MX-CMX` | 09 | Ciudad de México | -99.3649, 19.0482, -98.9403, 19.5928 | -99.51, 18.90, -98.79, 19.74 |
-| `MX-DUR` | 10 | Durango | -107.2101, 22.3451, -102.4727, 26.8449 | -107.36, 22.20, -102.32, 26.99 |
+| `MX-CHH` | 08 | Chihuahua | -109.0749, 25.5588, -103.3068, 31.7845 | -109.23, 25.40, -103.15, 31.94 |
+| `MX-CMX` | 09 | Ciudad de México | -99.3649, 19.0482, -98.9403, 19.5928 | -99.52, 18.89, -98.79, 19.75 |
+| `MX-DUR` | 10 | Durango | -107.2101, 22.3451, -102.4727, 26.8449 | -107.37, 22.19, -102.32, 27.00 |
 | `MX-GUA` | 11 | Guanajuato | -102.0970, 19.9128, -99.6713, 21.8394 | -102.25, 19.76, -99.52, 21.99 |
-| `MX-GRO` | 12 | Guerrero | -102.1844, 16.3160, -98.0073, 18.8878 | -102.33, 16.17, -97.86, 19.04 |
-| `MX-HID` | 13 | Hidalgo | -99.8595, 19.5978, -97.9849, 21.3985 | -100.01, 19.45, -97.83, 21.55 |
-| `MX-JAL` | 14 | Jalisco | -105.6954, 18.9259, -101.5105, 22.7502 | -105.85, 18.78, -101.36, 22.90 |
-| `MX-MEX` | 15 | México | -100.6131, 18.3669, -98.5969, 20.2859 | -100.76, 18.22, -98.45, 20.44 |
-| `MX-MIC` | 16 | Michoacán de Ocampo | -103.7381, 17.9134, -100.0630, 20.3946 | -103.89, 17.76, -99.91, 20.54 |
-| `MX-MOR` | 17 | Morelos | -99.4944, 18.3324, -98.6329, 19.1317 | -99.64, 18.18, -98.48, 19.28 |
-| `MX-NAY` | 18 | Nayarit | -106.6877, 20.6032, -103.7209, 23.0845 | -106.84, 20.45, -103.57, 23.23 |
+| `MX-GRO` | 12 | Guerrero | -102.1844, 16.3160, -98.0073, 18.8878 | -102.34, 16.16, -97.85, 19.04 |
+| `MX-HID` | 13 | Hidalgo | -99.8595, 19.5978, -97.9849, 21.3985 | -100.01, 19.44, -97.83, 21.55 |
+| `MX-JAL` | 14 | Jalisco | -105.6954, 18.9259, -101.5105, 22.7502 | -105.85, 18.77, -101.36, 22.91 |
+| `MX-MEX` | 15 | México | -100.6131, 18.3669, -98.5969, 20.2859 | -100.77, 18.21, -98.44, 20.44 |
+| `MX-MIC` | 16 | Michoacán de Ocampo | -103.7381, 17.9134, -100.0630, 20.3946 | -103.89, 17.76, -99.91, 20.55 |
+| `MX-MOR` | 17 | Morelos | -99.4944, 18.3324, -98.6329, 19.1317 | -99.65, 18.18, -98.48, 19.29 |
+| `MX-NAY` | 18 | Nayarit | -106.6877, 20.6032, -103.7209, 23.0845 | -106.84, 20.45, -103.57, 23.24 |
 | `MX-NLE` | 19 | Nuevo León | -101.2068, 23.1627, -98.4216, 27.7991 | -101.36, 23.01, -98.27, 27.95 |
-| `MX-OAX` | 20 | Oaxaca | -98.5527, 15.6569, -93.8674, 18.6697 | -98.70, 15.51, -93.72, 18.82 |
-| `MX-PUE` | 21 | Puebla | -99.0705, 17.8609, -96.7247, 20.8400 | -99.22, 17.71, -96.57, 20.99 |
-| `MX-QUE` | 22 | Querétaro | -100.5965, 20.0150, -99.0431, 21.6700 | -100.75, 19.87, -98.89, 21.82 |
+| `MX-OAX` | 20 | Oaxaca | -98.5527, 15.6569, -93.8674, 18.6697 | -98.71, 15.50, -93.71, 18.82 |
+| `MX-PUE` | 21 | Puebla | -99.0705, 17.8609, -96.7247, 20.8400 | -99.23, 17.71, -96.57, 20.99 |
+| `MX-QUE` | 22 | Querétaro | -100.5965, 20.0150, -99.0431, 21.6700 | -100.75, 19.86, -98.89, 21.82 |
 | `MX-ROO` | 23 | Quintana Roo | -89.2966, 17.8940, -86.7104, 21.6055 | -89.45, 17.74, -86.56, 21.76 |
-| `MX-SLP` | 24 | San Luis Potosí | -102.2960, 21.1602, -98.3260, 24.4915 | -102.45, 21.01, -98.18, 24.64 |
-| `MX-SIN` | 25 | Sinaloa | -109.4447, 22.4671, -105.3922, 27.0423 | -109.59, 22.32, -105.24, 27.19 |
-| `MX-SON` | 26 | Sonora | -115.0530, 26.2970, -108.4243, 32.4939 | -115.20, 26.15, -108.27, 32.64 |
-| `MX-TAB` | 27 | Tabasco | -94.1300, 17.2509, -90.9875, 18.6510 | -94.28, 17.10, -90.84, 18.80 |
-| `MX-TAM` | 28 | Tamaulipas | -100.1450, 22.2070, -97.1443, 27.6791 | -100.29, 22.06, -96.99, 27.83 |
-| `MX-TLA` | 29 | Tlaxcala | -98.7084, 19.1051, -97.6254, 19.7289 | -98.86, 18.96, -97.48, 19.88 |
-| `MX-VER` | 30 | Veracruz de Ignacio de la Llave | -98.6815, 17.1370, -93.6079, 22.4718 | -98.83, 16.99, -93.46, 22.62 |
+| `MX-SLP` | 24 | San Luis Potosí | -102.2960, 21.1602, -98.3260, 24.4915 | -102.45, 21.01, -98.17, 24.65 |
+| `MX-SIN` | 25 | Sinaloa | -109.4447, 22.4671, -105.3922, 27.0423 | -109.60, 22.31, -105.24, 27.20 |
+| `MX-SON` | 26 | Sonora | -115.0530, 26.2970, -108.4243, 32.4939 | -115.21, 26.14, -108.27, 32.65 |
+| `MX-TAB` | 27 | Tabasco | -94.1300, 17.2509, -90.9875, 18.6510 | -94.28, 17.10, -90.83, 18.81 |
+| `MX-TAM` | 28 | Tamaulipas | -100.1450, 22.2070, -97.1443, 27.6791 | -100.30, 22.05, -96.99, 27.83 |
+| `MX-TLA` | 29 | Tlaxcala | -98.7084, 19.1051, -97.6254, 19.7289 | -98.86, 18.95, -97.47, 19.88 |
+| `MX-VER` | 30 | Veracruz de Ignacio de la Llave | -98.6815, 17.1370, -93.6079, 22.4718 | -98.84, 16.98, -93.45, 22.63 |
 | `MX-YUC` | 31 | Yucatán | -92.3263, 19.5512, -87.5331, 22.5860 | -92.48, 19.40, -87.38, 22.74 |
-| `MX-ZAC` | 32 | Zacatecas | -104.3535, 21.0419, -100.7423, 25.1252 | -104.50, 20.89, -100.59, 25.28 |
+| `MX-ZAC` | 32 | Zacatecas | -104.3535, 21.0419, -100.7423, 25.1252 | -104.51, 20.89, -100.59, 25.28 |
 
 Notas:
 
 - **La península de Baja California** se divide entre `MX-BCN` (norte) y `MX-BCS` (sur) en la línea de 28° N. Ambas
   son penínsulas largas y estrechas con costa a ambos lados, así que cada una debe ser su propia región.
 - **La caja de Colima** se extiende lejos hacia el Pacífico porque incluye las Islas Revillagigedo (Socorro, San
-  Benedicto, Clarión, Roca Partida), a unos 720 km de la costa. La parte continental de Colima es un estado pequeño
-  costero alrededor de -103.5° W.
-- **Ciudad de México (MX-CMX)** está totalmente rodeada por el Estado de México (MX-MEX), la región más pequeña por
-  área. Las dos cajas se superponen mucho; un índice de direcciones cortado por estado necesitaría el prefijo del
-  código postal (MX-CMX es 00xxx–16xxx, MX-MEX es 50xxx–59xxx) en lugar de la caja.
-- **Tlaxcala (MX-TLA)** está totalmente rodeada por Puebla (MX-PUE).
+  Benedicto, Clarión, Roca Partida). El borde oeste, -114.76°, es la Isla Clarión, a unos 700 km del continente, no
+  Socorro. La parte continental de Colima es un estado pequeño costero alrededor de -103.5° W.
+- **Ciudad de México (MX-CMX)** colinda al norte, este y oeste con el Estado de México (MX-MEX) y al sur con Morelos
+  (MX-MOR), así que no está totalmente rodeada por MX-MEX. Es la región más pequeña por área (aprox. 1.500 km²), más
+  pequeña que Tlaxcala. Las cajas de la Ciudad de México y del Estado de México se superponen mucho. Un índice de
+  direcciones no puede cortarse leyendo los dos primeros dígitos del código postal como el código de estado del INEGI;
+  esa división queda como trabajo futuro (un polígono estatal, o una tabla CP→estado cuyos derechos se comprueben).
+- **Tlaxcala (MX-TLA)** colinda con Puebla (MX-PUE), Hidalgo (MX-HID) y el Estado de México (MX-MEX), así que no está
+  totalmente rodeada por Puebla. Vale la misma reserva sobre el código postal.
 - **Sonora y Chihuahua** son los dos estados más grandes por área; sus bordes norte llegan a la frontera con EE. UU.
   (Arizona, Nuevo México y Texas).
 - **Quintana Roo** incluye Cozumel e Isla Mujeres; es la región más oriental.
@@ -154,22 +164,29 @@ Notas:
   mexicanos es una decisión de los mantenedores, como se plantea para olivos, cítricos y frutos secos en REGIONS-ES.md.
 - **Edificios.** Google Open Buildings V3 proporciona 1.800 millones de huellas de edificios en África, América Latina,
   el Caribe, el Sur de Asia y el Sudeste Asiático, incluyendo todo México. Cada huella tiene una puntuación de confianza
-  [0.65–1.0], un área y un Plus Code. La licencia es CC BY 4.0 y ODbL; el usuario puede elegir cualquiera. OSM tiene
-  huellas de edificios en zonas urbanas pero la cobertura es más delgada en el México rural.
+  [0.65–1.0], un área y un Plus Code. La licencia es CC BY 4.0 y ODbL; el usuario puede elegir cualquiera. Microsoft
+  Global ML Building Footprints también cubre México y sigue como alternativa. El repositorio es público y no está
+  archivado (API de GitHub, 19 de noviembre de 2026; último push el 18 de noviembre de 2026). La licencia directa de
+  los datos, según el README, es CDLA-Permissive-2.0 (README abierto el mismo día; hay una entrada de actualización
+  del 12 de noviembre de 2026). OSM tiene huellas de edificios en zonas urbanas pero la cobertura es más delgada en
+  el México rural.
 - **Lugares.** El Marco Geoestadístico del INEGI es el marco nacional: estados (AGEE, 32), municipios (AGEM, ~2.467) y
   localidades (urbanas y rurales). Se actualiza anualmente; la versión de diciembre de 2023 se usó para las cajas de esta
   propuesta, y la versión de diciembre de 2025 está disponible.
 
-## Direcciones en Overture, medidas
+## Direcciones en Overture, según la guía del editor
 
-Las filas mexicanas de Overture, versión `2026-11-18.0`, se leyeron desde la guía de direcciones el 18 de noviembre de 2026:
+Las filas mexicanas de Overture, versión `2026-11-18.0`, se leyeron desde la guía de direcciones el 18 de noviembre de 2026.
+Los conteos de abajo son los del editor, no una medición hecha para esta propuesta:
 
-- **30.726.687 direcciones**, el segundo país más grande después de EE. UU. (126.202.222). Fuente: "INEGI, Censos
-  Económicos. TÉRMINOS DE LIBRE USO DE LA INFORMACIÓN DEL INEGI. Distributed by OpenAddresses. Accessed: 2026-11-17."
-  (página de atribución de Overture, abierta).
-- Los conteos por estado no se calcularon para esta propuesta. Necesitarían una consulta DuckDB con `country = 'MX'` y
-  una división por los dos primeros dígitos del código postal (el código de estado del INEGI), el mismo método usado para
-  las provincias de España.
+- **30.726.687 direcciones**, el tercero después de Estados Unidos (126.202.222) y Brasil (89.887.635). Fuente: "INEGI,
+  Censos Económicos. TÉRMINOS DE LIBRE USO DE LA INFORMACIÓN DEL INEGI. Distributed by OpenAddresses. Accessed:
+  2026-11-17." (página de atribución de Overture, abierta).
+- Los conteos por estado no se calcularon. Dividir por los dos primeros dígitos del código postal como si fueran el
+  código de estado del INEGI pondría direcciones en el estado equivocado: Aguascalientes (INEGI 01) empieza en 20000, y
+  Zacatecas (INEGI 32) en 98000. La división por estado queda como trabajo futuro, por ejemplo por polígono estatal, o
+  por una tabla CP→estado cuyos derechos se comprueben. El total nacional de la guía es cerca de un cuarto del total de
+  EE. UU. y mayor que el de cualquier país europeo listado allí.
 
 ## Puntos de ayuda
 
@@ -231,9 +248,10 @@ comercial. Lo que cada una pide:
 - **Orden.** Tipo de vía, nombre de la vía, luego el número, luego código postal y ciudad: "Av. Reforma, 123, 06600 Ciudad
   de México". El tipo va primero (*Avenida*, *Calle*, *Boulevard*, *Privada*, *Andador*, *Calzada*) y se abrevía a menudo
   (*Av.*, *C.*, *Blvd.*, *Priv.*, *And.*).
-- **Código postal.** Cinco dígitos (*código postal*, CP), igual que un ZIP de EE. UU. Los dos primeros son el código de
-  estado del INEGI (01–32), así que los ceros a la izquierda son comunes (01xxx Aguascalientes, 32xxx Zacatecas) y un CP
-  debe permanecer como texto.
+- **Código postal.** Cinco dígitos (*código postal*, CP), igual que un ZIP de EE. UU. Un CP debe permanecer como texto,
+  porque hay ceros a la izquierda (por ejemplo 06600 Ciudad de México). Los dos primeros dígitos no son el código de
+  estado del INEGI: Aguascalientes (INEGI 01) empieza en 20000 y Zacatecas (INEGI 32) en 98000. La división por estado
+  de esos códigos es trabajo futuro.
 - **Caracteres del español.** Los nombres de vías llevan acentos (á, é, í, ó, ú) y ñ. `normalize()` en
   `engine/address_search.py` y `norm()` en `tools/build_addresses.py` solo conservan `a-z` y `0-9`, así que "Reforma" pasa
   pero "Niños Héroes" se convierte en "ni os" y "Privada de la Cañada" en "privada de la ca ada". El plegado de acentos y ñ
@@ -258,8 +276,11 @@ Cada uno necesita la decisión de los mantenedores antes de cualquier cambio de 
 5. **Licencia de CONAGUA.** Si la licencia del catálogo de presas se confirma como abierta.
 6. **Google Open Buildings vs. edificios de Overture.** Si usar Google Open Buildings (CC BY 4.0 / ODbL) o esperar a que
    Overture incluya edificios de México.
-7. **Ciudad de México y Estado de México.** Las dos cajas se superponen; si un índice por región puede cortarse por
-   prefijo de CP o si la superposición de cajas es aceptable.
+7. **Cajas que se superponen.** La caja de la Ciudad de México se superpone con la del Estado de México, y la Ciudad
+   de México también colinda con Morelos. Tlaxcala colinda con Puebla, Hidalgo y el Estado de México. Si un índice por
+   región puede cortarse por polígono estatal, o por una tabla CP→estado cuyos derechos se comprueben, o si la
+   superposición de cajas es aceptable. Los dos primeros dígitos del código postal no son el código de estado del
+   INEGI, así que no sirven para ese corte.
 8. **La línea de crédito en el mapa.** Los términos del INEGI piden atribución en la fuente de la obra.
 
 ## Qué se verificó y qué no
@@ -268,8 +289,16 @@ Cada uno necesita la decisión de los mantenedores antes de cualquier cambio de 
   CEM; la página del Marco Geoestadístico del INEGI y su shapefile (vía el espejo de CONABIO, que es datos del INEGI, en
   coordenadas geográficas WGS84); la página del catálogo de presas de CONAGUA; la página de Google Open Buildings V3; la
   guía de direcciones y la página de atribución de Overture; el taginfo de Geofabrik para México (API).
-- Calculado el 18 de noviembre de 2026: las 32 cajas, a partir del shapefile AGEE del Marco Geoestadístico del INEGI como
-  se describe arriba.
+- Calculado el 18 de noviembre de 2026: las 32 cajas sin margen, a partir del shapefile AGEE del Marco Geoestadístico del
+  INEGI como se describe arriba. El 19 de noviembre de 2026 los márgenes de 0.15° se recalcularon desde esos límites,
+  redondeando hacia afuera (hacia abajo en oeste y sur, hacia arriba en este y norte) a 0.01°.
+- Comprobado el 19 de noviembre de 2026, para la revisión: los conteos por país de la guía de direcciones de Overture
+  (EE. UU., Brasil, México); el repositorio Microsoft Global ML Building Footprints (público, no archivado; licencia del
+  README CDLA-Permissive-2.0); el compendio geográfico 2024 del INEGI para la Ciudad de México (1.494,3 km²; colinda con
+  el Estado de México y Morelos); *Conociendo Tlaxcala* del INEGI para los límites de Tlaxcala (Hidalgo, Puebla y el
+  Estado de México); coordenadas publicadas de la Isla Clarión, la Isla Socorro y la desembocadura del Suchiate. El
+  archivo del catálogo de SEPOMEX no se volvió a descargar; los ejemplos 20000 de Aguascalientes y 98000 de Zacatecas se
+  leyeron en los rangos por estado que publica Correos de México.
 - Solo visto en resultados de búsqueda: la página de hidrografía del INEGI; los Ríos Principales de CONAGUA; las series de
   uso del suelo y vegetación del INEGI; el conteo de presas de CONAGUA (~210) de los resultados de búsqueda del CSV del
   catálogo.
