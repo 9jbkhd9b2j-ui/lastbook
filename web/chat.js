@@ -149,7 +149,7 @@ const Chat = (() => {
       : l.state === 'error' ? `<p>${esc(l.message || 'The local AI could not start.')}</p><div class="row"><button class="btn" data-ai="rescan">Look again</button></div>`
       : `<p><b>Add the local AI to get written answers.</b> It is about 17 GB, and runs on this computer only.</p>
          <div class="row"><a class="btn" href="/ui/setup.html#manage">Add the local AI</a><button class="btn plain" data-ai="rescan">Look again</button></div>
-         <p class="small">Already downloaded <code>${esc(l.file)}</code>? Put it in your <b>LastbookData</b> folder or Downloads, then Look again.</p>`;
+         <p class="small">Already downloaded <code>${esc(l.file)}</code>? Move it into the <b>models</b> folder inside your <b>LastbookData</b> folder, then Look again. Or open <b>Add the local AI</b> and pick the file you already have.</p>`;
     $$('[data-ai]', box).forEach(b => b.onclick = async () => {
       b.disabled = true;
       try { await fetch('/api/assistant/local', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: b.dataset.ai }) }) } catch { }
