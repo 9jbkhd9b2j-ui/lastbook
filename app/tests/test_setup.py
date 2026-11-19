@@ -1880,6 +1880,85 @@ class Manage(Base):
         s.start(copy_to=str(drive))
         self.assertEqual(self.wait(s)['result']['start_here'], 'START-HERE.txt')
 
+    def link_or_skip(self, target, link):
+        try:
+            os.symlink(target, link)
+        except OSError:
+            self.skipTest('cannot make a symbolic link here')
+
+    def test_copy_never_writes_through_a_link_on_the_drive(self):
+        """The review case: an unfinished copy whose library-data is a link to someone else's folder. Nothing is written there."""
+        lib = self.installed_library()
+        drive = self.drive()
+        out = drive / 'LastbookData'
+        out.mkdir()
+        (out / api.COPY_MARK).write_text('copying')
+        theirs = self.tmp / 'their-folder'
+        theirs.mkdir()
+        (theirs / 'catalog.json').write_text('their own file')
+        self.link_or_skip(theirs, out / 'library-data')
+        s = self.setup('manage', current=lib)
+        s.start(copy_to=str(drive))
+        j = self.wait(s)
+        self.assertEqual((j['state'], j['error']['code']), ('failed', 'copy'), j)
+        self.assertIn('goes through a link', j['error']['message'])
+        self.assertEqual((theirs / 'catalog.json').read_text(), 'their own file')
+        self.assertEqual(sorted(p.name for p in theirs.iterdir()), ['catalog.json'])             # nothing new written there
+        self.assertFalse((drive / 'START-HERE.txt').exists())
+
+    def test_copy_never_writes_through_a_partial_link(self):
+        lib = self.installed_library()
+        drive = self.drive()
+        out = drive / 'LastbookData'
+        out.mkdir()
+        (out / api.COPY_MARK).write_text('copying')
+        theirs = self.tmp / 'their-file.txt'
+        theirs.write_text('their own file')
+        self.link_or_skip(theirs, out / 'pack.json.partial')
+        s = self.setup('manage', current=lib)
+        s.start(copy_to=str(drive))
+        j = self.wait(s)
+        self.assertEqual((j['state'], j['error']['code']), ('failed', 'copy'), j)
+        self.assertEqual(theirs.read_text(), 'their own file')
+
+    def test_copy_refuses_a_lastbookdata_that_is_a_link(self):
+        lib = self.installed_library()
+        drive = self.drive()
+        theirs = self.tmp / 'their-folder'
+        theirs.mkdir()
+        self.link_or_skip(theirs, drive / 'LastbookData')
+        r = self.setup('manage', current=lib).start(copy_to=str(drive))
+        self.assertEqual(r['code'], 'folder')
+        self.assertEqual(list(theirs.iterdir()), [])
+
+    def test_copy_keeps_both_start_here_names_of_someone_else(self):
+        """The review case: someone else's START-HERE.txt and START-HERE (Lastbook).txt both stay as they were."""
+        lib = self.installed_library()
+        drive = self.drive()
+        (drive / 'START-HERE.txt').write_text('first')
+        (drive / 'START-HERE (Lastbook).txt').write_text('second')
+        s = self.setup('manage', current=lib)
+        s.start(copy_to=str(drive))
+        j = self.wait(s)
+        self.assertEqual(j['state'], 'done', j)
+        self.assertEqual(((drive / 'START-HERE.txt').read_text(), (drive / 'START-HERE (Lastbook).txt').read_text()), ('first', 'second'))
+        self.assertEqual(j['result']['start_here'], 'START-HERE (Lastbook 2).txt')
+        self.assertIn('LastbookData', (drive / 'START-HERE (Lastbook 2).txt').read_text(encoding='utf-8'))
+        self.assertEqual(sorted(p.name for p in drive.iterdir() if p.name.endswith('.partial')), [])   # no temporary file left behind
+
+    def test_start_here_is_never_written_through_a_link(self):
+        lib = self.installed_library()
+        drive = self.drive()
+        theirs = self.tmp / 'their-file.txt'
+        theirs.write_text('their own file')
+        (drive / 'START-HERE.txt').write_text('mine')
+        self.link_or_skip(theirs, drive / 'START-HERE (Lastbook).txt')
+        s = self.setup('manage', current=lib)
+        s.start(copy_to=str(drive))
+        j = self.wait(s)
+        self.assertEqual(j['result']['start_here'], 'START-HERE (Lastbook 2).txt')
+        self.assertEqual(theirs.read_text(), 'their own file')
+
     def test_copy_refuses_a_link_out_of_the_library(self):
         lib = self.installed_library()
         outside = self.tmp / 'outside-catalog.json'

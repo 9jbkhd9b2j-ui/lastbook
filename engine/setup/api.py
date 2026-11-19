@@ -107,6 +107,32 @@ def _read_back(path, control, progress):
     return h.hexdigest()
 
 
+def _dest_ok(dst, rel):
+    """A copy writes only inside its own LastbookData on the drive. Refuses when the copy folder, any folder on the way to rel, the
+    file, or its .partial is a link: a link left on a drive could otherwise send the copy into someone else's folder."""
+    if dst.is_symlink():
+        raise install.Refused('copy', f'The {DATA_NAME} folder on the drive is a link, so nothing was written there. Choose another drive or folder.')
+    p = dst
+    for part in Path(rel).parts:
+        p = p / part
+        if p.is_symlink():
+            raise install.Refused('copy', f'On the drive, {rel} goes through a link that could lead outside the copy, so nothing more was '
+                                          'written. Choose another drive or folder.')
+    if p.with_name(p.name + '.partial').is_symlink():
+        raise install.Refused('copy', f'On the drive, {rel}.partial is a link, so nothing more was written. Choose another drive or folder.')
+
+
+def _inside(dst, path):
+    root, real = dst.resolve(), Path(path).resolve()
+    return real == root or root in real.parents
+
+
+def _open_new(path):
+    """Open a file for writing without following a link to it (O_NOFOLLOW where the system has it)."""
+    flags = os.O_WRONLY | os.O_CREAT | os.O_TRUNC | getattr(os, 'O_NOFOLLOW', 0) | getattr(os, 'O_BINARY', 0)
+    return os.fdopen(os.open(path, flags, 0o644), 'wb')
+
+
 def _ours(path):
     """Is this START-HERE.txt one a Lastbook copy wrote?"""
     try:
@@ -710,6 +736,8 @@ class Setup:
                 return {'error': 'Lastbook cannot find that drive or folder.', 'code': 'missing'}
             if there == here or here in there.parents or there in here.parents:
                 return {'error': 'Choose a place outside this library, such as a USB drive.', 'code': 'folder'}
+            if target.is_symlink():
+                return {'error': f'The {DATA_NAME} folder there is a link. Choose another drive or folder.', 'code': 'folder'}
             if target.exists() and any(target.iterdir()) and not (target / COPY_MARK).exists():
                 return {'error': f'There is already a {DATA_NAME} folder there. Choose another drive or folder.', 'code': 'folder'}
             if not os.access(target.parent, os.W_OK):
@@ -751,13 +779,16 @@ class Setup:
         A file already there at its size and SHA-256 (an earlier copy that stopped) is kept. The source is never changed."""
         src, dst = Path(plan['source']), Path(plan['target'])
         rows = self.copy_rows(src)
+        _dest_ok(dst, COPY_MARK)
         dst.mkdir(parents=True, exist_ok=True)
-        (dst / COPY_MARK).write_text('Lastbook is copying a library here. Copy again to the same place to carry on.\n', encoding='utf-8')
+        with _open_new(dst / COPY_MARK) as f:
+            f.write('Lastbook is copying a library here. Copy again to the same place to carry on.\n'.encode('utf-8'))
         tracker, done, total = _Item(it), 0, sum(r[1] for r in rows)
         self._set(it, 'copying', bytes_done=0, bytes_total=total)
         for rel, size, digest in rows:
             control.check()
             a, b = src / rel, dst / rel
+            _dest_ok(dst, rel)
             if b.is_file() and b.stat().st_size == size and digest is not None and _read_back(b, control, lambda n: None) == digest:
                 done += size
                 tracker.progress(done, total, 'copying')
@@ -765,11 +796,13 @@ class Setup:
             if not a.is_file() or a.stat().st_size != size:
                 raise install.Refused('copy', f'The library’s {rel} is missing or the wrong size, so the copy stopped. Check and repair the library, then copy again.')
             b.parent.mkdir(parents=True, exist_ok=True)
+            if not _inside(dst, b.parent):           # checked again now the folders exist
+                raise install.Refused('copy', f'On the drive, {rel} would land outside the copy, so nothing more was written. Choose another drive or folder.')
             part = b.with_name(b.name + '.partial')
             plan['partial'] = str(part)
             h, base, written = hashlib.sha256(), done, 0
             try:
-                with open(a, 'rb') as fa, open(part, 'wb') as fb:
+                with open(a, 'rb') as fa, _open_new(part) as fb:
                     while True:
                         control.check()
                         chunk = fa.read(8 * 1024 * 1024)
@@ -807,13 +840,14 @@ class Setup:
         c = plan.get('copied') or {}
         text = START_HERE.format(title=plan.get('title') or 'Lastbook', size=_gb(c.get('bytes') or 0), files=c.get('files') or 0,
                                  date=time.strftime('%Y-%m-%d'), data=DATA_NAME)
-        name = 'START-HERE.txt'
-        there = dst.parent / name
-        if there.exists() and not _ours(there):     # someone else's file of that name: keep it, use another name
-            name = 'START-HERE (Lastbook).txt'
-        tmp = dst.parent / (name + '.partial')
-        tmp.write_text(text, encoding='utf-8', newline='\r\n')      # Windows line ends: every computer's text editor opens it
-        os.replace(tmp, dst.parent / name)
+        names = ['START-HERE.txt', 'START-HERE (Lastbook).txt'] + [f'START-HERE (Lastbook {n}).txt' for n in range(2, 100)]
+        name = next((n for n in names if not (dst.parent / n).is_symlink() and (not (dst.parent / n).exists() or _ours(dst.parent / n))), None)
+        if name is None:
+            raise install.Refused('copy', 'The drive already holds many START-HERE files that are not Lastbook’s. Remove some, then copy again.')
+        tmp = dst.parent / f'.{name}.{uuid.uuid4().hex[:8]}.partial'      # a fresh name: never someone else's file, never a link
+        with _open_new(tmp) as f:
+            f.write(text.replace('\n', '\r\n').encode('utf-8'))       # Windows line ends: every computer's text editor opens it
+        os.replace(tmp, dst.parent / name)        # someone else's file of that name is never replaced: name is new or ours
         try:
             (dst / COPY_MARK).unlink()
         except FileNotFoundError:
