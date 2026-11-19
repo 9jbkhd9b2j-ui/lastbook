@@ -709,6 +709,8 @@ class Setup:
                 if inside:          # the person explicitly chose this folder
                     return self.use(str(inside[0]))
                 return {'error': f'“{p.name}” is not a Lastbook library. Choose the folder called {DATA_NAME}.', 'code': 'not_library'}
+            if self.current and install._real(lib) == install._real(self.current):
+                return {'error': 'That library is the one open now.', 'code': 'current'}
             if not os.access(lib, os.W_OK):
                 return {'error': f'Lastbook cannot save in “{lib.name}”. Move it somewhere you can save to, then choose it there.', 'code': 'folder'}
             with self.lock:

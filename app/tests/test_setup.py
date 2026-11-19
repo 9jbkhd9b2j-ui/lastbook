@@ -1347,6 +1347,39 @@ class Jobs(Base):
         self.assertEqual(s.use(str(self.tmp))['items'][0]['kind'], 'pack')     # a folder holding a pack zip: that zip is used
         self.wait(s)
 
+    def test_switch_to_another_library_while_one_is_open(self):
+        """Library and local AI can open another LastbookData, say on a USB stick, but not the one that is open (#266)."""
+        def library(where):
+            lib = self.tmp / where / 'LastbookData'
+            (lib / 'library-data').mkdir(parents=True)
+            (lib / 'library-data' / 'catalog.json').write_text('{}')
+            return lib
+        here, usb = library('laptop'), library('usb')
+        s = self.setup('manage', current=here)
+        opened = []
+        s.on_finish = opened.append
+        for chosen in (here, here.parent):
+            with self.subTest(str(chosen)):
+                r = s.use(str(chosen))
+                self.assertEqual(r['code'], 'current', r)
+                self.assertIsNone(s.public_job())                       # nothing to finish, nothing switched
+        if hasattr(os, 'symlink'):
+            try:
+                (self.tmp / 'link').symlink_to(here.parent, target_is_directory=True)
+            except OSError:
+                pass                                                    # Windows without the right to make links
+            else:
+                self.assertEqual(s.use(str(self.tmp / 'link'))['code'], 'current')
+        j = s.use(str(usb.parent))
+        self.assertEqual((j['state'], j['items'][0]['id']), ('done', 'library'))
+        self.assertEqual(s.finish()['folder'], str(usb))
+        for _ in range(50):
+            if opened:
+                break
+            time.sleep(0.05)
+        self.assertEqual(opened, [str(usb)])                            # the app relaunches into the other library
+        self.assertEqual(sorted(p.name for p in here.rglob('*')), ['catalog.json', 'library-data'])   # the open one is untouched
+
     def test_restart_mid_download(self):
         """A child process downloads and is killed; a new Setup finds the job paused and resumes with Range."""
         self.files.pace = 0.01
