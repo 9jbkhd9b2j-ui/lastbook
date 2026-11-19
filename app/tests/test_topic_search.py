@@ -102,8 +102,11 @@ FIRST = {
 # Words that a reading already cited under a choice is about, but that no title, keyword, label or hint held, so a search
 # for them found nothing: [guide, choice] that comes first.
 ALREADY_COVERED = {
-    'pets': ['food', 'special'], 'pet food': ['food', 'special'],
-    'propane': ['power', 'gas'], 'propane tank': ['power', 'gas'], 'dental': ['health', None],
+    'pets': ['food', 'special'], 'propane': ['power', 'gas'], 'propane tank': ['power', 'gas'], 'dental': ['health', None],
+}
+# An emergency that happens to mention a new word still opens the urgent choice first, not the routine one the word was added to.
+URGENT_FIRST = {
+    'child unconscious after pet food': ['hurt', 'breathing'], 'child swallowed pet food': ['hurt', 'poison'],
 }
 # Searches the new words must not disturb: [guide, choice] that comes first.
 UNDISTURBED = {
@@ -113,10 +116,11 @@ UNDISTURBED = {
     'ice': ['water', 'inhome'], 'micro-hydro': ['energy', None], 'wind': ['disaster', 'hurricane'],
     'winter storm': ['shelter', 'cold'], 'furnace smells like gas': ['power', 'gas'], 'gas furnace': ['power', 'gas'],
     'lost in the forest': ['comms', 'signal'],
-    'baby formula': ['food', 'special'], 'food allergies': ['food', 'special'], 'spoiled food': ['food', 'outage'],
+    'baby formula': ['food', 'special'], 'food allergies': ['food', 'outage'], 'spoiled food': ['food', 'outage'],
+    'pet food': ['food', 'outage'],
     'dentist': ['health', None], 'toothache': ['health', 'teeth'],
 }
-TOPS = sorted({*SAME_AS, *SAME_AS.values(), *SAME_GUIDE, *SAME_GUIDE.values(), *FIRST, *ALREADY_COVERED, *UNDISTURBED})
+TOPS = sorted({*SAME_AS, *SAME_AS.values(), *SAME_GUIDE, *SAME_GUIDE.values(), *FIRST, *ALREADY_COVERED, *URGENT_FIRST, *UNDISTURBED})
 
 # A made-up topic in Spanish and Chinese: found by Spanish words and by a single Han character.
 OWN = {'id': 'own', 'title': 'Agua potable', 'short': 'Hervir el agua', 'keywords': ['水'], 'choices': []}
@@ -224,7 +228,7 @@ class TopicSearch(unittest.TestCase):
                 with self.subTest(q=q, us=us, segmenter=r['segmenter']):
                     self.assertTrue(top[q])
                     self.assertEqual(top[q][0][0], top[us][0][0])
-            for q, first in [*FIRST.items(), *ALREADY_COVERED.items(), *UNDISTURBED.items()]:
+            for q, first in [*FIRST.items(), *ALREADY_COVERED.items(), *URGENT_FIRST.items(), *UNDISTURBED.items()]:
                 with self.subTest(q=q, segmenter=r['segmenter']):
                     self.assertEqual(top[q][0], first)
 
