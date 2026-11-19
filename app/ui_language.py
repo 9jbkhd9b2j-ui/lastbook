@@ -1,8 +1,10 @@
 """The desktop interface language, stored alongside the app's settings."""
+import errno
 import json
 import os
 import stat
 import tempfile
+import time
 from http import HTTPStatus
 from pathlib import Path
 
@@ -10,6 +12,12 @@ FILENAME = 'ui-language.json'
 ROUTE = '/api/ui-language'
 LANGUAGES = ('en', 'es-419')
 MAX_BYTES = 128
+# Windows refuses to replace a file another process has open for a moment (a
+# window reading it, a virus scanner). Wait a little and try again.
+REPLACE_TRIES = 5
+REPLACE_WAIT = 0.02
+# What O_NOFOLLOW reports for a symbolic link.
+SYMLINK_ERRORS = (errno.ELOOP, getattr(errno, 'EMLINK', errno.ELOOP))
 
 
 def _language(data):
@@ -35,6 +43,10 @@ def _load(path):
             data = f.read(MAX_BYTES + 1)
     except FileNotFoundError:
         return None
+    except OSError as error:
+        if error.errno in SYMLINK_ERRORS:  # a link swapped in after the lstat: not our file
+            return None
+        raise
     if len(data) <= MAX_BYTES:
         try:
             return _language(data)
@@ -54,10 +66,37 @@ def _save(path, language):
             f.write((json.dumps({'language': language}) + '\n').encode('utf-8'))
             f.flush()
             os.fsync(f.fileno())
-        os.replace(tmp, path)  # Windows requires the temp handle to be closed.
+        _replace(tmp, path)  # Windows requires the temp handle to be closed.
     except OSError:
         tmp.unlink(missing_ok=True)
         raise
+    _sync_folder(path.parent)
+
+
+def _replace(tmp, path):
+    for attempt in range(REPLACE_TRIES):
+        try:
+            return os.replace(tmp, path)
+        except PermissionError:
+            if attempt == REPLACE_TRIES - 1:
+                raise
+            time.sleep(REPLACE_WAIT * (attempt + 1))
+
+
+def _sync_folder(folder):
+    """Make the rename itself durable where the system can (POSIX). The file is already replaced: never fail the save here."""
+    if not hasattr(os, 'O_DIRECTORY'):
+        return
+    try:
+        fd = os.open(folder, os.O_RDONLY | os.O_DIRECTORY)
+    except OSError:
+        return
+    try:
+        os.fsync(fd)
+    except OSError:
+        pass
+    finally:
+        os.close(fd)
 
 
 def handle(h, path):

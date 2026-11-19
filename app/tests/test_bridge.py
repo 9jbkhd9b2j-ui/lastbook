@@ -354,6 +354,101 @@ class Both:
         self.assertEqual(other.read_bytes(), b'{"language":"es-419"}')
         self.assertEqual(json.loads(call(b, 'GET', route, key).body), {'language': 'en'})
 
+    def test_language_save_retries_a_replace_another_process_is_holding(self):
+        file, b, key = self.language_bridge()
+        route = B.ui_language.ROUTE
+        real = os.replace
+        refusals = [PermissionError('in use'), PermissionError('in use')]
+
+        def replace_when_free(src, dst):
+            if refusals:
+                raise refusals.pop()
+            real(src, dst)
+
+        with patch.object(B.ui_language.os, 'replace', side_effect=replace_when_free) as replace, \
+                patch.object(B.ui_language, 'REPLACE_WAIT', 0):
+            r = call(b, 'POST', route, key, b'{"language":"es-419"}')
+        self.assertEqual(r.status, 200)
+        self.assertEqual(replace.call_count, 3)
+        self.assertEqual(json.loads(file.read_bytes()), {'language': 'es-419'})
+        self.assertEqual(list(file.parent.iterdir()), [file])
+        # A refusal that never clears still ends in a clean 500 after a bounded number of tries.
+        with patch.object(B.ui_language.os, 'replace', side_effect=PermissionError('in use')) as replace, \
+                patch.object(B.ui_language, 'REPLACE_WAIT', 0):
+            r = call(b, 'POST', route, key, b'{"language":"en"}')
+        self.assertEqual(r.status, 500)
+        self.assertEqual(replace.call_count, B.ui_language.REPLACE_TRIES)
+        self.assertEqual(json.loads(file.read_bytes()), {'language': 'es-419'})
+        self.assertEqual(list(file.parent.iterdir()), [file])
+        # Only a permission refusal is retried.
+        with patch.object(B.ui_language.os, 'replace', side_effect=OSError('disk')) as replace:
+            self.assertEqual(call(b, 'POST', route, key, b'{"language":"en"}').status, 500)
+        self.assertEqual(replace.call_count, 1)
+
+    @unittest.skipUnless(hasattr(os, 'O_DIRECTORY'), 'folder sync is POSIX only')
+    def test_language_save_syncs_the_folder_but_never_fails_on_it(self):
+        file, b, key = self.language_bridge()
+        route = B.ui_language.ROUTE
+        synced = []
+        real = os.fsync
+
+        def fsync(fd):
+            synced.append(stat_is_dir(fd))
+            return real(fd)
+
+        def stat_is_dir(fd):
+            import stat as stat_module
+            return stat_module.S_ISDIR(os.fstat(fd).st_mode)
+
+        with patch.object(B.ui_language.os, 'fsync', side_effect=fsync):
+            self.assertEqual(call(b, 'POST', route, key, b'{"language":"es-419"}').status, 200)
+        self.assertEqual(synced, [False, True])  # the new file's data, then the folder entry
+
+        def fsync_folder_fails(fd):
+            if stat_is_dir(fd):
+                raise OSError('not supported here')
+            return real(fd)
+
+        with patch.object(B.ui_language.os, 'fsync', side_effect=fsync_folder_fails):
+            self.assertEqual(call(b, 'POST', route, key, b'{"language":"en"}').status, 200)
+        self.assertEqual(json.loads(file.read_bytes()), {'language': 'en'})
+        real_open = os.open
+        refused = []
+
+        def open_without_folders(path, flags, *args, **kwargs):
+            if flags & os.O_DIRECTORY:
+                refused.append(path)
+                raise OSError('no folder handle')
+            return real_open(path, flags, *args, **kwargs)
+
+        with patch.object(B.ui_language.os, 'open', side_effect=open_without_folders):
+            self.assertEqual(call(b, 'POST', route, key, b'{"language":"es-419"}').status, 200)
+        self.assertTrue(refused)
+        self.assertEqual(json.loads(file.read_bytes()), {'language': 'es-419'})
+
+    def test_language_symlink_swapped_in_after_the_check_reads_as_unset(self):
+        import errno
+        file, b, key = self.language_bridge()
+        route = B.ui_language.ROUTE
+        file.write_bytes(b'{"language":"es-419"}')
+        # O_NOFOLLOW reports a link that replaced the file between lstat and open as ELOOP.
+        real_open = os.open
+
+        def fail_for_the_file(error):
+            def opener(path, flags, *args, **kwargs):
+                if Path(path) == file:
+                    raise error
+                return real_open(path, flags, *args, **kwargs)
+            return opener
+
+        with patch.object(B.ui_language.os, 'open', side_effect=fail_for_the_file(OSError(errno.ELOOP, 'too many links'))):
+            r = call(b, 'GET', route, key)
+        self.assertEqual(r.status, 200)
+        self.assertEqual(json.loads(r.body), {'language': None})
+        # Other open failures are still errors the person can see.
+        with patch.object(B.ui_language.os, 'open', side_effect=fail_for_the_file(PermissionError(errno.EACCES, 'denied'))):
+            self.assertEqual(call(b, 'GET', route, key).status, 500)
+
     # ---- Range forms on video
     def check_slice(self, r, start, end, size=A_SIZE):
         self.assertEqual(r.status, 206)
