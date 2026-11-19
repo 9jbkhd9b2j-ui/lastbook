@@ -86,6 +86,9 @@ fails as `checksum`, and a 200 to a Range goes on over one connection from the h
 - Manual downloads are recognized: a `Lastbook-*.zip` or the model file in Downloads, Documents or Desktop, or an existing
   LastbookData anywhere `app/main.py` already looks, offered as *Use the file you already have*. A file is used only after its
   size and SHA-256 match the manifest.
+- If the local AI download stops with a network error before gaining any bytes, the Stopped card also offers **Choose AI
+  model file**. Choosing the published model file resumes that same job, keeping any finished library or map steps. Its
+  size and SHA-256 are checked as usual; a file that does not match is left alone and is not used.
 
 ## Engine interface: `/api/setup/*`
 
