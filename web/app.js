@@ -175,8 +175,10 @@ function vcard(v, opts = {}) {
 function rail(html, cls = '') {
   return `<div class="rail-wrap"><button class="rail-btn l" aria-label="Scroll left" data-i18n-aria-label="nav.scrollLeft" data-i18n-lang hidden>${ico('back')}</button><div class="rail ${cls}">${html}</div><button class="rail-btn r" aria-label="Scroll right" data-i18n-aria-label="nav.scrollRight" data-i18n-lang>${ico('right')}</button></div>`;
 }
+// Translate the marked interface text inside markup that was just rendered into `root`
+// (a page, or one section filled in later). Static page chrome is translated by the language policy itself.
+function translateRendered(root = main) { i18n?.apply(root) }
 function wireRails(root = main) {
-  i18n?.apply(root);
   $$('.rail-wrap', root).forEach(w => {
     const r = $('.rail', w), l = $('.rail-btn.l', w), rb = $('.rail-btn.r', w);
     const upd = () => { l.hidden = r.scrollLeft < 10; rb.hidden = r.scrollLeft + r.clientWidth > r.scrollWidth - 10 };
@@ -189,8 +191,12 @@ const secHead = (title, sub, link) => `<div class="sec-head"><div><h2>${title}</
 function crumbs(list) {
   return `<nav class="crumbs" aria-labelledby="crumbLabel"><span class="sr" id="crumbLabel" data-i18n="nav.currentPath">You are here</span>${list.map((c, i) => i < list.length - 1 ? `<a href="${c[1]}">${esc(c[0])}</a><span aria-hidden="true">›</span>` : `<span aria-current="page">${esc(c[0])}</span>`).join('')}</nav>`;
 }
-function backButton(from, fallback = ['nav.back', 'Back']) {
-  let [key, label] = fallback;
+// A label is [message key, English text]. A plain string is still accepted: it keeps its text, and the few
+// common ones keep their translation.
+const KNOWN_LABELS = { Back: 'nav.back', Videos: 'nav.videos', Library: 'nav.library', Search: 'search.label', Go: 'search.go', Filter: 'search.filter' };
+const labelPair = (label, fallback) => Array.isArray(label) ? label : typeof label === 'string' ? [KNOWN_LABELS[label] || null, label] : fallback;
+function backButton(from, fallback) {
+  let [key, label] = labelPair(fallback, ['nav.back', 'Back']);
   const href = from?.startsWith('#') ? from : '#/';
   const m = /^#\/t\/([\w-]+)/.exec(href);
   if (m && topicById(m[1])) [key, label] = [null, SHORT[m[1]] || topicById(m[1]).title];
@@ -301,7 +307,7 @@ async function route() {
     else if (v === 'about') await about();
     else notFound();
   } catch (e) { setTitle(''); document.body.className = 'v-error'; main.innerHTML = emptyState('warn', 'This page could not be opened', e.message || e) }   // v-error: not a reading page, so a phone keeps its tab bar
-  wireRails(); dock(); barState();
+  translateRendered(); wireRails(); dock(); barState();
   $('#topQ').value = '';
   const big = $('main h1'); if (big) h1seen.observe(big);
   if (v === 'ask') { bandState(); return }  // the chat manages its own scroll position
@@ -431,8 +437,9 @@ document.addEventListener('keydown', e => {
 });
 function notFound() { setTitle('Not found'); main.innerHTML = emptyState('search', 'That page isn’t here', 'The link may be from an older version of the guide.') }
 const emptyState = (icon, title, text) => `<div class="empty"><span class="e-ico">${ico(icon)}</span><b>${esc(title)}</b><p>${esc(text)}</p><p class="e-act"><a class="btn plain" href="#/" data-i18n="nav.goToVideos">Go to Videos</a></p></div>`;
-function searchBox(id, value, placeholder, [key, button] = ['search.label', 'Search']) {
-  return `<form class="bigsearch" role="search" id="${id}F">${ico('search')}<label class="sr" for="${id}" data-i18n="search.label">Search</label><input id="${id}" type="search" autocomplete="off" value="${esc(value || '')}" placeholder="${esc(placeholder)}" enterkeyhint="search"><button data-i18n="${key}">${button}</button></form>`;
+function searchBox(id, value, placeholder, buttonLabel) {
+  const [key, button] = labelPair(buttonLabel, ['search.label', 'Search']);
+  return `<form class="bigsearch" role="search" id="${id}F">${ico('search')}<label class="sr" for="${id}" data-i18n="search.label">Search</label><input id="${id}" type="search" autocomplete="off" value="${esc(value || '')}" placeholder="${esc(placeholder)}" enterkeyhint="search"><button${key ? ` data-i18n="${key}"` : ''}>${esc(button)}</button></form>`;
 }
 
 /* --------------------------------------------------------------- home -- */
@@ -463,7 +470,7 @@ async function home() {
   try {
     const rows = await api('/api/videos');
     const g = rows.find(r => r.id === 'guides');
-    if (g && $('#homeVideos')) { $('#homeVideos').innerHTML = secHead('Watch how it’s done', 'Videos picked for the guides', '<a href="#/videos">All videos</a>') + rail(g.items.slice(0, 14).map(v => vcard(v, { style: tcStyle(v.guide) })).join('')); wireRails($('#homeVideos')) }
+    if (g && $('#homeVideos')) { $('#homeVideos').innerHTML = secHead('Watch how it’s done', 'Videos picked for the guides', '<a href="#/videos">All videos</a>') + rail(g.items.slice(0, 14).map(v => vcard(v, { style: tcStyle(v.guide) })).join('')); translateRendered($('#homeVideos')); wireRails($('#homeVideos')) }
   } catch { }
 }
 async function continueItems() {
@@ -691,7 +698,7 @@ async function watch(id, t, from) {
   });
   try {
     const rel = await api('/api/videos/related/' + encodeURIComponent(id));
-    if (rel.length && $('#morev')) { $('#morev').innerHTML = secHead('More like this') + rail(rel.map(v => vcard(v)).join('')); wireRails($('#morev')) }
+    if (rel.length && $('#morev')) { $('#morev').innerHTML = secHead('More like this') + rail(rel.map(v => vcard(v)).join('')); translateRendered($('#morev')); wireRails($('#morev')) }
   } catch { }
 }
 
@@ -1005,7 +1012,7 @@ async function results(q, kind) {
       if (seq !== searchSeq) return true;
       const vids = (kind === 'video' ? d : vd)?.results || [];
       if (kind === 'video') { $('#sres').innerHTML = vids.length ? `<div class="vgrid" style="margin-top:14px">${vids.map(r => vcard(r)).join('')}</div>` : ''; return vids.length > 0 }
-      if (vids.length) { $('#svid').innerHTML = secHead('Videos', '', `<a href="#/search?q=${encodeURIComponent(q)}&kind=video">See all</a>`) + rail(vids.slice(0, 10).map(r => vcard(r)).join('')); wireRails($('#svid')) }
+      if (vids.length) { $('#svid').innerHTML = secHead('Videos', '', `<a href="#/search?q=${encodeURIComponent(q)}&kind=video">See all</a>`) + rail(vids.slice(0, 10).map(r => vcard(r)).join('')); translateRendered($('#svid')); wireRails($('#svid')) }
       $('#sres').innerHTML = d.results.length ? `<h2>In the manuals and saved pages</h2>
         ${d.expanded.length ? `<p class="small muted">Also looked for: ${d.expanded.slice(0, 10).map(esc).join(', ')}${d.mode === 'some words' ? ' · showing pages with some of your words' : ''}</p>` : ''}
         <div class="results">${d.results.map(resultCard).join('')}</div>` : '';
