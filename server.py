@@ -17,7 +17,7 @@ requests, and adds a few read-only endpoints:
   /api/map/tile/<z>/<x>/<y>   offline street map vector tile (SoCal OpenStreetMap)
   /api/map/near?lat=&lon=     nearest help points (hospital, pharmacy, water, fire station...)
   /api/places?q=              place finder (ZIP codes, towns, named places)
-  /api/battery                this computer's battery (Linux so far), read when asked; this computer only
+  /api/battery                this computer's battery (Linux and Mac so far), read when asked; this computer only
 
 Nothing in library-data is written. Caches go to derived/cache.
 """
