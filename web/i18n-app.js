@@ -26,6 +26,16 @@
   const apply = (scope = document, paramsFor) => applyI18n(scope, engine, paramsFor);
   window.LastbookI18n = Object.freeze({ apply });
 
+  // The file behind the bridge is the truth. Its last answer is also kept in this window's own storage, only so the
+  // next page can start in the right language instead of flashing English until the bridge replies.
+  const HINT = 'lastbook.ui-language';
+  function readHint() {
+    try { const hint = localStorage.getItem(HINT); return ['en', 'es-419'].includes(hint) ? hint : null; } catch { return null; }
+  }
+  function writeHint(saved) {
+    try { saved ? localStorage.setItem(HINT, saved) : localStorage.removeItem(HINT); } catch { /* storage is optional */ }
+  }
+
   function activate(saved) {
     selection = saved || 'en';
     engine.usePreferredLocales(selection);
@@ -44,6 +54,9 @@
     }
   }
 
+  // A hung bridge must not keep the selector hidden or the button busy for ever.
+  const READ_TIMEOUT = 8000, WRITE_TIMEOUT = 15000;
+
   async function preference(language) {
     const options = { cache: 'no-store' };
     if (language !== undefined) {
@@ -51,9 +64,15 @@
       options.headers = { 'Content-Type': 'application/json' };
       options.body = JSON.stringify({ language });
     }
-    const response = await fetch('/api/ui-language', options);
-    if (!response.ok) throw new Error('Could not access the desktop language preference');
-    const saved = (await response.json()).language;
+    const abort = new AbortController();
+    options.signal = abort.signal;
+    const timer = setTimeout(() => abort.abort(), language === undefined ? READ_TIMEOUT : WRITE_TIMEOUT);
+    let saved;
+    try {
+      const response = await fetch('/api/ui-language', options);
+      if (!response.ok) throw new Error('Could not access the desktop language preference');
+      saved = (await response.json()).language;
+    } finally { clearTimeout(timer); }
     if (![null, 'en', 'es-419'].includes(saved) || (language !== undefined && language !== saved)) {
       throw new Error('Unexpected desktop language preference');
     }
@@ -66,6 +85,7 @@
     try {
       const saved = await preference();
       if (generation !== readGeneration) return;
+      writeHint(saved);
       activate(saved);
       if (saved && saved !== engine.catalogLocale) message = 'language.unavailable';
     } catch { message = 'language.loadFailed'; }
@@ -91,6 +111,7 @@
       announce('language.saving');
       try {
         const saved = await preference(next);
+        writeHint(saved);
         activate(saved);
         select.value = saved;
         announce('language.saved');
@@ -104,7 +125,7 @@
     });
   }
 
-  activate(null);
+  activate(desktop ? readHint() : null);
   if (desktop) {
     load();
     // Returning from Settings can restore the old library document and its
