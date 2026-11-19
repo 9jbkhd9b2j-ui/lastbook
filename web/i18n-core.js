@@ -189,7 +189,12 @@
           return { text: interpolate(entry.text, params, tag), locale: tag };
         }
         const count = parameter(params, "count");
-        if (!Number.isFinite(count)) throw new TypeError("Expected finite numeric count for " + key);
+        if (!Number.isFinite(count)) {
+          // A caller bug must not break the screen. Without a usable number
+          // there is no grammatical category, so the required "other" form
+          // renders with any non-numeric count shown as given.
+          return { text: interpolate(entry.forms.get("other"), params, tag), locale: tag };
+        }
         const exact = entry.forms.get("=" + count);
         const form = exact ?? entry.forms.get(pluralRules(tag).select(count)) ?? entry.forms.get("other");
         // Grammar belongs to the message; numbers retain the selected region

@@ -51,8 +51,9 @@ test("plural selection uses exact counts and the grammar of the matched catalog"
   ]) {
     const i18n = translator(locale);
     assert.deepEqual([0, 1, 2].map(count => i18n.t("files", { count })), expected);
-    assert.throws(() => i18n.t("files", { count: "2" }), TypeError);
-    assert.throws(() => i18n.t("files", { count: Infinity }), TypeError);
+    // No usable count: the "other" form renders and nothing throws.
+    assert.equal(i18n.t("files", { count: "2" }), expected[2].replace(/^\d+/, "2"));
+    assert.equal(i18n.t("files", { count: Infinity }), expected[2].replace(/^\d+/, "Infinity"));
   }
   const i18n = createI18n({
     locale: "ja", fallbackLocale: "en",
@@ -96,8 +97,19 @@ test("plural grammar and count formatting agree for fractional quantities", () =
   assert.equal(translator("es-UY").t("files", { count: 1.001 }),
     new Intl.NumberFormat("es-UY").format(1.001) + " archivos");
   for (const count of [NaN, Infinity, "2", undefined]) {
-    assert.throws(() => translator("en").t("files", { count }), TypeError);
+    assert.doesNotThrow(() => translator("en").t("files", { count }));
   }
+});
+
+test("a plural message without a numeric count falls back to its other form", () => {
+  const en = translator("en");
+  assert.equal(en.t("files"), "{count} files");
+  assert.equal(en.t("files", {}), "{count} files");
+  assert.equal(en.t("files", null), "{count} files");
+  assert.equal(en.resolve("files", { count: undefined }).locale, "en");
+  assert.equal(translator("es-UY").t("files"), "{count} archivos");
+  assert.equal(en.t("files", { count: "many" }), "many files");
+  assert.equal(en.t("files", { count: 1 }), "1 file");
 });
 
 test("explicit routes to the default never hide later supported preferences", () => {
