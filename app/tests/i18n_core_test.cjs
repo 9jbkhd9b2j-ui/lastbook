@@ -6,6 +6,15 @@ const { runInNewContext } = require("node:vm");
 const createI18n = require("../../web/i18n-core.js");
 const applyI18n = require("../../web/i18n-dom.js");
 
+test("the shared iPad scheme without the desktop marker skips desktop localization", () => {
+  const window = {
+    get createI18n() { assert.fail("desktop localization started"); },
+  };
+  const script = readFileSync(resolve(__dirname, "../../web/i18n-app.js"), "utf8");
+  runInNewContext(script, { window, location: { protocol: "lastbook:" } });
+  assert.equal(window.LastbookI18n, undefined);
+});
+
 const catalogs = {
   en: {
     greeting: "Hello, {name}",
@@ -327,6 +336,23 @@ test("older Intl runtimes retain ordinary RTL scripts", () => {
   runInNewContext(readFileSync(resolve(__dirname, "../../web/i18n-core.js"), "utf8"), context);
   assert.equal(runInNewContext('createI18n({ catalogs: { en: { hello: "Hello" } } }).direction("ar")', context), "rtl");
   assert.equal(runInNewContext('createI18n({ catalogs: { en: { hello: "Hello" } } }).direction("az-Arab")', context), "rtl");
+});
+
+test("generated files preserve UTF-8 and initialize both entry points before their controllers", () => {
+  const web = resolve(__dirname, "../../web");
+  const local = name => readFileSync(resolve(web, name), "utf8");
+  const assets = ["i18n-core.js", "i18n-dom.js", "i18n-en.js", "i18n-locales.js", "i18n-app.js"];
+  for (const [entry, controller] of [["setup.html", "setup.js"], ["index.html", "app.js"]]) {
+    const scripts = [...local(entry).matchAll(/<script src="\/ui\/([^"?]+)[^"]*"><\/script>/g)].map(match => match[1]);
+    assert.deepEqual(scripts.slice(-6), [...assets, controller]);
+    assert.match(local(entry), /<html lang="en"/);
+  }
+  const context = {};
+  for (const name of assets.slice(0, 4)) runInNewContext(local(name), context);
+  assert.equal(runInNewContext(`
+    createI18n({ locale: "es-419", catalogs: { en: lastbookI18nEnglish, ...lastbookI18nLocales } })
+      .t("nav.guides")
+  `, context), "Guías");
 });
 
 test("injected parameters are plain text in both text and attribute sinks", () => {
