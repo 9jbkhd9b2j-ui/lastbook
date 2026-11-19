@@ -175,7 +175,8 @@ Notes:
 - **Places.** DLM Geographische Namen holds settlements, areas, mountains, glaciers, waters and field names
   (Riednamen). BEV also publishes small CSV tables of mountains and lakes with their heights.
 - **Addresses.** Overture's attribution page lists "Austrian Address Register", CC BY 4.0, distributed by
-  OpenAddresses, accessed 15 October 2026. So `tools/build_addresses.py` would only need a different country filter.
+  OpenAddresses, "Accessed: 2026-11-17" when read on 19 November 2026 (it said 15 October 2026 two days earlier; the
+  page refreshes this date). So `tools/build_addresses.py` would only need a different country filter.
   How Overture fills the region field for Austrian rows was not checked.
 
 ## Help points
