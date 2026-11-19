@@ -364,6 +364,8 @@ def transcript_text(vtt):
     for _, lines in caption_blocks(vtt):
         for line in lines:
             s = line.strip()
+            if not s:
+                continue
             end = s.rfind('>') + 1      # past the last '>' nothing can match, and a line of nothing but '<' would take quadratic time to find that out
             s = _TAG.sub('', s[:end]) + s[end:]
             if s != last:
