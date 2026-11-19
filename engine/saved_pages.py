@@ -332,20 +332,21 @@ def _drawers(data):
 
 
 _CUE_TIME = re.compile(r'(?:(\d+):)?(\d\d):(\d\d)[.,]\d+[ \t]+-->')
-_VTT_HEADER = re.compile(r'^(?:WEBVTT|NOTE)(?:[ \t]|$)')
+_VTT_HEADER = re.compile(r'^WEBVTT(?:[ \t]|$)')
+_VTT_NOTE = re.compile(r'^NOTE(?:[ \t]|$)')
 
 
 def caption_blocks(vtt):
     """Yield (start seconds, payload lines) from timed captions. Identifiers and metadata are not spoken text.
 
-    A blank line ends a block; its timing line follows at most one identifier. Keep numbers inside the payload,
+    An empty line ends a block; its timing line follows at most one identifier. Keep numbers inside the payload,
     including a line containing only digits. Comma timestamps remain accepted for existing subtitle files."""
     lines = vtt.decode('utf-8-sig', 'replace').splitlines()
-    for nonblank, block in itertools.groupby(lines, key=lambda line: bool(line.strip())):
-        if not nonblank:
+    for number, (nonempty, block) in enumerate(itertools.groupby(lines, key=bool)):
+        if not nonempty:
             continue
         block = list(block)
-        if _VTT_HEADER.match(block[0]):
+        if (number == 0 and _VTT_HEADER.match(block[0])) or _VTT_NOTE.match(block[0]):
             continue
         timing = 0
         match = _CUE_TIME.match(block[0])
