@@ -123,6 +123,8 @@ as one map.
 [REGIONS-DK.md](REGIONS-DK.md) does the same for Denmark's 5 regions.
 [REGIONS-AT.md](REGIONS-AT.md) does the same for Austria's nine states.
 
+[REGIONS-MX.md](REGIONS-MX.md) does the same for Mexico's 32 states (entidades federativas).
+
 ## Checking a map change
 
 - A change to a layer in `web/map.js` is a change you can see: include screenshots in light and dark mode.
