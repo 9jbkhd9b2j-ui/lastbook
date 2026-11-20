@@ -933,7 +933,8 @@ async function zimResults(q, el, max = 8, heading = '') {
 }
 
 /* ------------------------------------------------------------- search -- */
-const QSTOP = new Set('a an and are can do does for from get got have how i if in is it its me my need no not of on or our so that the this to was we what when where which who why will with without you your won don can t s'.split(' '));
+// A guide word only has to start with a search word, so she, her and his would find shelter, here and hissing.
+const QSTOP = new Set('a an and are can do does for from get got have how i if in is it its me my need no not of on or our so that the this to was we what when where which who why will with without you your won don can t s she her hers his him'.split(' '));
 // Words are split, folded and matched by web/words.js (loaded first), so accents, Chinese and other scripts work.
 function topicMatches(q) {
   return typeof SearchWords === 'undefined' ? [] : SearchWords.rankTopics(q, TOPICS, QSTOP);
