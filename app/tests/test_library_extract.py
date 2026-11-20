@@ -1,10 +1,12 @@
 """Video text extraction and cache migration in a temporary library."""
+import io
 import json
 import os
 import subprocess
 import sys
 import tempfile
 import unittest
+from contextlib import redirect_stdout
 from pathlib import Path
 from unittest.mock import patch
 
@@ -27,9 +29,10 @@ class LibraryExtraction(unittest.TestCase):
                        'captions': ['transcripts/example.vtt']}
         self.textpath = self.root / 'text/video-example.txt'
         self.metapath = self.textpath.with_suffix('.json')
-        root_patch = patch.object(library, 'ROOT', self.root)
-        root_patch.start()
-        self.addCleanup(root_patch.stop)
+        for name, value in (('ROOT', self.root), ('DB', self.root / 'search.sqlite')):
+            setting = patch.object(library, name, value)
+            setting.start()
+            self.addCleanup(setting.stop)
 
     def caption(self, text, path='transcripts/example.vtt'):
         dest = self.root / path
@@ -46,6 +49,14 @@ class LibraryExtraction(unittest.TestCase):
     def legacy_cache(self, text, **details):
         self.textpath.write_text(text, encoding='utf-8')
         self.metapath.write_text(json.dumps({'sha256': self.record['sha256'], 'details': details}), encoding='utf-8')
+
+    def build(self):
+        (self.root / 'manifests/examples.json').write_text(json.dumps([self.record]), encoding='utf-8')
+        with redirect_stdout(io.StringIO()):
+            library.build()
+        catalog = json.loads((self.root / 'catalog.json').read_text(encoding='utf-8'))
+        summary = json.loads((self.root / 'summary.json').read_text(encoding='utf-8'))
+        return catalog[0], summary
 
     def test_video_formats_keep_numeric_payload_and_skip_metadata(self):
         data = (b'\xef\xbb\xbfWEBVTT\r\nKind: captions\r\n\r\n'
@@ -127,9 +138,109 @@ class LibraryExtraction(unittest.TestCase):
         self.extract()
         before = (self.textpath.read_bytes(), self.metapath.read_bytes())
         path.unlink()
-        _, pages, error = library.extract(dict(self.record))
-        self.assertEqual(pages, [])
+        record, pages, error = library.extract(dict(self.record))
+        self.assertEqual(pages, ['Previously available caption.'])
+        self.assertEqual(record['text_path'], 'text/video-example.txt')
         self.assertIsNotNone(error)
+        self.assertEqual((self.textpath.read_bytes(), self.metapath.read_bytes()), before)
+
+    def test_rebuild_keeps_cached_video_searchable_until_captions_return(self):
+        for version in ('legacy', 1, 2):
+            with self.subTest(cache_version=version):
+                path = self.caption('The label reads\n12\nlitres.')
+                self.build()
+                self.assertEqual([r['doc_id'] for r in library.search('12')], ['video-example'])
+                metadata = json.loads(self.metapath.read_text(encoding='utf-8'))
+                if version == 'legacy':
+                    metadata.pop('caption_inputs')
+                else:
+                    metadata['caption_inputs']['version'] = version
+                self.metapath.write_text(json.dumps(metadata), encoding='utf-8')
+                before = (self.textpath.read_bytes(), self.metapath.read_bytes())
+                path.unlink()
+
+                for _ in range(2):
+                    record, summary = self.build()
+                    self.assertEqual([r['doc_id'] for r in library.search('12')], ['video-example'])
+                    self.assertEqual(record['text_path'], 'text/video-example.txt')
+                    self.assertEqual(summary['indexed_units'], 1)
+                    self.assertEqual(len(summary['extraction_errors']), 1)
+                    self.assertEqual(summary['extraction_errors'][0]['path'], self.record['path'])
+                    self.assertIn(path.name, summary['extraction_errors'][0]['error'])
+                    self.assertEqual((self.textpath.read_bytes(), self.metapath.read_bytes()), before)
+
+                self.caption('The label reads\n34\nlitres.')
+                _, summary = self.build()
+                self.assertEqual(library.search('12'), [])
+                self.assertEqual([r['doc_id'] for r in library.search('34')], ['video-example'])
+                self.assertEqual(summary['extraction_errors'], [])
+                self.assertEqual(json.loads(self.metapath.read_text())['caption_inputs']['version'], 2)
+
+    def test_rebuild_reports_missing_captions_without_using_an_invalid_cache(self):
+        cases = ('no cache', 'missing text', 'missing metadata', 'invalid metadata',
+                 'non-object metadata', 'different video', 'empty text', 'invalid text encoding')
+        for case in cases:
+            with self.subTest(cache=case):
+                self.textpath.unlink(missing_ok=True)
+                self.metapath.unlink(missing_ok=True)
+                path = self.caption('Cached caption 12.')
+                self.build()
+                path.unlink()
+                if case in ('no cache', 'missing text'):
+                    self.textpath.unlink()
+                if case in ('no cache', 'missing metadata'):
+                    self.metapath.unlink()
+                if case == 'invalid metadata':
+                    self.metapath.write_text('{', encoding='utf-8')
+                elif case == 'non-object metadata':
+                    self.metapath.write_text('[]', encoding='utf-8')
+                elif case == 'different video':
+                    metadata = json.loads(self.metapath.read_text(encoding='utf-8'))
+                    metadata['sha256'] = 'b' * 64
+                    self.metapath.write_text(json.dumps(metadata), encoding='utf-8')
+                elif case == 'empty text':
+                    self.textpath.write_text(' \n\f\n\t', encoding='utf-8')
+                elif case == 'invalid text encoding':
+                    self.textpath.write_bytes(b'\xff')
+                record, summary = self.build()
+                self.assertEqual(library.search('12'), [])
+                self.assertNotIn('text_path', record)
+                self.assertEqual(summary['indexed_units'], 0)
+                self.assertEqual(len(summary['extraction_errors']), 1)
+                self.assertIn(path.name, summary['extraction_errors'][0]['error'])
+
+    def test_rebuild_does_not_replace_cached_tracks_with_partial_captions(self):
+        second = 'transcripts/second.vtt'
+        self.record['captions'].append(second)
+        self.caption('First track 12.')
+        path = self.caption('Second track 34.', second)
+        self.build()
+        before = (self.textpath.read_bytes(), self.metapath.read_bytes())
+        self.caption('Changed first track 56.')
+        path.unlink()
+        _, summary = self.build()
+        for query in ('12', '34'):
+            self.assertEqual([r['doc_id'] for r in library.search(query)], ['video-example'])
+        self.assertEqual(library.search('56'), [])
+        self.assertEqual(len(summary['extraction_errors']), 1)
+        self.assertEqual((self.textpath.read_bytes(), self.metapath.read_bytes()), before)
+        self.caption('Changed second track 78.', second)
+        _, summary = self.build()
+        for query in ('12', '34'):
+            self.assertEqual(library.search(query), [])
+        for query in ('56', '78'):
+            self.assertEqual([r['doc_id'] for r in library.search(query)], ['video-example'])
+        self.assertEqual(summary['extraction_errors'], [])
+
+    def test_caption_permission_error_keeps_the_cached_extract(self):
+        self.caption('Previously available caption.')
+        self.extract()
+        before = (self.textpath.read_bytes(), self.metapath.read_bytes())
+        with patch.object(Path, 'read_bytes', side_effect=PermissionError('caption access denied')):
+            record, pages, error = library.extract(dict(self.record))
+        self.assertEqual(pages, ['Previously available caption.'])
+        self.assertEqual(record['text_path'], 'text/video-example.txt')
+        self.assertEqual(error, 'caption access denied')
         self.assertEqual((self.textpath.read_bytes(), self.metapath.read_bytes()), before)
 
     def test_missing_text_file_is_rebuilt(self):
