@@ -125,14 +125,24 @@ https://www.nuget.org/api/v2/package/Microsoft.Web.WebView2/1.0.3856.49 and copy
 against the hashes in `packaging/build_app_windows.sh`.
 
 On Linux, start it through `packaging/linux/run_source_linux.sh` instead, or videos will not play. The window comes
-from the system (WebKitGTK 4.1 and PyGObject), so make the virtual environment with `--system-site-packages` and install
-`packaging/linux/requirements_linux.txt` (on Fedora, or any source install on Python 3.15, install
-`packaging/linux/requirements_linux_fedora.txt` instead — the packaged pins stay as the Ubuntu package builds them):
+from the system (WebKitGTK 4.1 and PyGObject), so make the virtual environment with `--system-site-packages` and
+install one requirements file — `packaging/linux/requirements_linux.txt` on Ubuntu (or Arch), or
+`packaging/linux/requirements_linux_fedora.txt` on Fedora (and any source install on Python 3.15, where the packaged
+pins have no wheel):
+
+Ubuntu (or Arch):
 
 ```bash
 python3 -m venv --system-site-packages .venv
-.venv/bin/pip install -r packaging/linux/requirements_linux.txt            # Ubuntu (or Arch)
-.venv/bin/pip install -r packaging/linux/requirements_linux_fedora.txt     # Fedora (Python 3.15)
+.venv/bin/pip install -r packaging/linux/requirements_linux.txt
+bash packaging/linux/run_source_linux.sh --data /path/to/LastbookData
+```
+
+Fedora:
+
+```bash
+python3 -m venv --system-site-packages .venv
+.venv/bin/pip install -r packaging/linux/requirements_linux_fedora.txt
 bash packaging/linux/run_source_linux.sh --data /path/to/LastbookData
 ```
 
@@ -145,7 +155,7 @@ points GStreamer and WebKit at it for that launch only, and warns about any miss
 | Build the plugin | `gcc pkg-config gstreamer` | `gcc pkg-config libgstreamer1.0-dev` | `gcc pkgconf-pkg-config gstreamer1-devel gstreamer1-plugins-base-devel` |
 | Window | `webkit2gtk-4.1 python-gobject` | `gir1.2-webkit2-4.1 python3-gi` | `webkit2gtk4.1 python3-gobject` |
 | MP4, H.264, AAC | `gst-plugins-base gst-plugins-good gst-libav` | `gstreamer1.0-plugins-good gstreamer1.0-libav` | `gstreamer1-plugins-base gstreamer1-plugins-good gstreamer1-plugin-libav` |
-| AV1 (many of the library's videos) | `gst-plugin-dav1d` | `gstreamer1.0-plugins-bad` | `gstreamer1-plugins-bad-free` |
+| AV1 (many of the library's videos) | `gst-plugin-dav1d` | `gstreamer1.0-plugins-bad` | `gstreamer1-plugin-dav1d` |
 
 A source run was validated natively on Fedora 45 (Python 3.15), with `requirements_linux_fedora.txt`: the whole test
 suite passes, videos decode, and the window opens.
