@@ -45,6 +45,22 @@ class ReadingCatalogExportTests(unittest.TestCase):
             self.assertNotIn("invalid", result)
             self.assertNotIn("bad", result)
 
+    def test_skips_malformed_kind_without_losing_valid_titles(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            catalog = root / "catalog.json"
+            output = root / "catalog.html"
+            catalog.write_text(json.dumps([
+                {"kind": {"unexpected": "pdf"}, "title": "Malformed object"},
+                {"kind": ["pdf"], "title": "Malformed list"},
+                {"kind": "pdf", "title": "Valid title", "collection": "Guides"},
+            ]), encoding="utf-8")
+            self.assertEqual(export(catalog, output), 1)
+            result = output.read_text(encoding="utf-8")
+            self.assertIn("Valid title", result)
+            self.assertNotIn("Malformed object", result)
+            self.assertNotIn("Malformed list", result)
+
     def test_empty_catalog(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
