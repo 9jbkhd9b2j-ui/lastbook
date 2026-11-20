@@ -34,7 +34,7 @@ if __name__ == '__main__':  # --data must be known before the paths below are wo
 
 import engine.paths as lastbook_paths  # noqa: E402  (data folder and program folder can differ in the packaged app)
 from engine.paths import ro_uri  # noqa: E402
-from engine import saved_pages, address_search  # noqa: E402
+from engine import saved_pages, address_search, encyclopedias  # noqa: E402
 from engine.setup import api as setup_api  # noqa: E402  (the one module that may download: only when the person asks)
 HERE = lastbook_paths.DATA  # holds derived/
 APP = lastbook_paths.APP  # holds web/ and content/
@@ -201,11 +201,9 @@ def topics():
 
 
 def zim_names():
-    """The encyclopedia files this library really holds. Its folder decides, so one rule covers every size of pack."""
-    try:
-        return sorted(p.name for p in (LIB / 'collections').glob('*.zim'))
-    except OSError:
-        return []
+    """The encyclopedia files this library really holds. Its folder decides, so one rule covers every size of pack.
+    Only files the /zim/ reader would open (engine/safe_paths.py): a link out of collections/ is not offered or cited."""
+    return encyclopedias.list_files(LIB)
 
 
 def item_here(i, zims):

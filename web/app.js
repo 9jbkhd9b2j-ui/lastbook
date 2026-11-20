@@ -749,10 +749,10 @@ const zimLabel = name => { for (const k in ZIMNAMES) if (name.startsWith(k)) ret
 async function wiki(path, from, y) {
   const [zim, ...rest] = path.split('/');
   const art = rest.join('/');
-  const title = decodeURIComponent(art.split('/').pop() || '').replace(/_/g, ' ') || zimLabel(zim);
+  const title = (art.split('/').pop() || '').replace(/_/g, ' ') || zimLabel(zim);   // parse() already decoded each component
   setTitle(title, '', zimLabel(zim));
   const src = '/zim/' + encodeURIComponent(zim) + '/' + art.split('/').map(encodeURIComponent).join('/');
-  const selfHref = '#/wiki/' + path;
+  const selfHref = '#/wiki/' + path.split('/').map(encodeURIComponent).join('/');
   const mainPage = zimMain(zim);
   main.innerHTML = `<div class="rtop">${backButton(from || '#/encyclopedias')}<span id="wsave" class="dock">${saveButton({ key: 'w:' + path, title, href: selfHref, sub: zimLabel(zim) })}</span></div>
     <h1 class="rtitle" id="wtitle">${esc(title)}</h1><div class="rsrc"><span class="zn">${esc(zimLabel(zim))} · </span>Community-written; check safety-critical steps against a manual${IN_WINDOW ? '' : ` · <a id="wopen" href="${src}" target="_blank" rel="noopener">open on its own</a>`}</div>
@@ -795,6 +795,7 @@ async function wiki(path, from, y) {
       const loc = f.contentWindow.location.pathname, t = fd.title || '';
       const m = /^\/zim\/([^/]+)\/(.*)$/.exec(loc); if (!m) return;
       const p = decodeURIComponent(m[1]) + '/' + m[2].split('/').map(decodeURIComponent).join('/');
+      const href = '#/wiki/' + p.split('/').map(encodeURIComponent).join('/');
       const own = fd.querySelector('#firstHeading, h1'), raw = (own && own.textContent.trim()) || t;
       if (!m[2] && !raw) return;   // the bare address, on its way to the front page
       const front = decodeURIComponent(loc) === await mainPage;   // the front page is named by its file, such as App/IntroPage: the encyclopedia's name says it instead
@@ -804,9 +805,9 @@ async function wiki(path, from, y) {
       const nt = front ? zimLabel(zim) : raw || p.split('/').pop().replace(/_/g, ' '), sub = front ? 'Encyclopedia' : zimLabel(zim);
       $('#wtitle').textContent = nt; if ($('#wopen')) $('#wopen').href = loc; setTitle(nt, '', zimLabel(zim));
       f.lbName = !front && own ? { nt, at: own.getBoundingClientRect().bottom + fw.scrollY } : null; barName();
-      $('#wsave').innerHTML = saveButton({ key: 'w:' + p, title: nt, href: '#/wiki/' + p, sub });
+      $('#wsave').innerHTML = saveButton({ key: 'w:' + p, title: nt, href, sub });
       fit();
-      if (p !== shown) { shown = p; history.replaceState(null, '', '#/wiki/' + p + (from ? '?from=' + encodeURIComponent(from) : '')); remember({ key: 'w:' + p, title: nt, href: '#/wiki/' + p, sub }) }
+      if (p !== shown) { shown = p; history.replaceState(null, '', href + (from ? '?from=' + encodeURIComponent(from) : '')); remember({ key: 'w:' + p, title: nt, href, sub }) }
     } catch { }
   });
 }
