@@ -182,7 +182,7 @@
   {
    "id": "home-fire",
    "label": "Fire in the home",
-   "hint": "Smoke alarm going off, fire or smoke inside",
+   "hint": "Smoke alarm going off, house fire, fire or smoke inside",
    "read": [
     {
      "doc": "255b448d041a65",
