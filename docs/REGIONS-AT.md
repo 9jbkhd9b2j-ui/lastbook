@@ -29,8 +29,9 @@ open data, and every one of those records names CC BY 4.0. The agriculture agenc
 the interior ministry (BMI) publish the crop, river and police layers under the same licence. Overture already carries
 Austria's address register.
 
-So Austria needs no state-by-state table: every layer has one nationwide official source, under one licence. What it
-does need is code work, mostly in address search (see "How addresses are written").
+So Austria needs no state-by-state table for its primary terrain, river, crop, building, place, address and police
+sources: each is nationwide and names CC BY 4.0. The dam and hospital lists remain cross-checks with unverified terms,
+as noted below. Code work is still needed, mostly in address search (see "How addresses are written").
 
 ## What a region is
 
@@ -118,9 +119,9 @@ worked example, `eu-at`. The two proposals answer different questions and fit to
 - **Region level.** #84 cuts whole countries. This proposal cuts states, with the whole country as an alternative
   (`AT` in the table above). If #84 lands, the whole-country option here is simply its `eu-at`, and the open question
   becomes whether Austria also needs the nine state regions on top.
-- **Boxes.** #84 takes each country's box from the polygon of Geofabrik's OpenStreetMap extract. Its Austria box is
-  9.3768–17.3141° E, 46.2198–49.174° N with the margin. Taking the 0.15° margin off gives 9.5268, 46.3698, 17.1641,
-  49.0240, within 0.004° (about 400 m) of the official boundary computed here on every side, the extract's polygon
+- **Boxes.** #84 takes each country's box from the polygon of Geofabrik's OpenStreetMap extract. Its stored `eu-at.box`
+  is [9.5268, 46.3698, 17.1641, 49.024]; `build_packs.py` adds a 0.15° margin, giving 9.3768–17.3141° E and
+  46.2198–49.174° N. The stored box is within 0.004° (about 400 m) of the official boundary computed here on every side, the extract's polygon
   being a little wider. For a whole-country map the two methods give the same result. For states only the official
   boundary helps, because the extract has no state lines.
 - **Sources.** #84 cuts from the existing source layers, which [MAPS.md](MAPS.md) describes as US datasets or
@@ -230,7 +231,8 @@ Not proposed:
 
 ## Licence notes and attribution
 
-Every official source here names CC BY 4.0: credit the source, link the licence, note changes. The credit lines found
+The official sources proposed for the primary layers above name CC BY 4.0: credit the source, link the licence, note
+changes. The dam and hospital lists have separate, unresolved terms as noted above. The credit lines found
 so far:
 
 - **Austrian Address Register.** Its BEV record (opened) sets the line itself, for every form of distribution and every
