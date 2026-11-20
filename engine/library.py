@@ -125,7 +125,17 @@ def extract(r):
  if video:
   try:
    captions=[(c,(ROOT/c).read_bytes()) for c in r.get('captions',[])]
-  except Exception as e:return r,[],str(e)
+  except Exception as e:
+   # A failed refresh must not remove usable cached pages from the rebuilt index.
+   try:
+    m=json.loads(meta.read_text(encoding='utf-8'))
+    if m.get('sha256')==r.get('sha256'):
+     pages=textpath.read_text(encoding='utf-8').split('\n\f\n')
+     if any(page.strip() for page in pages):
+      r.update(m.get('details',{}));r['text_path']=textpath.relative_to(ROOT).as_posix()
+      return r,pages,str(e)
+   except (OSError,ValueError,TypeError,AttributeError):pass  # missing or unreadable cache
+   return r,[],str(e)
   # A video's checksum says nothing about its subtitles. Version 2 also retires caches made before the cue-boundary fixes.
   caption_inputs={'version':2,'files':[[c,hashlib.sha256(data).hexdigest()] for c,data in captions],
                   'fallback':[r['title'],r.get('notes','')]}
