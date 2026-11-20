@@ -11,6 +11,10 @@ const Chat = (() => {
     ['grow', 'What vegetables can I plant this month?'],
     ['repair', 'How do I change the oil on a Honda EU2200i generator?'],
   ];
+  // The Chat page's first screen: one card per urgent guide, each asking its guide's starter question, then a few learning guides.
+  // The ink drawings are the website's own (website-next/img/ink/), copied flat into web/ because builds ship web/ without folders.
+  const HOME = [['water', 'water'], ['hurt', 'aid'], ['food', 'food'], ['power', 'power'], ['comms', 'radio'], ['grow', 'garden']];
+  const LEARN = [['grow', 'garden'], ['health', 'carer'], ['energy', 'lantern']];
   const ABOUT_STARTERS = { doc: ['Explain this page in simple words', 'What are the warnings on this page?', 'Is there a video that shows this?'],
     video: ['Summarise what this video shows', 'What safety points does this video make?', 'Find a manual page that covers the same thing'],
     topic: ['What should I do first?', 'What are the most important warnings?', 'Which video should I watch first?'] };
@@ -77,6 +81,7 @@ const Chat = (() => {
           </div>
           <p class="comp-note">Answers come from the library on this computer and can be wrong. Check the linked pages; get trained help for anything serious.</p>
         </form>
+        <div class="ask-more" id="askMore" hidden></div>
       </section></div>`;
     renderSide(); renderCtx(); renderLog();
     const ta = $('#chatIn');
@@ -187,13 +192,24 @@ const Chat = (() => {
   /* --------------------------------------------------------------- log --- */
   function renderLog() {
     const log = $('#chatLog'); if (!log) return;
-    if (!cur || !cur.messages.length) {
-      const st = aboutCtx ? ABOUT_STARTERS[aboutCtx.kind] || [] : null;
+    const empty = !cur || !cur.messages.length, home = empty && !aboutCtx, more = $('#askMore');
+    log.closest('.chat-main').classList.toggle('home', home);
+    if (more) { more.hidden = !home; more.innerHTML = home ? homeMore() : '' }
+    if (home) {
+      log.innerHTML = `<div class="ask-hero">
+        <div><h1>What do you need to know?</h1>
+        <p class="lead">Answers from the guides, manuals and videos on this computer, with the page or video moment for each point.</p></div>
+        <img class="ink-art" src="/ui/ink-pair.svg" alt="" width="240" height="120"></div>`;
+      $$('[data-start]', more).forEach(b => b.onclick = () => send(b.dataset.start));
+      return;
+    }
+    if (empty) {
+      const st = ABOUT_STARTERS[aboutCtx.kind] || [];
       log.innerHTML = `<div class="chat-empty">
         <div class="ce-mark">${ico('ask')}</div>
         <h1>Chat</h1>
         <p class="lead">Answers are built only from the manuals, guides and video transcripts on this computer — with the exact page or video moment for each point.</p>
-        <div class="starters">${(st ? st.map(t => ['ask', t]) : STARTERS).map(([i, t]) => `<button class="starter" ${tcStyle(i)} data-start="${esc(t)}"><span class="ico">${ico(i)}</span><span>${esc(t)}</span></button>`).join('')}</div>
+        <div class="starters">${st.map(t => ['ask', t]).map(([i, t]) => `<button class="starter" ${tcStyle(i)} data-start="${esc(t)}"><span class="ico">${ico(i)}</span><span>${esc(t)}</span></button>`).join('')}</div>
         <p class="small muted" style="margin-top:18px">It reads text only: it can’t see inside videos without captions, scanned pages without text, or raw map files. It tells you when the library has nothing on a question.</p></div>`;
       $$('[data-start]', log).forEach(b => b.onclick = () => send(b.dataset.start));
       fitEmpty();
@@ -201,6 +217,15 @@ const Chat = (() => {
     }
     log.innerHTML = cur.messages.map((m, i) => m.role === 'user' ? `<div class="msg user"><div class="bubble">${esc(m.content)}</div></div>` : `<div class="msg bot" id="m${i}">${botHtml(m, i)}</div>`).join('');
     wire(log);
+  }
+  function homeMore() {
+    const q = Object.fromEntries(STARTERS), title = id => esc(SHORT[id] || id);
+    return `<p class="ask-safe"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 4.5 6v5.5c0 4.4 3.2 8.2 7.5 9.5 4.3-1.3 7.5-5.1 7.5-9.5V6z"/><path d="m8.8 12 2.2 2.2 4.2-4.6"/></svg>Runs on this computer. Nothing you ask leaves it.</p>
+      <h2 class="ask-h">Start with what matters</h2>
+      <div class="ask-cards">${HOME.map(([id, art]) => `<button class="ask-card" ${tcStyle(id)} data-start="${esc(q[id])}">
+        <span class="ink-tile"><img src="/ui/ink-${art}.svg" alt="" width="44" height="44"></span><span class="ac-t"><b>${title(id)}</b><span>${esc(q[id])}</span></span>${ico('right', 'ac-go')}</button>`).join('')}</div>
+      <div class="ask-learn-head"><h2 class="ask-h">Keep learning</h2><a href="#/library">All skills</a></div>
+      <div class="ask-learn">${LEARN.map(([id, art]) => `<a href="#/t/${id}" ${tcStyle(id)}><span class="ink-tile"><img src="/ui/ink-${art}.svg" alt="" width="44" height="44"></span><span><b>${title(id)}</b><small>Step-by-step guide</small></span></a>`).join('')}</div>`;
   }
   // The page itself never scrolls while a chat is empty: in a window too short for every suggestion (or with lines wrapped narrow beside
   // the chats column), the last ones go, a row at a time down to one row, then the note under them, the introduction and the mark.
