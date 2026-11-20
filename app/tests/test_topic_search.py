@@ -123,6 +123,8 @@ FIRST = {
     'furnace': ['shelter', 'cold'], 'furnace is out': ['shelter', 'cold'], 'frostnip': ['hurt', 'heatcold'],
     'forest fire': ['disaster', 'wildfire'], 'forest fires': ['disaster', 'wildfire'],
     'forest fire smoke': ['disaster', 'smoke'], 'Hydro': ['power', 'first-hours'], 'Frostnip': ['hurt', 'heatcold'],
+    'cold': ['shelter', 'cold'], 'its cold': ['shelter', 'cold'],
+    'house fire': ['disaster', 'home-fire'], 'my house is on fire': ['disaster', 'home-fire'],
 }
 # Searches the new words must not disturb: [guide, choice] that comes first.
 UNDISTURBED = {
@@ -132,12 +134,45 @@ UNDISTURBED = {
     'ice': ['water', 'inhome'], 'micro-hydro': ['energy', None], 'wind': ['disaster', 'hurricane'],
     'winter storm': ['shelter', 'cold'], 'furnace smells like gas': ['power', 'gas'], 'gas furnace': ['power', 'gas'],
     'lost in the forest': ['comms', 'signal'],
+    'cold frame': ['repair', 'build'], 'freezing': ['shelter', 'cold'],
+    'fire alarm': ['disaster', 'home-fire'], 'smoke alarm': ['disaster', 'home-fire'], 'smoke': ['disaster', 'smoke'],
+    'fires after an earthquake': ['disaster', 'earthquake-after'],
 }
-TOPS = sorted({*SAME_AS, *SAME_AS.values(), *SAME_GUIDE, *SAME_GUIDE.values(), *FIRST, *UNDISTURBED, *EVERYDAY, *LISTED})
+# A search that names a sign of a life-threatening emergency shows that choice, even if another choice in the guide
+# matches more words. The rest don't say the person isn't breathing or is unconscious, and keep their choice.
+URGENT = {
+    'burn and not breathing': ['hurt', 'breathing'], 'broken leg and not breathing': ['hurt', 'breathing'],
+    'cut and not breathing': ['hurt', 'breathing'], 'fractured neck and not breathing': ['hurt', 'breathing'],
+    'dislocated neck unconscious': ['hurt', 'breathing'], 'my baby stopped breathing': ['hurt', 'breathing'],
+    "he isn't breathing": ['hurt', 'breathing'], 'choking': ['hurt', 'breathing'],
+    'allergic reaction trouble breathing': ['hurt', 'allergy'], "can't breathe after a bee sting": ['hurt', 'allergy'],
+    'gas burn': ['hurt', 'burn'], 'broken leg stuck under rubble': ['hurt', 'bone'],
+    'wound infection not responding to antibiotics': ['hurt', 'bleeding'],
+    'allergic reaction not responding to epinephrine': ['hurt', 'allergy'],
+    'allergic reaction choking': ['hurt', 'allergy'], 'burn and choking on smoke': ['hurt', 'burn'],
+}
+TOPS = sorted({*SAME_AS, *SAME_AS.values(), *SAME_GUIDE, *SAME_GUIDE.values(), *FIRST, *UNDISTURBED, *URGENT, *EVERYDAY, *LISTED})
 
 # A made-up topic in Spanish and Chinese: found by Spanish words and by a single Han character.
 OWN = {'id': 'own', 'title': 'Agua potable', 'short': 'Hervir el agua', 'keywords': ['水'], 'choices': []}
 RANK_OWN = [['agua', [OWN]], ['水', [OWN]], ['hervir', [OWN]]]
+
+# A guide whose urgent phrase the search names comes first, even when the other words pull another guide ahead or
+# below the cut; that guide is still offered: query -> (first row, a row that must still be shown).
+GUIDE_URGENT = {
+    'unconscious in the flood water': (['hurt', 'breathing'], ['water', 'unsafe']),
+    'unconscious after drinking flood water': (['hurt', 'breathing'], ['water', 'unsafe']),
+    'not breathing after falling in the well water': (['hurt', 'breathing'], ['land', 'water-source']),
+    'unconscious after the generator ran indoors': (['hurt', 'breathing'], ['shelter', 'co']),
+    'child unconscious after pet food': (['hurt', 'breathing'], None), 'pet food unconscious': (['hurt', 'breathing'], None),
+}
+# Searches without an urgent phrase keep their guide order: [guide, choice] that comes first.
+GUIDE_ORDINARY = {
+    'how do i light a campfire': ['power', 'first-hours'], 'treat water': ['water', 'keepclean'],
+    "make the water safe for a baby's formula": ['food', 'outage'], 'not responding to antibiotics': ['health', 'medicine'],
+    'radio not responding': ['comms', 'alerts-radio'], 'dental abscess': ['health', 'teeth'], 'propane burns': ['hurt', 'shock'],
+}
+TOPS = sorted({*TOPS, *GUIDE_URGENT, *GUIDE_ORDINARY})
 
 CASES = {
     'stop': QSTOP, 'fold': list(FOLD), 'match': [m[:2] for m in MATCH], 'rank': ENGLISH, 'topics': TOPICS,
@@ -219,6 +254,7 @@ class TopicSearch(unittest.TestCase):
         for r in self.modes:
             self.assertEqual([ok(e) for e in r['match']], [m[2] for m in MATCH])
 
+
     def test_rank_non_english_topic(self):
         for r in self.modes:
             self.assertEqual([ok(e) for e in r['rankOwn']], [[['own', None]]] * 3)
@@ -254,6 +290,27 @@ class TopicSearch(unittest.TestCase):
             for q, first in [*FIRST.items(), *UNDISTURBED.items()]:
                 with self.subTest(q=q, segmenter=r['segmenter']):
                     self.assertEqual(top[q][0], first)
+
+    def test_urgent_choice_wins(self):
+        for r in self.modes:
+            top = dict(zip(TOPS, (ok(e) for e in r['tops'])))
+            for q, first in URGENT.items():
+                with self.subTest(q=q, segmenter=r['segmenter']):
+                    self.assertEqual(top[q][0] if top[q] else None, first)
+
+
+    def test_urgent_guide_comes_first(self):
+        for r in self.modes:
+            top = dict(zip(TOPS, (ok(e) for e in r['tops'])))
+            for q, (first, offered) in GUIDE_URGENT.items():
+                with self.subTest(q=q, segmenter=r['segmenter']):
+                    self.assertEqual(top[q][:1], [first])
+                    if offered:
+                        self.assertIn(offered, top[q])
+                    self.assertLessEqual(len(top[q]), 3)
+            for q, first in GUIDE_ORDINARY.items():
+                with self.subTest(q=q, segmenter=r['segmenter']):
+                    self.assertEqual(top[q][:1], [first])
 
 
 if __name__ == '__main__':
