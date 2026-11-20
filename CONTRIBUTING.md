@@ -57,6 +57,15 @@ nothing shared may name a real person's home, street, coordinates, machines or a
 **Sources first.** A guide card points at a real page of a real source in the library, with its page number. If the
 library does not cover something, record that in `content/gaps.json` instead of writing advice from memory.
 
+**Text is UTF-8 on every platform.** On Windows, Python reads and writes text as cp1252 unless told otherwise, so code
+that works on a Mac or Linux can stop there with `UnicodeDecodeError: 'charmap' codec ...` (#170, #290).
+
+- Pass `encoding='utf-8'` to `open()`, `Path.read_text()` and `Path.write_text()`, and to `subprocess.run(..., text=True)`
+  (Node prints UTF-8). This goes for tests and tools too.
+- Don't rely on `PYTHONUTF8=1` or `python -X utf8` being set: other people's computers don't have it.
+- AI coding agents often leave the encoding out. If you use one, give it this rule (in its instructions file, for
+  example `AGENTS.md` or `CLAUDE.md`) and check its changes for it.
+
 **Plain words.** Interface text is short, concrete and calm. Many readers will be stressed, tired, or reading in a second
 language.
 
