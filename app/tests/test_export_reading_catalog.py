@@ -26,6 +26,34 @@ class ReadingCatalogExportTests(unittest.TestCase):
             self.assertLess(result.index("Alpha"), result.index("Slides"))
             self.assertLess(result.index("Slides"), result.index("&lt;Guide"))
 
+    def test_skips_invalid_titles_and_handles_optional_fields(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            catalog = root / "catalog.json"
+            output = root / "catalog.html"
+            catalog.write_text(json.dumps([
+                {"kind": "pdf", "title": 123, "collection": "A"},
+                {"kind": "pdf", "title": "  ", "collection": "A"},
+                {"kind": "pdf", "title": "Valid", "collection": ["invalid"], "publisher": {"bad": "field"}},
+                {"kind": "html", "title": "  Good  ", "collection": "  Science  ", "publisher": "  Press  "},
+                None,
+            ]), encoding="utf-8")
+            self.assertEqual(export(catalog, output), 2)
+            result = output.read_text(encoding="utf-8")
+            self.assertIn("<td>Other</td><td>Valid</td>", result)
+            self.assertIn("<td>Science</td><td>Good</td>", result)
+            self.assertNotIn("invalid", result)
+            self.assertNotIn("bad", result)
+
+    def test_empty_catalog(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            catalog = root / "catalog.json"
+            output = root / "catalog.html"
+            catalog.write_text("[]", encoding="utf-8")
+            self.assertEqual(export(catalog, output), 0)
+            self.assertIn("<tbody></tbody>", output.read_text(encoding="utf-8"))
+
     def test_rejects_non_list_catalog(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
