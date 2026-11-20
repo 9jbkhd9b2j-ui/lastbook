@@ -282,7 +282,7 @@ async function route() {
     else if (v === 't') await topicPage(parts[1], parts[2]);
     else if (v === 'ask') await Chat.page(main, parts.slice(1), q);
     else if (v === 'videos') await (parts[1] ? videoRow(parts[1], q) : videosHome());
-    else if (v === 'watch') await watch(parts[1], +q.get('t') || 0, q.get('from'));
+    else if (v === 'watch') await watch(parts[1], q.get('t'), q.get('from'));
     else if (v === 'read') await reader(parts[1], +q.get('p') || 0, q.get('from'), q.get('view'));
     else if (v === 'wiki') await wiki(parts.slice(1).join('/'), q.get('from'), y);
     else if (v === 'search') await searchPage(q.get('q') || '', q.get('kind') || 'all');
@@ -605,17 +605,19 @@ async function watch(id, t, from) {
   const selfHref = `#/watch/${encodeURIComponent(id)}`;
   remember({ key: 'v:' + id, title: d.title, href: selfHref, sub: 'Video · ' + fmtDur(d.duration) });
   const p = vprog()[id];
-  const resumeAt = !t && p && p.t > 15 && (!d.duration || p.t < d.duration - 20) ? p.t : 0;
+  const start = t !== null && Number.isFinite(+t) && +t >= 0 ? +t : null;
+  const resumeAt = start === null && p && p.t > 15 && (!d.duration || p.t < d.duration - 20) ? p.t : 0;
   main.innerHTML = `<div class="rtop">${backButton(from, 'Videos')}</div>
   <div class="watch">
     <div>
-      <div class="player"><video id="vid" controls preload="metadata" playsinline src="${fileUrl(d.path)}${t ? '#t=' + t : ''}"></video></div>
+      <div class="player"><video id="vid" controls preload="metadata" playsinline src="${fileUrl(d.path)}${start !== null ? '#t=' + start : ''}"></video></div>
       <div class="video-speed"><label for="videoSpeed">Playback speed</label><select id="videoSpeed"><option value="0.5">0.5×</option><option value="0.75">0.75×</option><option value="1" selected>Normal</option><option value="1.25">1.25×</option><option value="1.5">1.5×</option><option value="2">2×</option></select></div>
       ${d.remote ? `<p class="small muted" style="margin:6px 0 0">Stored on the remote drive “${esc(d.remote)}”. It plays only while that computer is reachable.</p>` : ''}
       <h1 class="vtitle">${esc(d.title)}</h1>
       <div class="vmeta"><b>${esc(d.publisher || '')}</b><span>${fmtDur(d.duration)}</span>${d.upload_date ? `<span>${esc(d.upload_date.replace(/(\d{4})(\d\d)(\d\d)/, '$1-$2-$3'))}</span>` : ''}<span>${esc(d.trust)}</span></div>
       ${resumeAt ? `<div class="resume" id="resume">You stopped at ${clock(resumeAt)}. <button class="btn" id="resYes">Resume</button><button class="btn plain" id="resNo">Start over</button></div>` : ''}
       <div class="vactions dock">${saveButton({ key: 'v:' + id, title: d.title, href: selfHref, sub: 'Video · ' + fmtDur(d.duration) })}<a class="btn plain" title="Ask about this video" href="#/ask?about=${encodeURIComponent('video:' + id)}&${fromQ()}" id="askv">${ico('ask')}<span>Ask about this video</span></a></div>
+      ${momentSection(true)}
       <div class="notice small">A video shows how one person did something. Watching isn’t practice, and it may not match current safety guidance — check a manual for anything risky.</div>
     </div>
     <section class="txpanel" id="tx" aria-label="Transcript"><header><h2>Transcript</h2><label class="sr" for="cueQ">Find in transcript</label><input id="cueQ" type="search" placeholder="Find words in the transcript"></header>
@@ -624,6 +626,7 @@ async function watch(id, t, from) {
   <div id="morev"></div>
   <details class="about-src"><summary>About this video</summary><div class="in"><dl><dt>Channel</dt><dd>${esc(d.publisher || '—')}</dd><dt>Kind</dt><dd>${esc(d.trust)}</dd><dt>Length</dt><dd>${fmtDur(d.duration) || 'unknown'}</dd>${d.notes ? `<dt>Note</dt><dd>${esc(d.notes)}</dd>` : ''}${d.source_url ? `<dt>Online original</dt><dd>${esc(hostOf(d.source_url))} <span class="muted">(online; not needed here)</span></dd>` : ''}</dl></div></details>`;
   const vid = $('#vid');
+  wireMoments({ video: d, player: vid, start });
   const speed = $('#videoSpeed');
   speed.addEventListener('change', () => { vid.playbackRate = Number(speed.value) });
   // Native controls may also change the rate. Keep the visible control in sync.
@@ -678,6 +681,117 @@ async function watch(id, t, from) {
     const rel = await api('/api/videos/related/' + encodeURIComponent(id));
     if (rel.length && $('#morev')) { $('#morev').innerHTML = secHead('More like this') + rail(rel.map(v => vcard(v)).join('')); wireRails($('#morev')) }
   } catch { }
+}
+
+/* ------------------------------------------------------- video moments -- */
+function momentSection(watching = false) {
+  return `<section class="moments" aria-labelledby="momentsTitle">
+    <header class="moments-head"><h2 id="momentsTitle">${watching ? 'Saved moments' : 'Video moments'} <span id="momentCount" class="moment-count"></span></h2>
+      ${watching ? `<button class="btn plain" id="saveMoment" disabled>${ico('save')}<span>Save this moment</span></button>` : ''}</header>
+    <p class="moments-hint">${watching ? 'Keep the parts you want to return to.' : 'Your saved places in videos.'} Kept on this device.</p>
+    <div id="momentEditor"></div><ul class="moment-list" id="momentList"></ul>
+    <p id="momentStatus" class="moment-status" role="status"></p>
+  </section>`;
+}
+
+function wireMoments({ video = null, player = null, available = null, start = null } = {}) {
+  const root = $('.moments'), list = $('#momentList', root), editor = $('#momentEditor', root);
+  const status = $('#momentStatus', root), add = $('#saveMoment', root);
+  let editing = null;
+  const say = (text, error = false) => { status.textContent = text; status.classList.toggle('is-error', error) };
+  const focusRow = key => {
+    const button = $$('[data-moment-edit]', root).find(b => b.dataset.momentEdit === key);
+    if (button) button.focus(); else if (add) add.focus(); else $('#momentsTitle').focus();
+  };
+  $('#momentsTitle').tabIndex = -1;
+  const read = () => VideoMoments.readSaved().filter(VideoMoments.isMoment);
+  const draw = () => {
+    let items;
+    try { items = read() } catch (e) { say(e.message, true); return }
+    if (video) items = items.filter(x => x.videoId === video.id).sort((a, b) => a.time - b.time);
+    $('#momentCount', root).textContent = items.length || '';
+    list.innerHTML = items.length ? items.map(x => {
+      const missing = available && !available.has(x.videoId), title = esc(x.title), time = clock(x.time);
+      const content = `<span class="moment-time">${time}</span><span class="moment-name"><b>${title}</b>${!video ? `<small>${esc(x.videoTitle)}${missing ? ' · Not in this library' : ''}</small>` : ''}</span>`;
+      const open = video ? `<button class="moment-open" data-moment-play="${x.time}" aria-label="Play ${title} at ${time}">${content}</button>`
+        : missing ? `<span class="moment-open unavailable">${content}</span>`
+          : `<a class="moment-open" href="${esc(VideoMoments.href(x))}" aria-label="Open ${title} at ${time}">${content}</a>`;
+      return `<li>${open}<div class="moment-actions"><button data-moment-edit="${esc(x.key)}" aria-label="Rename ${title}">Rename</button><button data-moment-remove="${esc(x.key)}" aria-label="Remove ${title}">Remove</button></div></li>`;
+    }).join('') : `<li class="moment-empty">${video ? 'Pause at a useful part, then choose Save this moment.' : 'No video moments saved.'}</li>`;
+  };
+  const close = () => {
+    const key = editing && editing.key;
+    editing = null; editor.replaceChildren(); focusRow(key);
+  };
+  const edit = (item, seconds) => {
+    if (player) player.pause();
+    const time = item ? item.time : Math.floor(seconds);
+    editing = { key: item ? item.key : null, time };
+    editor.innerHTML = `<form class="moment-form"><p class="moment-form-title">${item ? 'Rename moment' : 'Save moment'} <span class="moment-time">${clock(time)}</span></p>
+      <label for="momentName">Name <span class="muted">(optional)</span></label>
+      <input id="momentName" type="text" maxlength="120" autocomplete="off" placeholder="For example, tools needed" value="${esc(item ? item.title : '')}">
+      <div class="moment-form-actions"><button class="btn" type="submit">${item ? 'Save changes' : 'Save moment'}</button><button class="btn plain" type="button" id="cancelMoment">Cancel</button></div></form>`;
+    say('');
+    $('#cancelMoment', editor).onclick = close;
+    $('form', editor).onkeydown = e => { if (e.key === 'Escape') { e.preventDefault(); close() } };
+    $('form', editor).onsubmit = e => {
+      e.preventDefault();
+      const title = $('#momentName', editor).value.trim() || 'Moment at ' + clock(editing.time);
+      try {
+        const item = editing.key ? VideoMoments.rename(editing.key, title) : VideoMoments.save(video, editing.time, title);
+        editing = null; editor.replaceChildren(); draw(); savedCount(); focusRow(item.key);
+        say('Moment saved on this device.');
+      } catch (e) { say(e.message, true) }
+    };
+    $('#momentName', editor).focus();
+  };
+  if (player) {
+    const ready = () => !player.error && player.readyState >= 1 && Number.isFinite(player.duration) && player.duration > 0;
+    const update = () => { add.disabled = !ready() };
+    player.addEventListener('loadedmetadata', update);
+    player.addEventListener('durationchange', update);
+    player.addEventListener('error', update);
+    const checkStart = () => {
+      if (ready() && start !== null && start >= player.duration)
+        say('This position is beyond the end of this video.', true);
+    };
+    player.addEventListener('loadedmetadata', checkStart, { once: true });
+    checkStart();
+    update();
+    add.onclick = () => {
+      if (!ready()) return;
+      const time = Math.floor(Math.min(player.currentTime, Math.max(0, player.duration - 0.001)));
+      try { edit(read().find(x => x.videoId === video.id && x.time === time), time) }
+      catch (e) { say(e.message, true) }
+    };
+  }
+  list.onclick = e => {
+    const play = e.target.closest('[data-moment-play]');
+    if (play && player) {
+      const time = +play.dataset.momentPlay;
+      if (player.readyState < 1 || player.error) return say('This video is not ready to play.', true);
+      if (time >= player.duration) return say('This moment is beyond the end of this video.', true);
+      player.currentTime = time; player.play().catch(() => { }); say(''); return;
+    }
+    const rename = e.target.closest('[data-moment-edit]'), remove = e.target.closest('[data-moment-remove]');
+    try {
+      if (rename) {
+        const item = read().find(x => x.key === rename.dataset.momentEdit);
+        if (!item) return say('This moment is no longer saved.', true);
+        edit(item);
+      }
+      if (remove) {
+        const key = remove.dataset.momentRemove;
+        VideoMoments.remove(key);
+        if (editing && editing.key === key) { editing = null; editor.replaceChildren() }
+        draw(); savedCount();
+        const next = $('[data-moment-edit]', root);
+        if (next) next.focus(); else if (add) add.focus(); else $('#momentsTitle').focus();
+        say('Moment removed.');
+      }
+    } catch (e) { say(e.message, true) }
+  };
+  draw();
 }
 
 /* ------------------------------------------------------------- reader -- */
@@ -1083,13 +1197,17 @@ async function collectionPage(name, from) {
 /* -------------------------------------------------------------- saved -- */
 async function savedPage() {
   setTitle('Saved');
-  const s = store.get('saved', []), r = await recents();
+  const all = VideoMoments.readSaved(), moments = all.filter(VideoMoments.isMoment);
+  const s = all.filter(x => x && x.kind !== 'video-moment'), r = await recents();
   const li = x => `<li><a class="row" href="${esc(x.href)}"><span class="k">${ico(x.key[0] === 'v' ? 'video' : x.key[0] === 'w' ? 'wiki' : x.key[0] === 't' ? 'book' : x.key[0] === 'a' ? 'ask' : 'page')}</span><span><b>${esc(x.title)}</b><small>${esc(rowSub(x))}</small></span></a></li>`;
   const cont = await resumable();
+  const available = new Set(await held([...new Set(moments.map(x => x.videoId))]));
   main.innerHTML = `<h1>Saved</h1><p class="lead">Kept on this device only.</p>
-  ${s.length ? `<div class="collection" style="margin-top:18px"><ul class="list">${s.map(li).join('')}</ul></div>` : `<div class="empty"><span class="e-ico">${ico('save')}</span><b>Nothing saved yet</b><p>Choose Save on any page, video, article or answer to keep it here.</p></div>`}
+  ${moments.length ? momentSection() : ''}
+  ${s.length ? `<div class="collection" style="margin-top:18px"><ul class="list">${s.map(li).join('')}</ul></div>` : !moments.length ? `<div class="empty"><span class="e-ico">${ico('save')}</span><b>Nothing saved yet</b><p>Choose Save on any page, video, article or answer to keep it here.</p></div>` : ''}
   ${cont.length ? secHead('Continue watching') + rail(cont.map(([id, v]) => vcard({ id, title: v.title, thumb: v.thumb, duration: v.d }, { sub: 'Resume at ' + clock(v.t) })).join('')) : ''}
   ${secHead('Recently opened')}${r.length ? `<div class="collection"><ul class="list">${r.map(li).join('')}</ul></div><p><button class="btn plain" id="clr">Clear recent list</button></p>` : '<div class="empty"><p>Pages you open will appear here.</p></div>'}`;
+  if (moments.length) wireMoments({ available });
   const c = $('#clr'); if (c) c.onclick = () => { store.set('recent', []); savedPage() };
 }
 
