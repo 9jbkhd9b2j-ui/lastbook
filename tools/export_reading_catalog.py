@@ -1,9 +1,5 @@
 #!/usr/bin/env python3
-"""Export a searchable, offline HTML reading list from an installed Lastbook pack.
-
-Usage: python3 tools/export_reading_catalog.py --data /path/to/LastbookData --output books.html
-This is a list of titles, not a download service or permission to redistribute files.
-"""
+"""Export a searchable offline HTML title list from an installed Lastbook pack."""
 import argparse
 import html
 import json
@@ -11,21 +7,31 @@ from pathlib import Path
 
 READING_KINDS = {"pdf", "html", "pptx"}
 
+
 def export(catalog_path, output_path):
     records = json.loads(Path(catalog_path).read_text(encoding="utf-8"))
     if not isinstance(records, list):
-        raise ValueError("catalog.json must contain a list")
+        raise ValueError("catalog.json must contain a list of records")
     entries = []
     for record in records:
         if not isinstance(record, dict) or record.get("kind") not in READING_KINDS:
             continue
-        title = str(record.get("title") or "").strip()
-        if title:
-            entries.append((str(record.get("collection") or "Other"), title,
-                            str(record["kind"]).upper(), str(record.get("publisher") or "")))
+        title = record.get("title")
+        if not isinstance(title, str) or not title.strip():
+            continue
+        collection = record.get("collection")
+        publisher = record.get("publisher")
+        entries.append((
+            collection.strip() if isinstance(collection, str) and collection.strip() else "Other",
+            title.strip(),
+            record["kind"].upper(),
+            publisher.strip() if isinstance(publisher, str) else "",
+        ))
     entries.sort(key=lambda row: (row[0].casefold(), row[1].casefold()))
-    rows = "\n".join("<tr>" + "".join("<td>" + html.escape(field, quote=True) + "</td>"
-                                      for field in row) + "</tr>" for row in entries)
+    rows = "\n".join(
+        "<tr>" + "".join("<td>" + html.escape(value, quote=True) + "</td>" for value in entry) + "</tr>"
+        for entry in entries
+    )
     page = """<!doctype html>
 <html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Lastbook reading catalog</title>
@@ -40,7 +46,7 @@ tr[hidden]{display:none}
 <h1>Lastbook reading catalog</h1>
 <p>Titles from one installed library pack. This is a listing, not a download service. No network connection is used.</p>
 <label for="q">Search titles and collections</label>
-<input id="q" type="search" placeholder="Search"><p id="count"></p>
+<input id="q" type="search" placeholder="Search"><p id="count" role="status" aria-live="polite"></p>
 <table><thead><tr><th>Collection</th><th>Title</th><th>Type</th><th>Publisher</th></tr></thead>
 <tbody>""" + rows + """</tbody></table>
 <script>
@@ -53,12 +59,18 @@ q.addEventListener('input',filter);filter();
     Path(output_path).write_text(page, encoding="utf-8")
     return len(entries)
 
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--data", type=Path, required=True, help="Folder containing library-data/catalog.json")
     parser.add_argument("--output", type=Path, required=True, help="Output HTML file")
     args = parser.parse_args()
-    print(f"Exported {export(args.data / 'library-data' / 'catalog.json', args.output)} titles to {args.output}")
+    try:
+        count = export(args.data / "library-data" / "catalog.json", args.output)
+    except (OSError, ValueError, json.JSONDecodeError) as exc:
+        parser.exit(1, f"Cannot export reading catalog: {exc}\n")
+    print(f"Exported {count} titles to {args.output}")
+
 
 if __name__ == "__main__":
     main()
