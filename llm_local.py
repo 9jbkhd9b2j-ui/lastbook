@@ -430,8 +430,9 @@ def judge(fit):
         out['why'] = 'The model does not fit this computer’s graphics memory together with its own memory.'
     elif total and needs > total:
         out['fits'] = False
-        out['why'] = (f'The model needs about {_gb(in_ram)} of this computer’s memory, plus room for everything else, '
-                      f'and this computer has {_gb(total)}.')
+        # Say the whole need, so it can be held against what the computer has: "needs 14.9 GB ... has 17.2 GB" read as a fit (#112).
+        out['why'] = (f'The local AI needs about {_gb(needs)} of memory: {_gb(in_ram)} for the model and {_gb(RESERVE)} for everything else. '
+                      f'This computer has {_gb(total)}.')
     else:
         out['fits'] = True
     return out

@@ -2268,6 +2268,38 @@ class Recommend(Base):
         self.assertGreater(hw['ram_bytes'], 2 ** 30)
         self.assertTrue(hw['disks'] and hw['disks'][0]['free_bytes'] > 0)
 
+    def test_mac_free_is_what_finder_calls_available(self):
+        """#112: the plain free count leaves out the room macOS makes on its own (purgeable caches, local snapshots)."""
+        plain = mock.Mock(total=500 * 10 ** 9, free=17 * 10 ** 9)
+        with mock.patch.object(hardware.shutil, 'disk_usage', return_value=plain):
+            for platform, mac, free in (('darwin', 140 * 10 ** 9, 140 * 10 ** 9),     # Finder's figure, when macOS gives one
+                                        ('darwin', None, 17 * 10 ** 9),               # it cannot say: the plain count
+                                        ('darwin', 5 * 10 ** 9, 17 * 10 ** 9),        # never less than the plain count
+                                        ('win32', 140 * 10 ** 9, 17 * 10 ** 9)):      # only a Mac asks
+                with self.subTest(platform=platform, mac=mac), mock.patch.object(sys, 'platform', platform), \
+                        mock.patch.object(hardware, '_mac_available', return_value=mac, create=True) as asked:
+                    self.assertEqual(hardware.disk_of(self.parent), (free, 500 * 10 ** 9))
+                    self.assertEqual(asked.called, platform == 'darwin')
+
+    @unittest.skipUnless(sys.platform == 'darwin' and importlib.util.find_spec('Foundation'), 'needs a Mac with PyObjC')
+    def test_mac_available_here(self):
+        """The real call: macOS answers, and its figure is never below the plain free count by more than a moment's writes."""
+        n = hardware._mac_available(self.tmp)
+        self.assertIsNotNone(n)
+        self.assertGreater(n, shutil.disk_usage(self.tmp).free - 10 ** 9)
+        self.assertGreaterEqual(hardware.disk_of(self.tmp / 'not yet')[0], shutil.disk_usage(self.tmp).free - 10 ** 9)
+
+    def test_too_little_memory_says_the_whole_need(self):
+        """#112: "needs about 14.9 GB ... and this computer has 17.2 GB" read as a fit. Say the total, then what it is made of."""
+        import llm_local
+        fit = {'status': 'fits', 'ram_total': 16 * 2 ** 30, 'device_bytes': int(14.9e9), 'host_bytes': 0, 'memory': []}
+        with mock.patch.object(sys, 'platform', 'darwin'):
+            j = llm_local.judge(fit)
+        self.assertFalse(j['fits'])
+        self.assertEqual(j['why'], 'The local AI needs about 17.6 GB of memory: 14.9 GB for the model and 2.7 GB for everything else. '
+                                   'This computer has 17.2 GB.')
+        self.assertGreater(j['needs'], fit['ram_total'])
+
 
 class Through(Base):
     """/api/setup/* over the app's bridge, as the window asks: no socket."""
