@@ -1,0 +1,50 @@
+{
+  "about": "Proposed region definitions for detailed maps of Brazil: 26 states and the Federal District (DF), one region each. See docs/REGIONS-BR.md.",
+  "status": "proposal",
+  "checked": "2026-11-20",
+  "codes": {
+    "proposal": "ISO 3166-2:BR unit codes, BR-AC to BR-TO (the prefix BR- and two letters).",
+    "why": "Seven two-letter codes (AL, MA, MS, MT, PA, PR, SC) are also codes in STATE_CODES (engine/address_search.py) for US states or Puerto Rico. carry_over() in engine/setup/install.py keeps only [A-Z]{2} address indexes (line 335), so the hyphenated name must be decided before any index is shipped.",
+    "verified": "The ISO 3166-2:BR codes were not checked against the ISO site in this change."
+  },
+  "boxes": {
+    "source": "IBGE state polygons (malhas territoriais, estadual), read through the IBGE malhas API with qualidade=maxima on 2026-11-20.",
+    "method": "Every vertex of every polygon was read; the box was widened by 0.15 degrees and rounded outward to 0.01 degrees, the same margin map_sets.state uses for US states.",
+    "licence_status": "Not settled. No explicit open licence was found for the IBGE malhas; the IBGE technical and legal note was not read. Boxes are a proposal until that is checked."
+  },
+  "regions": [
+    {"code": "BR-AC", "ibge": "12", "name": "Acre", "box_margin": [-74.15, -11.30, -66.47, -6.96]},
+    {"code": "BR-AL", "ibge": "27", "name": "Alagoas", "box_margin": [-38.39, -10.65, -35.00, -8.66]},
+    {"code": "BR-AP", "ibge": "16", "name": "Amapá", "box_margin": [-55.03, -1.39, -49.72, 4.66]},
+    {"code": "BR-AM", "ibge": "13", "name": "Amazonas", "box_margin": [-73.96, -9.97, -55.94, 2.40]},
+    {"code": "BR-BA", "ibge": "29", "name": "Bahia", "box_margin": [-46.73, -18.49, -37.19, -8.38]},
+    {"code": "BR-CE", "ibge": "23", "name": "Ceará", "box_margin": [-41.58, -8.01, -37.10, -2.63]},
+    {"code": "BR-DF", "ibge": "53", "name": "Distrito Federal", "box_margin": [-48.44, -16.20, -47.15, -15.35]},
+    {"code": "BR-ES", "ibge": "32", "name": "Espírito Santo", "box_margin": [-42.03, -21.46, -29.14, -17.74]},
+    {"code": "BR-GO", "ibge": "52", "name": "Goiás", "box_margin": [-53.40, -19.65, -45.75, -12.24]},
+    {"code": "BR-MA", "ibge": "21", "name": "Maranhão", "box_margin": [-48.91, -10.41, -41.64, -0.89]},
+    {"code": "BR-MT", "ibge": "51", "name": "Mato Grosso", "box_margin": [-61.79, -18.20, -50.07, -7.19]},
+    {"code": "BR-MS", "ibge": "50", "name": "Mato Grosso do Sul", "box_margin": [-58.32, -24.22, -50.77, -17.01]},
+    {"code": "BR-MG", "ibge": "31", "name": "Minas Gerais", "box_margin": [-51.20, -23.08, -39.70, -14.08]},
+    {"code": "BR-PA", "ibge": "15", "name": "Pará", "box_margin": [-59.05, -10.00, -45.91, 2.75]},
+    {"code": "BR-PB", "ibge": "25", "name": "Paraíba", "box_margin": [-38.92, -8.46, -34.64, -5.87]},
+    {"code": "BR-PR", "ibge": "41", "name": "Paraná", "box_margin": [-54.77, -26.87, -47.87, -22.36]},
+    {"code": "BR-PE", "ibge": "26", "name": "Pernambuco", "box_margin": [-41.51, -9.64, -32.24, -3.68]},
+    {"code": "BR-PI", "ibge": "22", "name": "Piauí", "box_margin": [-46.18, -11.08, -40.22, -2.59]},
+    {"code": "BR-RJ", "ibge": "33", "name": "Rio de Janeiro", "box_margin": [-45.04, -23.52, -40.80, -20.61]},
+    {"code": "BR-RN", "ibge": "24", "name": "Rio Grande do Norte", "box_margin": [-38.74, -7.14, -34.81, -4.68]},
+    {"code": "BR-RS", "ibge": "43", "name": "Rio Grande do Sul", "box_margin": [-57.80, -33.91, -49.54, -26.93]},
+    {"code": "BR-RO", "ibge": "11", "name": "Rondônia", "box_margin": [-66.97, -13.85, -59.62, -7.82]},
+    {"code": "BR-RR", "ibge": "14", "name": "Roraima", "box_margin": [-64.98, -1.74, -58.73, 5.43]},
+    {"code": "BR-SC", "ibge": "42", "name": "Santa Catarina", "box_margin": [-53.99, -29.51, -48.20, -25.80]},
+    {"code": "BR-SP", "ibge": "35", "name": "São Paulo", "box_margin": [-53.27, -25.46, -44.01, -19.62]},
+    {"code": "BR-SE", "ibge": "28", "name": "Sergipe", "box_margin": [-38.40, -11.72, -36.24, -9.36]},
+    {"code": "BR-TO", "ibge": "17", "name": "Tocantins", "box_margin": [-50.90, -13.62, -45.54, -5.01]}
+  ],
+  "open_questions": [
+    "DF is inside the BR-GO box: separate maps, or the GO map includes DF (as the Argentina proposal suggests for CABA)?",
+    "Should BR- hyphenated codes become file and manifest names, with carry_over widened to match?",
+    "Does the IBGE technical and legal note for the state malha allow a copy in a build?",
+    "Is there an open source for CEP (postal-code) areas, so address indexes can be split by state?"
+  ]
+}
