@@ -341,27 +341,44 @@ def query_groups(q):
     return content, groups
 
 
+def search_ids(keep):
+    """Doc ids in the search index whose result passes keep (a transcript stands for its video), as a JSON list for
+    `doc_id IN (SELECT value FROM json_each(?))`: one parameter however many ids, so a LIMIT counts only those rows."""
+    cat = catalog()
+    ids = []
+    for r in cat['by_id'].values():
+        v = cat['by_path'].get(r.get('video_path')) if r['kind'] == 'transcript' else None
+        if keep(v or r):
+            ids.append(r['id'])
+    return json.dumps(ids)
+
+
 @functools.lru_cache(maxsize=256)
 def find(q, kind='all', limit=30):
     content, groups = query_groups(q)
     if not groups:
         return {'q': q, 'results': [], 'expanded': []}
+    allowed = KIND_FILTERS.get(kind)
+    # Videos are a small share of the index, so a broad word fills the LIMIT with manual pages and the filter below
+    # leaves nothing: count only video rows in the query itself. Manual pages are most of the index and need no help,
+    # and filtering in the query costs a read of every matching row, so To read and Everything keep the plain query.
+    only = (search_ids(lambda r: r['kind'] in allowed),) if kind == 'video' else ()
     con = sqlite3.connect(ro_uri(library.DB), uri=True)
     sql = ("SELECT doc_id,page,snippet(pages,6,'\u0001','\u0002',' … ',28),bm25(pages,0,6,1,1,0,0,1) "
-           "FROM pages WHERE pages MATCH ? ORDER BY bm25(pages,0,6,1,1,0,0,1) LIMIT 600")
+           "FROM pages WHERE pages MATCH ?" + (" AND doc_id IN (SELECT value FROM json_each(?))" if only else "") +
+           " ORDER BY bm25(pages,0,6,1,1,0,0,1) LIMIT 600")
     rows, mode = [], 'all words'
     try:
-        rows = con.execute(sql, (fts_expr(groups),)).fetchall()
+        rows = con.execute(sql, (fts_expr(groups),) + only).fetchall()
         if len(rows) < 8 and len(groups) > 1:
             # relax: any of the ideas, rank documents that have more of them higher
             mode = 'some words'
-            rows += con.execute(sql, (' OR '.join('(' + fts_expr([g]) + ')' for g in groups),)).fetchall()
+            rows += con.execute(sql, (' OR '.join('(' + fts_expr([g]) + ')' for g in groups),) + only).fetchall()
     except sqlite3.OperationalError:
         rows = []
     con.close()
     cat = catalog()['by_id']
     docs = {}
-    allowed = KIND_FILTERS.get(kind)
     for doc_id, page, snip, score in rows:
         r = cat.get(doc_id)
         if not r or r['kind'] == 'metadata':
