@@ -51,26 +51,42 @@ what runs there: the CCDRs (comissões de coordenação e desenvolvimento region
 civil-protection coordination, and the two autonomous regions have their own governments.
 
 Boxes were computed from Eurostat GISCO's NUTS 2024 boundaries, 1:3 million GeoJSON (`NUTS_RG_03M_2024_4326_LEVL_2.geojson`,
-CC BY 4.0 © EuroGeographics, opened). Every vertex of every polygon was read; the coordinates are ETRS89 (EPSG:4258),
-which differs from WGS 84 by far less than the 0.01° rounding. Each box was then widened by 0.15° and rounded outward to
-0.01°, the same margin `map_sets.state` uses for US states.
+opened; see "Licence notes" for what its terms allow). Every vertex of every polygon was read; the coordinates are
+ETRS89 (EPSG:4258), which differs from WGS 84 by far less than the 0.01° rounding. Each box was then widened by 0.15°
+and rounded **outward** to 0.01° — the west and south edges floored, the east and north edges ceiled — the same margin
+`map_sets.state` uses for US states.
+
+The seven continental boxes and Madeira's come from the GISCO polygon bounds. The two Azores boxes cannot come from a
+polygon, because GISCO has no sub-regional NUTS for the islands, so they come from the INE address dataset's own two
+groups of address points (marked in the table). The inputs are the GeoJSON above for the polygon boxes and the counted
+address rows described in "Addresses measured" for the island boxes, so every number here is recomputable from those
+two datasets with the rule stated.
 
 As a check, the outer edges match Portugal's known extreme points: Cabo da Roca in the west (-9.50°), the eastern border
-with Spain (-6.19°), Melgaço and Castro Laboreiro in the north (42.15°), and Cabo de Santa Maria near Faro in the south
+with Spain (-6.21°), Melgaço and Castro Laboreiro in the north (42.15°), and Cabo de Santa Maria near Faro in the south
 (36.97°). The address dataset's own per-group boxes agree from inside on every edge (see "Addresses measured").
 
-| Code | NUTS | Name | Box (west, south, east, north) | Box with 0.15° margin |
-|---|---|---|---|---|
-| `pt-11` | PT11 | Norte | -8.8781, 40.7622, -6.1936, 42.1544 | -9.03, 40.61, -6.04, 42.30 |
-| `pt-19` | PT19 | Centro | -9.0403, 39.4660, -6.7854, 41.0337 | -9.19, 39.32, -6.64, 41.18 |
-| `pt-1a` | PT1A | Área Metropolitana de Lisboa (Grande Lisboa) | -9.4932, 38.6804, -8.8463, 39.0615 | -9.64, 38.53, -8.70, 39.21 |
-| `pt-1b` | PT1B | Área Metropolitana de Lisboa (Península de Setúbal) | -9.2502, 38.4130, -8.4965, 38.8388 | -9.40, 38.26, -8.35, 38.99 |
-| `pt-1c` | PT1C | Alentejo | -8.8752, 37.3222, -6.9317, 39.6628 | -9.03, 37.17, -6.78, 39.81 |
-| `pt-1d` | PT1D | Oeste e Vale do Tejo | -9.5220, 38.7360, -7.8128, 39.8357 | -9.67, 38.59, -7.66, 39.99 |
-| `pt-15` | PT15 | Algarve | -8.9820, 36.9710, -7.4016, 37.5263 | -9.13, 36.82, -7.25, 37.68 |
-| `pt-20w` | PT20 (west) | Açores: Corvo e Flores | -31.2660, 39.3749, -31.1104, 39.6766 | -31.42, 39.22, -30.96, 39.83 |
-| `pt-20e` | PT20 (east) | Açores: restantes ilhas | -28.8250, 36.9295, -25.0138, 39.0954 | -28.98, 36.78, -24.86, 39.25 |
-| `pt-30` | PT30 | Região Autónoma da Madeira | -17.2578, 30.0351, -15.8637, 33.0886 | -17.42, 29.89, -15.71, 33.25 |
+| Code | NUTS | Name | Box (west, south, east, north) | Box with 0.15° margin | Box source |
+|---|---|---|---|---|---|
+| `pt-11` | PT11 | Norte | -8.8781, 40.7622, -6.1936, 42.1544 | -9.03, 40.61, -6.04, 42.31 | GISCO polygon |
+| `pt-19` | PT19 | Centro | -9.0403, 39.4660, -6.7854, 41.0337 | -9.20, 39.31, -6.63, 41.19 | GISCO polygon |
+| `pt-1a` | PT1A | Área Metropolitana de Lisboa (Grande Lisboa) | -9.4932, 38.6804, -8.8463, 39.0615 | -9.65, 38.53, -8.69, 39.22 | GISCO polygon |
+| `pt-1b` | PT1B | Área Metropolitana de Lisboa (Península de Setúbal) | -9.2502, 38.4130, -8.4965, 38.8388 | -9.41, 38.26, -8.34, 38.99 | GISCO polygon |
+| `pt-1c` | PT1C | Alentejo | -8.8752, 37.3222, -6.9317, 39.6628 | -9.03, 37.17, -6.78, 39.82 | GISCO polygon |
+| `pt-1d` | PT1D | Oeste e Vale do Tejo | -9.5220, 38.7360, -7.8128, 39.8357 | -9.68, 38.58, -7.66, 39.99 | GISCO polygon |
+| `pt-15` | PT15 | Algarve | -8.9820, 36.9710, -7.4016, 37.5263 | -9.14, 36.82, -7.25, 37.68 | GISCO polygon |
+| `pt-20w` | PT20 (west) | Açores: Corvo e Flores | -31.2660, 39.3749, -31.1104, 39.6766 | -31.42, 39.22, -30.96, 39.83 | INE address points (group `AC25`) |
+| `pt-20e` | PT20 (east) | Açores: restantes ilhas | -28.8250, 36.9295, -25.0138, 39.0954 | -28.98, 36.77, -24.86, 39.25 | INE address points (group `AC26`) |
+| `pt-30` | PT30 | Região Autónoma da Madeira | -17.2660, 30.0257, -15.8554, 33.1040 | -17.42, 29.87, -15.70, 33.26 | GISCO polygon |
+
+Cross-checks between the two datasets:
+
+- The address dataset's mainland group (`PTCONT`) agrees from inside with the continental boxes on every edge.
+- Madeira's address group (`MAD`) sits inside the GISCO polygon box on every edge: its raw points reach
+  -17.2578…-15.8637 and 30.0351…33.0886 against the polygon's -17.2660…-15.8554 and 30.0257…33.1040.
+- GISCO's own PT20 polygon box is -31.2679, 36.9305, -25.0142, 39.7262: its west edge matches the Corvo-and-Flores
+  address points to 0.002° and its south edge (36.93°, the Formigas islets) matches the eastern group's addresses
+  exactly, which is what let the island split follow the address data.
 
 Notes:
 
@@ -135,12 +151,22 @@ Notes:
 ## Addresses in Overture, measured
 
 The Portuguese rows of Overture release `2026-10-21.0` (the release `tools/build_addresses.py` defaults to) were read on
-20 November 2026, with the same DuckDB query the builder uses but `country = 'PT'`:
+20 November 2026, with the same DuckDB query the builder uses but `country = 'PT'` — in full:
 
-- **5,607,450 addresses**, from one source: `pt/countrywide` ("Portugal, distributed by OpenAddresses", from the INE's
-  INSPIRE ATOM service, upload dated 2026-02-23 in the source file). The raw INE CSV as published on OpenAddresses holds
-  **5,911,139 rows** — 303,689 more than the Overture release carries. The difference was not investigated; the source
-  file was uploaded after the release's ingest may have run.
+```sql
+SELECT count(*), count_if(number IS NOT NULL), count_if(street IS NOT NULL), count_if(postcode IS NOT NULL),
+       count_if(postal_city IS NOT NULL AND postal_city <> '')
+FROM read_parquet('s3://overturemaps-us-west-2/release/2026-10-21.0/theme=addresses/type=address/*',
+                  hive_partitioning = 1)
+WHERE country = 'PT';
+```
+
+- **5,607,450 addresses**, from one source: `pt/countrywide`
+  (source file: [sources/pt/countrywide.json](https://github.com/openaddresses/openaddresses/blob/master/sources/pt/countrywide.json),
+  "Portugal, distributed by OpenAddresses", from the INE's INSPIRE ATOM service, upload dated 2026-02-23 in the source
+  file). The raw INE CSV as published on OpenAddresses holds **5,911,139 rows** — 303,689 more than the Overture
+  release carries. The difference was not investigated; the source file was uploaded after the release's ingest may
+  have run.
 - **Postcodes.** All 5,607,450 rows have a postcode, and every one is 7 characters or more: the Portuguese format
   `3050-020` (four digits, hyphen, three) survives into Overture unchanged. **This needs one builder change**: the
   builder's `coalesce(left(postcode, 5), '')` keeps the hyphen ("3050-") where Spain's five-digit codes fit exactly.
@@ -151,8 +177,8 @@ The Portuguese rows of Overture release `2026-10-21.0` (the release `tools/build
   **4,365,268 rows would build**.
 - **Levels.** `postal_city` is always empty, and `address_levels[1]` holds the municipality in capitals (LISBOA 324,265,
   PORTO 136,764, VILA NOVA DE GAIA 90,860, AMADORA 87,840 …). This is the same shape Spain found, with the same
-  collision risk, only worse: the builder's `state = address_levels[1].value.upper()[:2]` turns VILA NOVA DE GAIA into
-  `GA` (Georgia), MAIA into `MA` (Massachusetts), ALMADA into `AL` (Alabama) and COIMBRA into `CO` (Colorado). A region
+  collision risk: the builder's `state = address_levels[1].value.upper()[:2]` turns MAIA into `MA` (Massachusetts),
+  ALMADA into `AL` (Alabama) and COIMBRA into `CO` (Colorado). A region
   cut must come from the postcode or the box, never from this field.
 - **Coverage by region.** The INE CSV's rows were counted against the ten region boxes (the un-margined column of the
   table above). The totals double-count at borders: **1,753,186 of 5,911,139 rows fall inside two or more boxes**,
@@ -221,8 +247,14 @@ All proposed licences allow redistribution in a free offline library, including 
 
 - **CC BY 4.0, INE addresses.** Attribution "Instituto Nacional de Estatística, I.P.", as the source file requires;
   derived works add the standard CC BY 4.0 notice.
-- **CC BY 4.0, Eurostat GISCO.** "© EuroGeographics for the administrative boundaries" (NUTS 2024), as GISCO's
-  distribution page requires.
+- **Eurostat GISCO — research only as proposed.** GISCO's statistical geometry terms (the
+  [statistical-units page](https://ec.europa.eu/eurostat/web/gisco/geodata/statistical-units), opened 20 November 2026)
+  grant free use "on condition that the data will not be used for commercial purposes", with the source acknowledged
+  and the copyright notice "© EuroGeographics" visible in any publication using the data. This proposal — research
+  documentation in a free repository — fits that. **Boxes derived from GISCO boundaries for redistribution inside a
+  shipped map pack would not**, because the library's own distribution involves commercial links (the buying guide's
+  affiliate). A shipped build should take region boxes from the CAOP (DGT's open administrative cartography, terms to
+  be verified) or ask Eurostat; the GISCO-derived boxes below are proposal inputs, not pack contents.
 - **Copernicus DEM.** The Copernicus licence, as in REGIONS.md.
 - **ODbL** (OSM, Overture buildings, Microsoft footprints). As for the US map.
 - **CC BY 4.0, GeoNames.** "Give credit to GeoNames."
@@ -288,8 +320,11 @@ other proposals.
   GlobalMLBuildingFootprints' README and `dataset-links.csv` (46 Portugal tiles); GeoNames' `PT.zip` (existence and
   size); Copernicus' COP-DEM collection page; the taginfo database for Geofabrik's Portugal extract (API, data until
   19 November 2026 21:19 UTC); this repository's address builder and engine code.
-- **Computed on 20 November 2026:** the ten region boxes, from GISCO NUTS 2024 1:3M; the address dataset's per-group
-  bounding boxes; the address counts and checks, from the INE CSV and from Overture.
+- **Computed on 20 November 2026:** the ten region boxes (seven from GISCO NUTS 2024 1:3M polygon bounds, two from the
+  INE address groups' own points, Madeira from its GISCO polygon), widened 0.15° and rounded outward — floor for the
+  west and south edges, ceil for the east and north; the address dataset's per-group bounding boxes; the address
+  counts and checks, from the INE CSV and from Overture.
+- **Also opened on 20 November 2026:** Eurostat's statistical geometry terms page (the GISCO licence note above).
 - **Seen only in search results:** the Mirandese law (Lei 7/99; the DRE page rendered as a JavaScript shell); the CTT
   postcode dictionary's commercial terms.
 - **Not checked:** the CAOP download and licence (DGT is a JavaScript application); the INE INSPIRE portal (under
