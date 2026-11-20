@@ -126,11 +126,13 @@ against the hashes in `packaging/build_app_windows.sh`.
 
 On Linux, start it through `packaging/linux/run_source_linux.sh` instead, or videos will not play. The window comes
 from the system (WebKitGTK 4.1 and PyGObject), so make the virtual environment with `--system-site-packages` and install
-`packaging/linux/requirements_linux.txt`:
+`packaging/linux/requirements_linux.txt` (on Fedora, or any source install on Python 3.15, install
+`packaging/linux/requirements_linux_fedora.txt` instead — the packaged pins stay as the Ubuntu package builds them):
 
 ```bash
 python3 -m venv --system-site-packages .venv
-.venv/bin/pip install -r packaging/linux/requirements_linux.txt
+.venv/bin/pip install -r packaging/linux/requirements_linux.txt            # Ubuntu (or Arch)
+.venv/bin/pip install -r packaging/linux/requirements_linux_fedora.txt     # Fedora (Python 3.15)
 bash packaging/linux/run_source_linux.sh --data /path/to/LastbookData
 ```
 
@@ -145,7 +147,7 @@ points GStreamer and WebKit at it for that launch only, and warns about any miss
 | MP4, H.264, AAC | `gst-plugins-base gst-plugins-good gst-libav` | `gstreamer1.0-plugins-good gstreamer1.0-libav` | `gstreamer1-plugins-base gstreamer1-plugins-good gstreamer1-plugin-libav` |
 | AV1 (many of the library's videos) | `gst-plugin-dav1d` | `gstreamer1.0-plugins-bad` | `gstreamer1-plugins-bad-free` |
 
-A source run was validated natively on Fedora 45 (Python 3.15): the requirements above resolve there, the whole test
+A source run was validated natively on Fedora 45 (Python 3.15), with `requirements_linux_fedora.txt`: the whole test
 suite passes, videos decode, and the window opens.
 
 Without an AV1 decoder, those videos fail or play with sound and a black picture. To check video without opening the

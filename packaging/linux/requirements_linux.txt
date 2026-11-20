@@ -1,13 +1,9 @@
 # The packaged Linux app (packaging/linux/build_app_linux.sh): wheels for Ubuntu's own python3 (3.12 on 24.04, 3.14 on 26.04), x86_64, installed into
 # /opt/lastbook/lib. The window comes from the system: python3-gi, GTK 3 and WebKitGTK 4.1 (the .deb depends on them), never from here.
 # Same set as the Mac build: keyword search only, no onnxruntime or tokenizers, no pywebview.
-# 4.1.0: the search call sites (engine/encyclopedias.py, tools/libq.py) spell the results for both libzim namings
-# (3.x getResults / 4.x get_results, which yields SearchResult objects), and this wheel is cp311-abi3 — one build for
-# Python 3.11 through 3.15. 3.13.x had no wheel for 3.15, which Fedora 45 ships.
-libzim==4.1.0
-# server.py renders PDF pages through bitmap.to_numpy(). 2.5.x has wheels for 3.12 through 3.15 but dropped 3.11,
-# which source installs still support, so it keeps 2.4.6 there.
-numpy==2.4.6; python_version < '3.12'
-numpy==2.5.5; python_version >= '3.12'
+# Below 4: libzim 4.0.0 renamed getResults and getEstimatedMatches, which engine/library.py calls.
+libzim==3.13.1
+# server.py renders PDF pages through bitmap.to_numpy().
+numpy==2.4.6
 beautifulsoup4==4.15.0
 pypdfium2==5.14.0
