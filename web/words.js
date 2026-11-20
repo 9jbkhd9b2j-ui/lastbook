@@ -95,10 +95,14 @@
       for (const { c, has } of m.choices) { const n = words.filter(has).length; if (n > bs) { bs = n; best = c } }
       const u = m.urgent.find(x => x.phrases.some(p => names(all, p)));
       if (u) best = u.c;
-      if (s || bs) out.push({ t, c: best, s: s + bs * 1.5 });
+      if (s || bs) out.push({ t, c: best, s: s + bs * 1.5, u: !!u });
     }
     out.sort((a, b) => b.s - a.s);
-    return out.filter(o => o.s >= out[0]?.s * 0.6).slice(0, 3);
+    const shown = out.filter(o => o.s >= out[0]?.s * 0.6);
+    // A guide whose urgent phrase the search names comes first, even below the cut ("unconscious in the flood water").
+    // Without one, the list is exactly as before.
+    const urgent = out.filter(o => o.u);
+    return [...urgent, ...shown.filter(o => !o.u)].slice(0, 3).map(({ t, c, s }) => ({ t, c, s }));
   }
 
   root.SearchWords = Object.freeze({ fold, splitWords, queryWords, matcher, rankTopics, hasSegmenter: () => !!segmenter() });
