@@ -41,8 +41,7 @@ sobre DF e Goiás abaixo.
 ### Códigos
 
 A ISO 3166-2:BR dá a cada unidade o prefixo `BR-` e duas letras: `BR-SP` São Paulo, `BR-RJ` Rio de Janeiro, `BR-DF`
-Distrito Federal, e assim por diante (não conferido no site da ISO, como as outras propostas também observam para seus
-códigos).
+Distrito Federal, e assim por diante (os 27 códigos foram lidos no artigo da Wikipédia "ISO 3166-2:BR", que lista os nomes como na ISO 3166-2 pela ISO 3166/MA; o site da ISO em si não foi aberto).
 
 - **Sete códigos de duas letras coincidem com códigos dos EUA.** Os códigos brasileiros `AL` (Alagoas), `MA` (Maranhão),
   `MS` (Mato Grosso do Sul), `MT` (Mato Grosso), `PA` (Pará), `PR` (Paraná) e `SC` (Santa Catarina) também estão em
@@ -86,7 +85,7 @@ Essas quatro bordas são definidas por esses estados, e a tabela coincide com el
 | `BR-SE` | 28 | Sergipe | -38,2450, -11,5685, -36,3959, -9,5150 | -38,40, -11,72, -36,24, -9,36 |
 | `BR-BA` | 29 | Bahia | -46,5768, -18,3372, -37,3411, -8,5328 | -46,73, -18,49, -37,19, -8,38 |
 | `BR-MG` | 31 | Minas Gerais | -51,0461, -22,9228, -39,8568, -14,2333 | -51,20, -23,08, -39,70, -14,08 |
-| `BR-ES` | 32 | Espírito Santo | -41,8796, -21,3011, -29,2990, -17,8919 | -42,03, -21,46, -29,14, -17,74 |
+| `BR-ES` | 32 | Espírito Santo | -41,8796, -21,3011, -39,6678, -17,8919 | -42,03, -21,46, -39,51, -17,74 |
 | `BR-RJ` | 33 | Rio de Janeiro | -44,8893, -23,3676, -40,9579, -20,7632 | -45,04, -23,52, -40,80, -20,61 |
 | `BR-SP` | 35 | São Paulo | -53,1101, -25,3089, -44,1614, -19,7799 | -53,27, -25,46, -44,01, -19,62 |
 | `BR-PR` | 41 | Paraná | -54,6199, -26,7171, -48,0235, -22,5163 | -54,77, -26,87, -47,87, -22,36 |
@@ -106,7 +105,20 @@ Notas:
   proposta não decide isso.
 - **Caixas grandes.** Amazonas, Pará e Mato Grosso são as maiores caixas. Os mapas deles serão grandes, e o tamanho do
   download não foi estimado nesta proposta.
-- **Fernando de Noronha** pertence a Pernambuco, e a caixa `BR-PE` vai até -32,40° O para incluí-la.
+- **Ilhas oceânicas.** As malhas do IBGE foram conferidas para todas as unidades: qualquer polígono a mais de 0,5° do
+  maior polígono da unidade foi listado. Duas ilhas afastadas estão nas malhas, e duas ilhas oceânicas não estão nelas.
+  - **Fernando de Noronha** (`BR-PE`, cerca de 3,4° a leste do continente) é **mantida** na caixa de PE, porque é uma
+    ilha de Pernambuco com moradores, e nenhum outro mapa a cobriria. A caixa de PE vai até -32,40° O por causa dela.
+    Sem Noronha a caixa terminaria em -34,81° O; o custo é cerca de 2,4° de oceano.
+  - **Trindade e Martim Vaz** (`BR-ES`, cerca de 10° a leste do continente, perto de 20,5° S) ficam **fora** da caixa do
+    ES. Mantê-las esticaria a caixa do ES de -39,67° O até -29,30° O, cerca de 13° de largura quase toda de oceano, e a
+    caixa deixaria de servir ao continente. Se precisam de um mapa próprio é uma pergunta em aberto. Nenhuma população
+    residente foi verificada para elas.
+  - **Atol das Rocas** (RN) e **São Pedro e São Paulo** (PE) **não estão nas malhas estaduais do IBGE**, então nenhuma
+    caixa as inclui e nada precisa ser cortado. Se alguma deve ter mapa é uma pergunta em aberto.
+  - A regra usada aqui: uma ilha entra na caixa do seu estado só se faz parte do polígono do IBGE do estado **e** ou
+    está perto do continente ou tem gente morando nela. Só Noronha passa nesse teste. É uma proposta, não uma regra
+    fechada.
 - **Caixas sobrepostas.** As caixas seguem o contorno de cada estado, então estados vizinhos se sobrepõem ao longo das
   fronteiras. A sobreposição é esperada e é a mesma dos EUA e do México.
 
@@ -120,10 +132,10 @@ Notas:
 | Culturas (`crops.sqlite`) | USDA Cropland Data Layer | O MapBiomas é candidato, porque cobre as classes de cultivo do Brasil, mas a licença e a lista de classes não foram verificadas | MapBiomas | não verificada | não verificado |
 | Edifícios (`buildings.sqlite`) | Microsoft, contornos dos EUA, alturas do OSM | Google Open Buildings V3, como em REGIONS-MX.md; cobertura do Brasil não reconferida aqui; OSM para preencher lacunas | Google; colaboradores do OSM | CC BY 4.0; ODbL | como em REGIONS-MX.md; não reaberta para o Brasil |
 | Lugares (`places.sqlite`) | GNIS, gazetteers do Census, OSM | Malhas do IBGE para estados, municípios e localidades (a camada estadual foi usada para as caixas); lugares nomeados do OSM | IBGE; colaboradores do OSM | termos do IBGE pouco claros (veja Notas sobre licença); ODbL | camada estadual aberta; licença não confirmada |
-| Endereços (`addresses/<código>.sqlite`) | endereços Overture | Endereços Overture do Brasil não foram contados nem verificados aqui; nenhuma tabela aberta de área de CEP foi encontrada | Overture Maps Foundation; Correios (CEP) | não verificada | não verificado |
+| Endereços (`addresses/<código>.sqlite`) | endereços Overture | Endereços Overture: 89.887.635 linhas brasileiras na tabela por país do editor; contagens por estado não calculadas; nenhuma tabela aberta de área de CEP encontrada | Overture Maps Foundation; Correios (CEP) | atribuição da Overture não relida; CEP não aberto | guia Overture aberto em 20/11/2026; guia dos Correios só busca |
 | Pontos de interesse (linhas `poi`) | OSM | OSM, como hoje, mais as listas de "Pontos de ajuda" | colaboradores do OSM | ODbL | não contado aqui |
 
-### Notas sobre licença
+## Notas sobre licença e atribuição
 
 - **Conteúdo do gov.br.** O rodapé das páginas do gov.br diz que todo o conteúdo é publicado sob a *Creative Commons
   Atribuição-SemDerivações 3.0 Não Adaptada* (CC BY-ND 3.0 Brasil) (aberta; lida em 20 de novembro de 2026 na página
@@ -145,9 +157,10 @@ pela Anatel (o regulador de telecomunicações), não por cada estado.
 | Serviço | Número | Fonte do número | Dados de localização |
 |---|---|---|---|
 | Ambulância (SAMU) | 192 | gov.br, "SAMU 192: saiba quando acionar o serviço de urgência", publicado em 29 de agosto de 2022, atualizado em 26 de outubro de 2026 (aberta) | não verificados |
-| Incêndio (Corpo de Bombeiros) | 193 | Listagem da Anatel dos códigos de utilidade pública e emergência (só trecho de busca; a página da Anatel não mostrou os números quando lida) | serviços estaduais de bombeiros: não verificados |
-| Polícia (Polícia Militar) | 190 | igual ao 193 (só trecho de busca) | polícia estadual: não verificada |
-| Defesa civil (Defesa Civil) | 199 | igual ao 193 (só trecho de busca) | não verificados |
+| Incêndio (Corpo de Bombeiros) | 193 | página da Anatel, aberta em 20/11/2026: "Corpo de Bombeiros 193" | serviços estaduais de bombeiros: não verificados |
+| Polícia (Polícia Militar) | 190 | página da Anatel, aberta em 20/11/2026: "Polícia Militar 190" | polícia estadual: não verificada |
+| Polícia, só celular (Polícia Militar) | 112 e 911 | página da Anatel, aberta em 20/11/2026: "Polícia Militar - SOMENTE CELULAR 112/911" | polícia estadual: não verificada |
+| Defesa civil (Defesa Civil) | 199 | página da Anatel, aberta em 20/11/2026: "Defesa Civil 199" | não verificados |
 
 Notas:
 
@@ -166,12 +179,66 @@ Notas:
 - Nada que um colaborador adicione pode fazer o aplicativo abrir uma conexão. Dados novos entram por uma ferramenta de
   compilação e chegam como arquivo.
 
-## Perguntas em aberto para os mantenedores
+## Endereços na Overture, segundo o guia do editor
 
-1. **DF e Goiás:** mapas separados, ou o mapa de Goiás deve incluir o DF (como a proposta da Argentina sugere para CABA)?
-2. **Códigos com hífen:** os códigos `BR-` devem virar nome de arquivo e de manifesto, e `carry_over` em
-   `engine/setup/install.py` deve ser ampliado para aceitá-los (a mudança toca o caminho de atualização, então precisa de
-   revisão)?
-3. **Licença do IBGE:** a nota técnica da malha estadual permite copiar na compilação? Até ela ser lida, as caixas
-   continuam sendo uma proposta.
-4. **CEP:** existe fonte aberta para áreas de CEP no Brasil? Sem ela, a busca de endereços não separa por estado.
+- **Brasil: 89.887.635 endereços**, na tabela por país do guia de endereços da Overture
+  (docs.overturemaps.org/guides/addresses/, aberto em 20 de novembro de 2026). É a contagem do editor, não uma contagem
+  feita para esta proposta. A mesma tabela traz EUA e México (México 30.726.687, como o REGIONS-MX.md lê).
+- Contagens por estado não foram calculadas. O primeiro dígito do CEP não é código de estado (veja abaixo), então dividir
+  por ele colocaria endereços no estado errado.
+- O guia da Overture diz que os IDs de endereço não são estáveis o bastante para entrar no registro GERS, então podem
+  mudar entre versões. Uma compilação precisaria de uma versão fixa.
+
+## Como os endereços são escritos
+
+Lido do *Guia Técnico de Endereçamento de Correspondências* dos Correios (versão 1.4, 2021) e da página do guia de
+endereçamento dos Correios: **só trechos de busca**; o PDF não foi aberto.
+
+- **CEP.** Oito dígitos, escritos `00000-000` com hífen depois do quinto dígito, por exemplo `01311-000` (o exemplo dos
+  Correios). A API dos Correios aceita oito dígitos sem hífen. Guardar como texto, porque ocorrem zeros à esquerda.
+- **Ordem.** Tipo de logradouro, nome da rua e número, depois complemento e bairro, depois cidade e UF, com o CEP por
+  último. O guia dos Correios coloca o CEP sozinho na última linha de um endereço escrito à mão.
+- **Sem número.** Os Correios escrevem `SN` (*sem número*). O complemento do CEP fica então `00000` (só trecho de busca).
+- **O CEP não é código de estado.** O primeiro dígito é uma região ampla, não um estado, e nenhuma tabela CEP-estado foi
+  verificada. Os índices de endereço não podem ser divididos por estado até achar uma tabela ou usar um polígono estadual.
+- **O que o código faz hoje** (lido neste repositório, 20 de novembro de 2026):
+  - `tools/build_addresses.py` mantém só `country = 'US'`; as linhas brasileiras precisariam mudar o país.
+  - `normalize()` em `engine/address_search.py` troca cada caractere fora de `a-z` e `0-9` por um espaço, então acentos
+    do português separam palavras: "Ação" vira "a o". Seria preciso tirar acentos, como o REGIONS-MX.md observa para o
+    espanhol.
+  - `is_address_query()` exige um número primeiro, então "Rua do Lago 50, 01311" hoje não é tratado como endereço.
+
+## Ainda por decidir
+
+Cada item precisa de decisão dos mantenedores antes de qualquer mudança de código.
+
+1. **Códigos no setup.** Se `BR-AC` e os outros servem como `id` no manifesto, e a regra de `carry_over()` em
+   `engine/setup/install.py` (linha 335), que mantém só nomes `[A-Z]{2}`.
+2. **DF e Goiás.** Mapas separados, ou o mapa de Goiás inclui o DF (sobreposição de caixas, como CABA no REGIONS-AR.md).
+3. **Trindade e Martim Vaz.** Um mapa pequeno próprio, ou nenhum mapa. Nenhuma população residente foi verificada.
+4. **Atol das Rocas e São Pedro e São Paulo.** Não estão nas malhas do IBGE; se alguma deve ter mapa.
+5. **Licença do IBGE.** Se a nota técnica da malha estadual permite copiar numa compilação.
+6. **CEP.** Uma fonte aberta de áreas de CEP ou de CEP-estado com direitos claros. Sem ela, a busca de endereços não
+   separa por estado.
+7. **Classes de cultura.** O MapBiomas é candidato; a licença e a lista de classes não foram verificadas, e os tipos de
+   cultura em `tools/build_crops.py` ainda não têm equivalente brasileiro.
+8. **Caixas sobrepostas.** As caixas seguem o contorno de cada estado, então vizinhos se sobrepõem nas fronteiras. Se
+   isso é aceitável é a mesma pergunta do REGIONS-MX.md.
+
+## O que foi verificado e o que não foi
+
+- **Aberto em 20 de novembro de 2026:** a API de malhas do IBGE, polígonos estaduais em qualidade máxima, para as 27
+  unidades; a página "Sobre o portal" do gov.br e o artigo federal do SAMU 192 (licença no rodapé: CC BY-ND 3.0 Brasil);
+  a página da Anatel de serviços de utilidade pública e emergência (190, 192, 193, 199, e 112/911 listados como só
+  celular); o guia de endereços da Overture (Brasil 89.887.635); o artigo da Wikipédia "ISO 3166-2:BR" (27 códigos,
+  nomes da ISO 3166/MA).
+- **Calculado em 20 de novembro de 2026:** as 27 caixas justas e as margens de 0,15° (para baixo em oeste e sul, para
+  cima em leste e norte, até 0,01°); a conferência de ilhas destacadas nas 27 unidades; a caixa do ES sem Trindade e
+  Martim Vaz.
+- **Visto só em resultados de busca:** a nota técnica e legal do IBGE e os termos da BC250 (uso restrito); o guia de
+  endereçamento dos Correios; uma resolução federal de 2017 sobre dados abertos que lista CC0, PDDL, CC BY 4.0 e ODbL
+  como aceitáveis.
+- **Não verificado:** o Online Browsing Platform da ISO (iso.org); a nota técnica e legal do IBGE em si; o cadastro de
+  saúde CNES; as listas estaduais de postos de bombeiros e polícia; a licença e a lista de classes do MapBiomas; a
+  cobertura do Google Open Buildings no Brasil; contagens do OSM para o Brasil; contagens da Overture por estado; as
+  populações de Trindade e Martim Vaz.

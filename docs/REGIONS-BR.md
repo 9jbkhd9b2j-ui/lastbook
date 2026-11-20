@@ -41,7 +41,8 @@ region here; see the note on DF and Goiás below.
 ### Codes
 
 ISO 3166-2:BR gives each unit the prefix `BR-` and two letters: `BR-SP` São Paulo, `BR-RJ` Rio de Janeiro, `BR-DF` Distrito
-Federal, and so on (not checked against the ISO site, as the other proposals also note for their codes).
+Federal, and so on (the 27 codes were read from the Wikipedia article "ISO 3166-2:BR", which lists the names as in ISO 3166-2 from the
+ISO 3166/MA; the ISO Online Browsing Platform itself was not opened).
 
 - **Seven two-letter codes collide with US codes.** The two-letter Brazilian codes `AL` (Alagoas), `MA` (Maranhão),
   `MS` (Mato Grosso do Sul), `MT` (Mato Grosso), `PA` (Pará), `PR` (Paraná) and `SC` (Santa Catarina) are also codes in
@@ -85,7 +86,7 @@ those states, and the table matches them.
 | `BR-SE` | 28 | Sergipe | -38.2450, -11.5685, -36.3959, -9.5150 | -38.40, -11.72, -36.24, -9.36 |
 | `BR-BA` | 29 | Bahia | -46.5768, -18.3372, -37.3411, -8.5328 | -46.73, -18.49, -37.19, -8.38 |
 | `BR-MG` | 31 | Minas Gerais | -51.0461, -22.9228, -39.8568, -14.2333 | -51.20, -23.08, -39.70, -14.08 |
-| `BR-ES` | 32 | Espírito Santo | -41.8796, -21.3011, -29.2990, -17.8919 | -42.03, -21.46, -29.14, -17.74 |
+| `BR-ES` | 32 | Espírito Santo | -41.8796, -21.3011, -39.6678, -17.8919 | -42.03, -21.46, -39.51, -17.74 |
 | `BR-RJ` | 33 | Rio de Janeiro | -44.8893, -23.3676, -40.9579, -20.7632 | -45.04, -23.52, -40.80, -20.61 |
 | `BR-SP` | 35 | São Paulo | -53.1101, -25.3089, -44.1614, -19.7799 | -53.27, -25.46, -44.01, -19.62 |
 | `BR-PR` | 41 | Paraná | -54.6199, -26.7171, -48.0235, -22.5163 | -54.77, -26.87, -47.87, -22.36 |
@@ -104,7 +105,20 @@ Notes:
   `BR-DF` (matches how people move in the area, as REGIONS-AR.md suggests for CABA). This proposal does not decide it.
 - **Large boxes.** Amazonas, Pará and Mato Grosso are the largest boxes. Their maps will be large, and the
   size of the download has not been estimated for this proposal.
-- **Fernando de Noronha** belongs to Pernambuco, and the `BR-PE` box reaches -32.40° W to include it.
+- **Offshore islands.** The IBGE polygons were checked for every unit: any polygon more than 0.5° from the unit's largest
+  polygon was listed. Two detached islands are in the polygons, and two offshore islands are not in them at all.
+  - **Fernando de Noronha** (`BR-PE`, about 3.4° east of the mainland) is **kept** in the PE box, because it is a
+    Pernambuco island with people living on it, and no other map would show it. The PE box reaches -32.40° W for it.
+    Without Noronha the box would end at -34.81° W; the cost is about 2.4° of mostly ocean.
+  - **Trindade and Martim Vaz** (`BR-ES`, about 10° east of the mainland, around 20.5° S) are **left out** of the ES
+    box. Keeping them would stretch the ES box from -39.67° W to -29.30° W, about 13° wide and mostly ocean, so the
+    box would stop being useful for the mainland. Whether they need a map of their own is an open question. No resident
+    population was checked for them.
+  - **Atol das Rocas** (RN) and **São Pedro e São Paulo** (PE) are **not in the IBGE state polygons**, so no box
+    includes them and nothing has to be cut. Whether either should have a map is an open question.
+  - The rule used here: an island goes in its state's box only if it is part of the state's IBGE polygon **and** either
+    is close to the mainland or has people living on it. Only Noronha passes that test. This is a proposal, not a
+    settled rule.
 - **Overlapping boxes.** Boxes follow each state's own outline, so neighbouring boxes overlap along borders. The
   overlap is expected and is the same as for the US and Mexico.
 
@@ -118,10 +132,10 @@ Notes:
 | Crops (`crops.sqlite`) | USDA Cropland Data Layer | MapBiomas land cover is a candidate, because it covers Brazil's crop classes, but its licence and class list were not checked | MapBiomas | not checked | not checked |
 | Buildings (`buildings.sqlite`) | Microsoft US footprints, OSM heights | Google Open Buildings V3, as in REGIONS-MX.md; Brazil coverage not re-checked here; OSM to fill gaps | Google; OSM contributors | CC BY 4.0; ODbL | as REGIONS-MX.md; not re-opened for Brazil |
 | Places (`places.sqlite`) | GNIS, Census gazetteers, OSM | IBGE malhas for states, municipalities and localities (the state layer was used for the boxes); OSM named places | IBGE; OSM contributors | IBGE terms unclear (see Licence notes); ODbL | state layer opened; licence not confirmed |
-| Addresses (`addresses/<code>.sqlite`) | Overture addresses | Overture addresses for Brazil were not counted or checked here; no open CEP area table found | Overture Maps Foundation; Correios (CEP) | not checked | not checked |
+| Addresses (`addresses/<code>.sqlite`) | Overture addresses | Overture addresses: 89,887,635 Brazilian rows in the publisher's per-country table; per-state counts not computed; no open CEP area table found | Overture Maps Foundation; Correios (CEP) | Overture attribution not re-read; CEP not open | Overture guide opened 20 Nov 2026; Correios guide search only |
 | Points of interest (`poi` rows) | OSM | OSM, as today, plus the lists in "Help points" | OSM contributors | ODbL | not counted here |
 
-### Licence notes
+## Licence notes and attribution
 
 - **gov.br content.** The footer of gov.br pages says all content is published under *Creative Commons
   Atribuição-SemDerivações 3.0 Não Adaptada* (CC BY-ND 3.0 Brazil) (opened, read on 20 November 2026 on the gov.br
@@ -142,9 +156,10 @@ The emergency numbers are the part people need most, and they are the same acros
 | Service | Number | Source for the number | Location data |
 |---|---|---|---|
 | Ambulance (SAMU) | 192 | gov.br, "SAMU 192: saiba quando acionar o serviço de urgência", published 29 August 2022, updated 26 October 2026 (opened) | not checked |
-| Fire (Corpo de Bombeiros) | 193 | Anatel listing of public-utility and emergency codes (search snippet only; the Anatel page did not show the numbers when read) | state fire services: not checked |
-| Police (Polícia Militar) | 190 | same as 193 (search snippet only) | state police: not checked |
-| Civil defence (Defesa Civil) | 199 | same as 193 (search snippet only) | not checked |
+| Fire (Corpo de Bombeiros) | 193 | Anatel page, opened 20 Nov 2026: "Corpo de Bombeiros 193" | state fire services: not checked |
+| Police (Polícia Militar) | 190 | Anatel page, opened 20 Nov 2026: "Polícia Militar 190" | state police: not checked |
+| Police, mobile phones only (Polícia Militar) | 112 and 911 | Anatel page, opened 20 Nov 2026: "Polícia Militar - SOMENTE CELULAR 112/911" | state police: not checked |
+| Civil defence (Defesa Civil) | 199 | Anatel page, opened 20 Nov 2026: "Defesa Civil 199" | not checked |
 
 Notes:
 
@@ -163,11 +178,65 @@ Notes:
 - Nothing a contributor adds may make the app open a connection. New data comes in through a build tool and ships as a
   file.
 
-## Open questions for maintainers
+## Addresses in Overture, from the publisher's guide
 
-1. **DF and Goiás:** separate maps, or should the Goiás map include DF (as the Argentina proposal suggests for CABA)?
-2. **Hyphenated codes:** should `BR-` codes become the file and manifest names, and should `carry_over` in
-   `engine/setup/install.py` be widened to match them (the change would touch the upgrade path, so it needs review)?
-3. **IBGE licence:** does the state malha's technical note allow a copy in a build? Until it is read, the boxes stay a
-   proposal.
-4. **CEP:** is there an open source for postal-code areas in Brazil? Without one, address search cannot split by state.
+- **Brazil: 89,887,635 addresses**, in the per-country table of the Overture addresses guide
+  (docs.overturemaps.org/guides/addresses/, opened 20 November 2026). This is the publisher's count, not one made for
+  this proposal. The same table lists the US and Mexico (Mexico 30,726,687, as REGIONS-MX.md reads it).
+- Per-state counts were not computed. The first digit of a CEP is not a state code (see below), so splitting on it
+  would put addresses in the wrong state.
+- The Overture guide says address IDs are not stable enough to register in GERS, so IDs may change between releases.
+  A build would need a fixed release.
+
+## How addresses are written
+
+Read from the Correios' *Guia Técnico de Endereçamento de Correspondências* (version 1.4, 2021) and the Correios
+addressing guide page: **search snippets only**; the PDF was not opened.
+
+- **Postcode (CEP).** Eight digits, written `00000-000` with a hyphen after the fifth digit, for example `01311-000`
+  (the Correios example). The Correios API accepts eight digits without the hyphen. Keep it as text, because leading
+  zeros occur.
+- **Order.** Street type, street name and number, then complement and neighbourhood, then city and state (UF), with
+  the CEP last. The Correios guide puts the CEP alone on the last line of a hand-written address.
+- **No number.** Correios writes `SN` (*sem número*, "no number"). The CEP complement is then `00000` (search snippet
+  only).
+- **The CEP is not a state code.** The first digit is a broad region, not a state, and no CEP-to-state table was
+  checked. Address indexes cannot be split by state until one is found or a state polygon is used.
+- **What the code does now** (read in this repository, 20 November 2026):
+  - `tools/build_addresses.py` keeps only `country = 'US'`; the Brazilian rows would need the country changed.
+  - `normalize()` in `engine/address_search.py` replaces every character outside `a-z` and `0-9` with a space, so
+    Portuguese accents split words: "Ação" becomes "a o". Accent folding would be needed, as noted for Spanish in
+    REGIONS-MX.md.
+  - `is_address_query()` needs a number first, so "Rua do Lago 50, 01311" is not treated as an address today.
+
+## Still undecided
+
+Each of these needs the maintainers' decision before any code changes.
+
+1. **Codes in setup.** Whether `BR-AC` and the others are acceptable as a manifest `id`, and the `carry_over()` rule in
+   `engine/setup/install.py` (line 335), which keeps only `[A-Z]{2}` index names.
+2. **DF and Goiás.** Separate maps, or the Goiás map includes DF (the box overlap, as for CABA in REGIONS-AR.md).
+3. **Trindade and Martim Vaz.** A separate small map, or no map. No resident population was checked.
+4. **Atol das Rocas and São Pedro e São Paulo.** Not in the IBGE polygons; whether either should have a map.
+5. **IBGE licence.** Whether the technical and legal note for the state malha allows a copy in a build.
+6. **CEP.** An open CEP-area or CEP-to-state source with clear rights. Without one, address search cannot split by state.
+7. **Crop classes.** MapBiomas is a candidate; its licence and class list were not checked, and the crop kinds in
+   `tools/build_crops.py` have no Brazilian equivalents yet.
+8. **Overlapping boxes.** Boxes follow each state's outline, so neighbours overlap along borders. Whether that is
+   acceptable is the same question as in REGIONS-MX.md.
+
+## What was checked, and what was not
+
+- **Opened on 20 November 2026:** the IBGE malhas API, state polygons at maximum quality, for all 27 units; the gov.br
+  "Sobre o portal" page and the federal SAMU 192 article (footer licence CC BY-ND 3.0 Brazil); the Anatel public-utility
+  and emergency codes page (190, 192, 193, 199, and 112/911 listed as mobile only); the Overture addresses guide
+  (Brazil 89,887,635); the Wikipedia article "ISO 3166-2:BR" (27 codes, names from the ISO 3166/MA).
+- **Computed on 20 November 2026:** the 27 tight boxes and the 0.15° margins (floor for west and south, ceiling for
+  east and north, to 0.01°); the detached-island check across all 27 units; the Espírito Santo box without Trindade and
+  Martim Vaz.
+- **Seen only in search results:** the IBGE technical and legal note and the BC250 terms (restricted use); the Correios
+  addressing guide; a 2017 federal open-data resolution that lists CC0, PDDL, CC BY 4.0 and ODbL as acceptable.
+- **Not checked:** the ISO Online Browsing Platform (iso.org); the IBGE technical and legal note itself; the CNES health
+  register; state fire and police station lists; MapBiomas licence and class list; Google Open Buildings coverage for
+  Brazil; OSM counts for Brazil; per-state Overture address counts; the populations of Trindade and Martim Vaz.
+
