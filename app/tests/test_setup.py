@@ -365,6 +365,22 @@ class Downloads(Base):
         self.assertTrue(all(r and r.startswith('bytes=') for r in ranges[1:]), ranges)
         self.assertEqual(len(ranges), 3)
 
+    def test_resume_says_downloading_once_the_part_is_read_again(self):
+        """A resumed download reads its part again as 'verifying', then says 'downloading' before it asks the server, so a wait for
+        a busy server or a dropped connection is not shown as checking."""
+        data, seen = self.files.data['model.gguf'], []
+        d = download.Download(f'{self.base}/model.gguf', self.tmp / 'dl' / 'model.gguf', len(data), sha(data), download.Control(),
+                              lambda done, total, phase: seen.append((phase, done)), allowed=ALLOWED, context=self.ctx)
+        os.makedirs(os.path.dirname(d.part), exist_ok=True)
+        Path(d.part).write_bytes(data[:600_000])
+        Path(d.meta).write_text(json.dumps({'url': d.url, 'size': d.size, 'sha256': d.sha256, 'etag': '"e1"', 'bytes_done': 600_000}))
+        self.files.answers['model.gguf'] = [(503, None)]
+        with fast_backoff():
+            self.assertEqual(Path(d.run()).read_bytes(), data)
+        last = max(i for i, (phase, _) in enumerate(seen) if phase == 'verifying')
+        self.assertEqual(seen[last], ('verifying', 600_000))
+        self.assertEqual(seen[last + 1], ('downloading', 600_000))
+
     def test_busy_server_is_waited_out(self):
         """downloads.lastbook.org cut a 388 GB download, then answered its resume with 503 for minutes: more 503s in a row than
         NETWORK_TRIES. A busy server is waited on longer, and the download finishes from where it was cut."""
@@ -1680,8 +1696,10 @@ class Manage(Base):
         s = self.setup('manage', current=lib)
         j = s.start(repair=True)
         self.assertEqual([i['kind'] for i in j['items']], ['pack', 'model'])
+        self.assertTrue(j['repair'])            # the setup page reads it to say "Checking the library" after a reload
         j = self.wait(s)
         self.assertEqual(j['state'], 'done', j)
+        self.assertTrue(j['repair'])
         self.assertEqual(self.files.log, [])
         self.assertFalse(api._pending_file(self.settings).exists())
         self.assertTrue((lib / 'models' / 'model.gguf').is_file())
