@@ -1,13 +1,15 @@
 # Mapas detallados para Chile: una propuesta
 
-> Versión en español de [REGIONS-CL.md](REGIONS-CL.md). Si las dos difieren, vale la versión en inglés, que es la que se
+> **Investigación complementaria del PR #140 (cd7d26c).** Este texto en español corresponde al estudio DPA 2023 en [inglés](REGIONS-CL-DPA2023.md), no a una traducción de la [propuesta de Chile ya existente](REGIONS-CL.md). No reemplaza sus rectángulos ni decide cuáles se usarán. La propuesta existente conserva cinco rectángulos separados para las islas de Valparaíso y un límite sur de −56.60° para Magallanes; este estudio usa tres grupos de islas y −56.5378° según DPA 2023. Las comprobaciones y los cálculos que siguen son los comunicados por el autor; no se recalcularon durante esta integración. No se entrega ningún mapa.
+
+> Versión en español de [REGIONS-CL-DPA2023.md](REGIONS-CL-DPA2023.md). Si las dos difieren, vale la versión en inglés, que es la que se
 > discute en el repositorio.
 
 Esta es una propuesta para discutir, no una decisión. Responde, para Chile, las preguntas que [MAPS.md](MAPS.md) pide
 contestar antes de que la cobertura vaya más allá de Estados Unidos: qué fuente abierta reemplaza a cada lista federal,
 con qué licencia, qué es un "estado" acá y cómo se escriben las direcciones. Sigue la forma de [REGIONS.md](REGIONS.md)
 y de [REGIONS-AR.md](REGIONS-AR.md), y busca alimentar la misma discusión de diseño (issues #23, #25 y #31). La versión
-legible por máquina es [regions-cl-proposed.json](regions-cl-proposed.json).
+legible por máquina es [regions-cl-dpa2023-proposed.json](regions-cl-dpa2023-proposed.json).
 
 Nada de esto cambia la app, el motor ni una compilación. Ningún código lee el JSON, y nada de esto se distribuye: las
 compilaciones empaquetan solo `web/` y `content/`.
