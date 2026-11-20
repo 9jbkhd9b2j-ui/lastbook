@@ -138,12 +138,15 @@ The packaged app plays library videos through `lastbooksrc`, its own GStreamer s
 (`packaging/linux/gst/lastbooksrc.c`). A source run has no copy of it. The script builds it into `derived/gst/`,
 points GStreamer and WebKit at it for that launch only, and warns about any missing decoders. It needs these packages:
 
-| | Arch | Ubuntu |
-|---|---|---|
-| Build the plugin | `gcc pkg-config gstreamer` | `gcc pkg-config libgstreamer1.0-dev` |
-| Window | `webkit2gtk-4.1 python-gobject` | `gir1.2-webkit2-4.1 python3-gi` |
-| MP4, H.264, AAC | `gst-plugins-base gst-plugins-good gst-libav` | `gstreamer1.0-plugins-good gstreamer1.0-libav` |
-| AV1 (many of the library's videos) | `gst-plugin-dav1d` | `gstreamer1.0-plugins-bad` |
+| | Arch | Ubuntu | Fedora |
+|---|---|---|---|
+| Build the plugin | `gcc pkg-config gstreamer` | `gcc pkg-config libgstreamer1.0-dev` | `gcc pkgconf-pkg-config gstreamer1-devel gstreamer1-plugins-base-devel` |
+| Window | `webkit2gtk-4.1 python-gobject` | `gir1.2-webkit2-4.1 python3-gi` | `webkit2gtk4.1 python3-gobject` |
+| MP4, H.264, AAC | `gst-plugins-base gst-plugins-good gst-libav` | `gstreamer1.0-plugins-good gstreamer1.0-libav` | `gstreamer1-plugins-base gstreamer1-plugins-good gstreamer1-plugin-libav` |
+| AV1 (many of the library's videos) | `gst-plugin-dav1d` | `gstreamer1.0-plugins-bad` | `gstreamer1-plugins-bad-free` |
+
+A source run was validated natively on Fedora 45 (Python 3.15): the requirements above resolve there, the whole test
+suite passes, videos decode, and the window opens.
 
 Without an AV1 decoder, those videos fail or play with sound and a black picture. To check video without opening the
 window, decode a few library videos through `lastbooksrc`. Name an AV1 video to cover that decoder too:
