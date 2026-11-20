@@ -40,13 +40,25 @@
    "url": "https://opendatacommons.org/licenses/odbl/1-0/",
    "attribution": "© OpenStreetMap contributors",
    "share_alike": true,
-   "verified": "not re-read for this document"
+   "verified": "opened 2026-11-20 (opendatacommons.org/licenses/odbl/1-0/): commercial use allowed; derivative databases allowed with share-alike."
   },
   "CC-BY-4.0": {
-   "name": "Creative Commons Attribution 4.0",
+   "name": "Creative Commons Attribution 4.0 International",
    "url": "https://creativecommons.org/licenses/by/4.0/",
    "share_alike": false,
-   "verified": "not re-read for this document"
+   "verified": "opened 2026-11-20 (creativecommons.org/licenses/by/4.0/): adapt, including commercially, with attribution."
+  },
+  "CNES-cc-by": {
+   "name": "cc-by, from the CNES dataset licence field",
+   "verified": "opened 2026-11-20 (dadosabertos.saude.gov.br dataset page)."
+  },
+  "ANA-free-access": {
+   "name": "'O acesso ao dado é livre' (no named licence)",
+   "verified": "opened 2026-11-20 (metadados.snirh.gov.br BHO 6 record). Not an explicit licence: fails the test."
+  },
+  "SIAGAS-no-licence": {
+   "name": "no licence text found",
+   "verified": "siagasweb.sgb.gov.br opened 2026-11-20: no licence or terms text. Fails the test."
   }
  },
  "country_layers": {
@@ -62,12 +74,12 @@
   ],
   "water": [
    {
-    "dataset": "OSM waterways and water areas (Geofabrik Brazil extract)",
+    "dataset": "OSM waterways and water areas (Brazil)",
     "publisher": "OSM contributors",
     "licence": "ODbL-1.0",
-    "verified": "not checked for Brazil",
-    "role": "primary today",
-    "notes": "IBGE hydrography not checked for this proposal."
+    "verified": "ODbL read 2026-11-20; OSM data not sampled for water features here",
+    "role": "primary",
+    "notes": "IBGE hydrography not checked; ANA BHO 6 not proposed (see water.not_proposed)."
    }
   ],
   "dams": [
@@ -130,12 +142,20 @@
   ],
   "pois": [
    {
-    "dataset": "OSM, plus the lists in help_points",
+    "dataset": "OSM amenity, emergency and water tags (counts in osm_counts)",
     "publisher": "OSM contributors",
     "licence": "ODbL-1.0",
-    "verified": "not counted for this proposal",
+    "verified": "counts read through Overpass 2026-11-20",
     "role": "primary",
-    "notes": "Health register (CNES), fire and police lists not checked."
+    "notes": ""
+   },
+   {
+    "dataset": "CNES health establishments",
+    "publisher": "Ministério da Saúde (DATASUS)",
+    "licence": "CNES-cc-by",
+    "verified": "dataset page opened 2026-11-20; coordinates not verified",
+    "role": "candidate",
+    "notes": "See help_points.cnes_health_establishments."
    }
   ]
  },
@@ -917,7 +937,18 @@
    "number": "199",
    "verified": "opened Anatel SUP page 2026-11-20 ('Defesa Civil 199')"
   },
-  "not_included": "191 (Polícia Rodoviária Federal, listed on the Anatel page) and state or city numbers."
+  "not_included": "191 (Polícia Rodoviária Federal, listed on the Anatel page) and state or city numbers.",
+  "cnes_health_establishments": {
+   "dataset": "CNES - Cadastro Nacional de Estabelecimentos de Saúde (health establishments)",
+   "publisher": "Ministério da Saúde (DATASUS)",
+   "url": "https://dadosabertos.saude.gov.br/dataset/cnes-cadastro-nacional-de-estabelecimentos-de-saude",
+   "licence": "cc-by ('Creative Commons Atribuição'), from the dataset page's licence field, opened 2026-11-20",
+   "verified": "dataset page opened 2026-11-20; licence field read. Coordinates (latitude and longitude) not verified; check the layout before a build.",
+   "caveat": "The footer of the same portal says the site's content is CC BY-ND 3.0 (Atribuição-SemDerivações). That refers to the site, not to the dataset. The dataset licence field is the one that matters for the data; maintainers should confirm.",
+   "role": "candidate"
+  },
+  "osm_counts": "Counts for hospital, clinic, fire_station and police are in osm_counts. Fire and police lists from the states were not checked.",
+  "shelters": "Not checked: no open national shelter list was found in this pass; OSM amenity=shelter not counted here."
  },
  "open_questions": [
   "DF inside the BR-GO box: separate maps, or should the Goiás map include DF (as the Argentina proposal suggests for CABA)?",
@@ -925,6 +956,336 @@
   "Does the IBGE technical and legal note for the state malha allow a copy in a build?",
   "Trindade and Martim Vaz: a separate small map, or no map? No resident population was checked.",
   "Atol das Rocas (RN) and São Pedro e São Paulo (PE): not in the IBGE polygons; should either have a map?",
-  "Is there an open CEP-area or CEP-to-state source with clear rights? Without one, address search cannot split by state."
- ]
+  "Is there an open CEP-area or CEP-to-state source with clear rights? Without one, address search cannot split by state.",
+  "Water: ask ANA which licence applies to BHO 6 and ask CPRM for the SIAGAS data licence. Both fail the test until answered.",
+  "CNES: the dataset licence field says cc-by, but the portal footer says CC BY-ND for its site content. Maintainers should confirm which governs."
+ ],
+ "osm_counts": {
+  "date": "2026-11-20",
+  "method": "Overpass API (overpass-api.de), one request per unit: area ISO3166-2 BR-XX with admin_level=4 (Brazil: ISO3166-1 BR, admin_level=2); nwr with each tag; out count. Counts are objects in OSM, not checked for duplicates or closed features.",
+  "licence": "ODbL-1.0",
+  "tags": [
+   "amenity=drinking_water",
+   "man_made=water_tap",
+   "natural=spring",
+   "man_made=water_well",
+   "amenity=hospital",
+   "amenity=clinic",
+   "amenity=fire_station",
+   "amenity=police"
+  ],
+  "counts": {
+   "AC": {
+    "amenity=drinking_water": 1,
+    "man_made=water_tap": 0,
+    "natural=spring": 19,
+    "man_made=water_well": 1,
+    "amenity=hospital": 26,
+    "amenity=clinic": 21,
+    "amenity=fire_station": 1,
+    "amenity=police": 21
+   },
+   "AL": {
+    "amenity=drinking_water": 5,
+    "man_made=water_tap": 0,
+    "natural=spring": 6,
+    "man_made=water_well": 93,
+    "amenity=hospital": 111,
+    "amenity=clinic": 154,
+    "amenity=fire_station": 10,
+    "amenity=police": 82
+   },
+   "AP": {
+    "amenity=drinking_water": 0,
+    "man_made=water_tap": 0,
+    "natural=spring": 2,
+    "man_made=water_well": 1,
+    "amenity=hospital": 38,
+    "amenity=clinic": 89,
+    "amenity=fire_station": 5,
+    "amenity=police": 46
+   },
+   "AM": {
+    "amenity=drinking_water": 14,
+    "man_made=water_tap": 1,
+    "natural=spring": 19,
+    "man_made=water_well": 6,
+    "amenity=hospital": 131,
+    "amenity=clinic": 147,
+    "amenity=fire_station": 11,
+    "amenity=police": 77
+   },
+   "BA": {
+    "amenity=drinking_water": 32,
+    "man_made=water_tap": 12,
+    "natural=spring": 103,
+    "man_made=water_well": 26,
+    "amenity=hospital": 656,
+    "amenity=clinic": 1163,
+    "amenity=fire_station": 25,
+    "amenity=police": 529
+   },
+   "CE": {
+    "amenity=drinking_water": 60,
+    "man_made=water_tap": 5,
+    "natural=spring": 15,
+    "man_made=water_well": 168,
+    "amenity=hospital": 344,
+    "amenity=clinic": 680,
+    "amenity=fire_station": 19,
+    "amenity=police": 253
+   },
+   "DF": {
+    "amenity=drinking_water": 34,
+    "man_made=water_tap": 12,
+    "natural=spring": 21,
+    "man_made=water_well": 2,
+    "amenity=hospital": 126,
+    "amenity=clinic": 190,
+    "amenity=fire_station": 42,
+    "amenity=police": 202
+   },
+   "ES": {
+    "amenity=drinking_water": 41,
+    "man_made=water_tap": 3,
+    "natural=spring": 15,
+    "man_made=water_well": 3,
+    "amenity=hospital": 144,
+    "amenity=clinic": 432,
+    "amenity=fire_station": 20,
+    "amenity=police": 250
+   },
+   "GO": {
+    "amenity=drinking_water": 29,
+    "man_made=water_tap": 2,
+    "natural=spring": 111,
+    "man_made=water_well": 14,
+    "amenity=hospital": 327,
+    "amenity=clinic": 312,
+    "amenity=fire_station": 34,
+    "amenity=police": 213
+   },
+   "MA": {
+    "amenity=drinking_water": 5,
+    "man_made=water_tap": 1,
+    "natural=spring": 4,
+    "man_made=water_well": 23,
+    "amenity=hospital": 228,
+    "amenity=clinic": 178,
+    "amenity=fire_station": 16,
+    "amenity=police": 118
+   },
+   "MT": {
+    "amenity=drinking_water": 4,
+    "man_made=water_tap": 7,
+    "natural=spring": 53580,
+    "man_made=water_well": 3,
+    "amenity=hospital": 181,
+    "amenity=clinic": 270,
+    "amenity=fire_station": 25,
+    "amenity=police": 172
+   },
+   "MS": {
+    "amenity=drinking_water": 9,
+    "man_made=water_tap": 0,
+    "natural=spring": 174,
+    "man_made=water_well": 6,
+    "amenity=hospital": 115,
+    "amenity=clinic": 87,
+    "amenity=fire_station": 19,
+    "amenity=police": 121
+   },
+   "MG": {
+    "amenity=drinking_water": 142,
+    "man_made=water_tap": 15,
+    "natural=spring": 1697,
+    "man_made=water_well": 54,
+    "amenity=hospital": 860,
+    "amenity=clinic": 1234,
+    "amenity=fire_station": 63,
+    "amenity=police": 656
+   },
+   "PA": {
+    "amenity=drinking_water": 42,
+    "man_made=water_tap": 0,
+    "natural=spring": 23,
+    "man_made=water_well": 16,
+    "amenity=hospital": 270,
+    "amenity=clinic": 229,
+    "amenity=fire_station": 16,
+    "amenity=police": 141
+   },
+   "PB": {
+    "amenity=drinking_water": 34,
+    "man_made=water_tap": 14,
+    "natural=spring": 15,
+    "man_made=water_well": 83,
+    "amenity=hospital": 213,
+    "amenity=clinic": 271,
+    "amenity=fire_station": 18,
+    "amenity=police": 107
+   },
+   "PR": {
+    "amenity=drinking_water": 101,
+    "man_made=water_tap": 37,
+    "natural=spring": 228,
+    "man_made=water_well": 33,
+    "amenity=hospital": 510,
+    "amenity=clinic": 930,
+    "amenity=fire_station": 92,
+    "amenity=police": 454
+   },
+   "PE": {
+    "amenity=drinking_water": 18,
+    "man_made=water_tap": 6,
+    "natural=spring": 245,
+    "man_made=water_well": 40,
+    "amenity=hospital": 431,
+    "amenity=clinic": 529,
+    "amenity=fire_station": 30,
+    "amenity=police": 209
+   },
+   "PI": {
+    "amenity=drinking_water": 9,
+    "man_made=water_tap": 0,
+    "natural=spring": 9,
+    "man_made=water_well": 29,
+    "amenity=hospital": 228,
+    "amenity=clinic": 478,
+    "amenity=fire_station": 3,
+    "amenity=police": 106
+   },
+   "RJ": {
+    "amenity=drinking_water": 71,
+    "man_made=water_tap": 22,
+    "natural=spring": 727,
+    "man_made=water_well": 54,
+    "amenity=hospital": 603,
+    "amenity=clinic": 797,
+    "amenity=fire_station": 118,
+    "amenity=police": 541
+   },
+   "RN": {
+    "amenity=drinking_water": 33,
+    "man_made=water_tap": 2,
+    "natural=spring": 5,
+    "man_made=water_well": 55,
+    "amenity=hospital": 191,
+    "amenity=clinic": 439,
+    "amenity=fire_station": 8,
+    "amenity=police": 180
+   },
+   "RS": {
+    "amenity=drinking_water": 88,
+    "man_made=water_tap": 30,
+    "natural=spring": 84,
+    "man_made=water_well": 38,
+    "amenity=hospital": 560,
+    "amenity=clinic": 1056,
+    "amenity=fire_station": 132,
+    "amenity=police": 583
+   },
+   "RO": {
+    "amenity=drinking_water": 3,
+    "man_made=water_tap": 0,
+    "natural=spring": 3,
+    "man_made=water_well": 0,
+    "amenity=hospital": 52,
+    "amenity=clinic": 41,
+    "amenity=fire_station": 6,
+    "amenity=police": 71
+   },
+   "RR": {
+    "amenity=drinking_water": 12,
+    "man_made=water_tap": 0,
+    "natural=spring": 4,
+    "man_made=water_well": 2,
+    "amenity=hospital": 23,
+    "amenity=clinic": 65,
+    "amenity=fire_station": 6,
+    "amenity=police": 55
+   },
+   "SC": {
+    "amenity=drinking_water": 34,
+    "man_made=water_tap": 3,
+    "natural=spring": 484,
+    "man_made=water_well": 20,
+    "amenity=hospital": 252,
+    "amenity=clinic": 1240,
+    "amenity=fire_station": 193,
+    "amenity=police": 459
+   },
+   "SP": {
+    "amenity=drinking_water": 470,
+    "man_made=water_tap": 92,
+    "natural=spring": 2411,
+    "man_made=water_well": 136,
+    "amenity=hospital": 1370,
+    "amenity=clinic": 2663,
+    "amenity=fire_station": 234,
+    "amenity=police": 2195
+   },
+   "SE": {
+    "amenity=drinking_water": 7,
+    "man_made=water_tap": 1,
+    "natural=spring": 7,
+    "man_made=water_well": 4,
+    "amenity=hospital": 72,
+    "amenity=clinic": 274,
+    "amenity=fire_station": 10,
+    "amenity=police": 146
+   },
+   "TO": {
+    "amenity=drinking_water": 7,
+    "man_made=water_tap": 0,
+    "natural=spring": 11,
+    "man_made=water_well": 0,
+    "amenity=hospital": 52,
+    "amenity=clinic": 75,
+    "amenity=fire_station": 2,
+    "amenity=police": 28
+   }
+  },
+  "note": "Outlier not trusted: MT natural=spring is 53,580, far above every other unit (next 2,411, SP); likely a bulk import, not checked. Sum of the 27 units is used as the total; a single country-wide query timed out on the Overpass server. TO was retried once after 502/504 errors and then read successfully."
+ },
+ "water": {
+  "proposed": [
+   {
+    "layer": "water.sqlite",
+    "dataset": "OpenStreetMap waterways and water areas (Brazil)",
+    "licence": "ODbL-1.0",
+    "verified": "ODbL 1.0 read on opendatacommons.org, 2026-11-20",
+    "role": "primary",
+    "notes": "Used as the base water layer, as in the US build."
+   },
+   {
+    "layer": "poi rows (drinking water)",
+    "dataset": "OSM amenity=drinking_water, man_made=water_tap, natural=spring, man_made=water_well",
+    "licence": "ODbL-1.0",
+    "verified": "counts per unit read through Overpass on 2026-11-20 (see osm_counts)",
+    "role": "help point",
+    "notes": "Springs and wells are shown with a plain 'not checked for drinking' label, as in REGIONS-ES.md. Drinking fountains are counted only when drinking_water=yes."
+   }
+  ],
+  "not_proposed": [
+   {
+    "dataset": "ANA Base Hidrográfica Ottocodificada (BHO 6)",
+    "publisher": "ANA (Agência Nacional de Águas e Saneamento Básico)",
+    "reason": "The metadata record (metadados.snirh.gov.br, opened 2026-11-20) states the licence field as 'O acesso ao dado é livre.' ('Access to the data is free.'). No licence is named, and nothing states that adaptation or commercial use is allowed. It fails the test.",
+    "next_step": "Ask ANA which licence applies to the BHO and to its dataset page on dadosabertos.ana.gov.br."
+   },
+   {
+    "dataset": "CPRM SIAGAS (groundwater wells)",
+    "publisher": "CPRM / Serviço Geológico do Brasil",
+    "reason": "The SIAGAS web portal (siagasweb.sgb.gov.br, opened 2026-11-20) shows no licence or terms text. Agreements and reports describe software licences, not data licences. Search results also say full data may need a request. No licence can be read, so it fails the test.",
+    "next_step": "Ask CPRM for the licence of the SIAGAS data export. Until then, OSM water_well counts stand in."
+   },
+   {
+    "dataset": "Ministry of Health open-data plan documents (CC BY-NC-SA)",
+    "publisher": "Ministério da Saúde",
+    "reason": "Search results say the Ministry's open-data plans are CC BY-NC-SA 4.0 (non-commercial, share-alike). The plan PDFs were not opened. This is not used for any dataset here, and the CNES dataset's own licence field is cc-by.",
+    "next_step": "None needed for CNES. Note only."
+   }
+  ]
+ }
 }

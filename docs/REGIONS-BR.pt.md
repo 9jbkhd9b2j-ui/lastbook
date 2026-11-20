@@ -127,13 +127,67 @@ Notas:
 | Camada (arquivo) | Fonte dos EUA hoje | Proposta para o Brasil | Publicador | Licença | Verificado |
 |---|---|---|---|---|---|
 | Relevo (`terrain.sqlite`) | USGS 3DEP | Copernicus DEM GLO-30, como alternativa em REGIONS-AR.md e REGIONS-MX.md; nenhum produto nacional de altitude específico do Brasil foi verificado aqui | ESA / Airbus | licença Copernicus | Copernicus como em REGIONS-AR.md; produto do Brasil não verificado |
-| Água (`water.sqlite`) | NHD | Vias e áreas de água do OSM, do extrato do Brasil da Geofabrik; hidrografia do IBGE não verificada nesta proposta | colaboradores do OSM | ODbL | OSM como nos EUA; IBGE não verificado |
+| Água (`water.sqlite`) | NHD | Vias e áreas de água do OSM, como nos EUA. A BHO 6 da ANA não é proposta: a licença é só "acesso livre" (veja Água) | colaboradores do OSM; ANA | ODbL (lida em 20/11/2026) | ODbL aberta; metadados da ANA abertos, sem licença nomeada |
 | Barragens | NID | Nenhuma lista nacional aberta de barragens foi identificada nesta etapa. `waterway=dam` do OSM como alternativa, não contada | colaboradores do OSM | ODbL | não verificado |
 | Culturas (`crops.sqlite`) | USDA Cropland Data Layer | O MapBiomas é candidato, porque cobre as classes de cultivo do Brasil, mas a licença e a lista de classes não foram verificadas | MapBiomas | não verificada | não verificado |
 | Edifícios (`buildings.sqlite`) | Microsoft, contornos dos EUA, alturas do OSM | Google Open Buildings V3, como em REGIONS-MX.md; cobertura do Brasil não reconferida aqui; OSM para preencher lacunas | Google; colaboradores do OSM | CC BY 4.0; ODbL | como em REGIONS-MX.md; não reaberta para o Brasil |
 | Lugares (`places.sqlite`) | GNIS, gazetteers do Census, OSM | Malhas do IBGE para estados, municípios e localidades (a camada estadual foi usada para as caixas); lugares nomeados do OSM | IBGE; colaboradores do OSM | termos do IBGE pouco claros (veja Notas sobre licença); ODbL | camada estadual aberta; licença não confirmada |
 | Endereços (`addresses/<código>.sqlite`) | endereços Overture | Endereços Overture: 89.887.635 linhas brasileiras na tabela por país do editor; contagens por estado não calculadas; nenhuma tabela aberta de área de CEP encontrada | Overture Maps Foundation; Correios (CEP) | atribuição da Overture não relida; CEP não aberto | guia Overture aberto em 20/11/2026; guia dos Correios só busca |
-| Pontos de interesse (linhas `poi`) | OSM | OSM, como hoje, mais as listas de "Pontos de ajuda" | colaboradores do OSM | ODbL | não contado aqui |
+| Pontos de interesse (linhas `poi`) | OSM | Tags do OSM para água potável, hospitais, clínicas, bombeiros e polícia (contagens em "Água" e "Pontos de ajuda e contagens"); CNES como candidato para estabelecimentos de saúde | colaboradores do OSM; Ministério da Saúde (DATASUS) | ODbL (lida); conjunto CNES cc-by (lido) | contado pela Overpass, 20/11/2026 |
+
+## Pontos de ajuda e contagens
+
+- **Estabelecimentos de saúde: CNES (candidato).** A página do conjunto CNES no DATASUS (dadosabertos.saude.gov.br, aberta
+  em 20 de novembro de 2026) dá o campo de licença como `cc-by` ("Creative Commons Atribuição"). Isso passa no teste: uso
+  comercial e adaptação são permitidos com atribuição. As coordenadas **não foram verificadas**, então o layout do arquivo
+  deve ser conferido antes de uma compilação.
+- **Ressalva sobre o CNES.** O rodapé do mesmo portal diz que o conteúdo do site é CC BY-ND 3.0 (sem adaptação). Isso se
+  refere ao texto do próprio site, não ao conjunto de dados. Os mantenedores devem confirmar que a licença do conjunto é a
+  que vale para os dados.
+- **Postos de bombeiros e polícia.** As listas estaduais não foram verificadas. As contagens do OSM abaixo são os únicos
+  números nacionais desta etapa.
+- **Abrigos.** Nenhuma lista nacional aberta de abrigos foi encontrada; `amenity=shelter` do OSM não foi contado aqui.
+- **Documentos de planos de dados do Ministério da Saúde** são descritos nos resultados de busca como CC BY-NC-SA (não
+  abertos). Essa licença não é usada em nenhum conjunto aqui.
+
+| Unidade | `amenity=drinking_water` | `man_made=water_tap` | `natural=spring` | `man_made=water_well` | `amenity=hospital` | `amenity=clinic` | `amenity=fire_station` | `amenity=police` |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| `BR-AC` | 1 | 0 | 19 | 1 | 26 | 21 | 1 | 21 |
+| `BR-AL` | 5 | 0 | 6 | 93 | 111 | 154 | 10 | 82 |
+| `BR-AP` | 0 | 0 | 2 | 1 | 38 | 89 | 5 | 46 |
+| `BR-AM` | 14 | 1 | 19 | 6 | 131 | 147 | 11 | 77 |
+| `BR-BA` | 32 | 12 | 103 | 26 | 656 | 1.163 | 25 | 529 |
+| `BR-CE` | 60 | 5 | 15 | 168 | 344 | 680 | 19 | 253 |
+| `BR-DF` | 34 | 12 | 21 | 2 | 126 | 190 | 42 | 202 |
+| `BR-ES` | 41 | 3 | 15 | 3 | 144 | 432 | 20 | 250 |
+| `BR-GO` | 29 | 2 | 111 | 14 | 327 | 312 | 34 | 213 |
+| `BR-MA` | 5 | 1 | 4 | 23 | 228 | 178 | 16 | 118 |
+| `BR-MT` | 4 | 7 | 53.580 | 3 | 181 | 270 | 25 | 172 |
+| `BR-MS` | 9 | 0 | 174 | 6 | 115 | 87 | 19 | 121 |
+| `BR-MG` | 142 | 15 | 1.697 | 54 | 860 | 1.234 | 63 | 656 |
+| `BR-PA` | 42 | 0 | 23 | 16 | 270 | 229 | 16 | 141 |
+| `BR-PB` | 34 | 14 | 15 | 83 | 213 | 271 | 18 | 107 |
+| `BR-PR` | 101 | 37 | 228 | 33 | 510 | 930 | 92 | 454 |
+| `BR-PE` | 18 | 6 | 245 | 40 | 431 | 529 | 30 | 209 |
+| `BR-PI` | 9 | 0 | 9 | 29 | 228 | 478 | 3 | 106 |
+| `BR-RJ` | 71 | 22 | 727 | 54 | 603 | 797 | 118 | 541 |
+| `BR-RN` | 33 | 2 | 5 | 55 | 191 | 439 | 8 | 180 |
+| `BR-RS` | 88 | 30 | 84 | 38 | 560 | 1.056 | 132 | 583 |
+| `BR-RO` | 3 | 0 | 3 | 0 | 52 | 41 | 6 | 71 |
+| `BR-RR` | 12 | 0 | 4 | 2 | 23 | 65 | 6 | 55 |
+| `BR-SC` | 34 | 3 | 484 | 20 | 252 | 1.240 | 193 | 459 |
+| `BR-SP` | 470 | 92 | 2.411 | 136 | 1.370 | 2.663 | 234 | 2.195 |
+| `BR-SE` | 7 | 1 | 7 | 4 | 72 | 274 | 10 | 146 |
+| `BR-TO` | 7 | 0 | 11 | 0 | 52 | 75 | 2 | 28 |
+| **Total (soma das 27 unidades)** | **1.305** | **265** | **60.022** | **910** | **8.114** | **14.044** | **1.158** | **8.015** |
+
+As contagens são objetos do OSM como encontrados pela Overpass em 20 de novembro de 2026, por unidade (área ISO 3166-2);
+a última linha é a soma das 27 unidades. Uma consulta nacional única deu timeout no servidor da Overpass, então o total do país não foi contado separadamente. Duplicatas e feições fechadas não foram removidas, então são limites
+superiores, não totais verificados.
+
+Um valor é um outlier e não é confiável: a contagem de `natural=spring` em Mato Grosso (53.580) está muito acima de todas as
+outras unidades (a seguinte é 2.411, em São Paulo). Provavelmente é uma importação em massa. Não foi verificada e não deve ser
+lida como contagem de nascentes.
 
 ## Notas sobre licença e atribuição
 
@@ -148,6 +202,33 @@ Notas:
   não aberta). Até que a nota da malha estadual seja lida, as camadas do IBGE **não são propostas para uma compilação**.
   As caixas deste arquivo são números calculados a partir dos dados e devem ser conferidas de novo contra a licença antes
   que alguém dependa delas.
+
+## Água: potável e limpa
+
+Esta é a prioridade do Brasil, então está descrita por inteiro. Para cada fonte, a pergunta é a mesma do resto do mapa:
+a biblioteca pode copiar, e dá para usar offline?
+
+**Proposto**
+
+- **Camada de água: OpenStreetMap, sob a ODbL.** Vias e áreas de água, como na compilação dos EUA. O texto da ODbL 1.0 foi
+  lido na página de licença em 20 de novembro de 2026 (aberta): uso comercial permitido, uma base de dados feita a partir
+  de dados do OSM é compartilhada sob a mesma licença, e a atribuição é "© OpenStreetMap contributors".
+- **Pontos de água potável: tags do OSM.** `amenity=drinking_water` (torneira ou bebedouro público), `man_made=water_tap`,
+  `natural=spring` e `man_made=water_well`. Uma tag não diz que a água é potável; por isso nascentes e poços recebem o
+  rótulo simples "não verificada para beber", como o REGIONS-ES.md propõe para a Espanha.
+- **Contagens por unidade** estão em "Pontos de ajuda e contagens", abaixo (API Overpass, 20 de novembro de 2026).
+
+**Não proposto (falha no teste de licença)**
+
+- **ANA Base Hidrográfica Ottocodificada (BHO 6).** O registro de metadados (metadados.snirh.gov.br, aberto em 20 de
+  novembro de 2026) dá a licença como "O acesso ao dado é livre." Isso não nomeia licença, e nada diz que o dado pode ser
+  adaptado ou usado comercialmente. Não proposto até a ANA nomear uma. Próximo passo: perguntar à ANA e conferir a página
+  do conjunto em dadosabertos.ana.gov.br.
+- **CPRM SIAGAS (poços de água subterrânea).** O portal web do SIAGAS (siagasweb.sgb.gov.br, aberto em 20 de novembro de
+  2026) não tem texto de licença nem de termos. Os acordos e relatórios encontrados descrevem licenças de software, não de
+  dados, e um documento de 2008 diz que os dados completos exigem pedido por escrito. Não proposto; poços do OSM ocupam
+  o lugar. Próximo passo: pedir à CPRM a licença dos dados.
+- **Barragens.** Ainda não verificadas (veja a tabela de fontes). Nenhuma lista nacional aberta foi encontrada nesta etapa.
 
 ## Pontos de ajuda
 
@@ -178,6 +259,16 @@ Notas:
   que um conjunto de mapas pode ter, e `scan_pack.py` lista os arquivos permitidos em `derived/geo/` (`GEO_FILES`).
 - Nada que um colaborador adicione pode fazer o aplicativo abrir uma conexão. Dados novos entram por uma ferramenta de
   compilação e chegam como arquivo.
+
+Licenças lidas para esta proposta (20 de novembro de 2026):
+
+- **ODbL 1.0** (água e pontos do OSM): uso comercial permitido; base derivada compartilhada sob a ODbL; atribuição
+  "© OpenStreetMap contributors". Lida na página de licença do opendatacommons.org.
+- **CC BY 4.0** (Google Open Buildings; campo `cc-by` do conjunto CNES): adaptar, inclusive comercialmente, com atribuição.
+  Lida no deed do creativecommons.org.
+- **Conjunto CNES** (`cc-by`, do campo de licença do conjunto): veja a ressalva em "Pontos de ajuda e contagens".
+- **Sem licença, não proposto:** ANA BHO 6 ("acesso livre" apenas); CPRM SIAGAS (sem texto de licença); conteúdo do gov.br
+  (CC BY-ND 3.0, sem adaptação).
 
 ## Endereços na Overture, segundo o guia do editor
 
@@ -224,6 +315,10 @@ Cada item precisa de decisão dos mantenedores antes de qualquer mudança de có
    cultura em `tools/build_crops.py` ainda não têm equivalente brasileiro.
 8. **Caixas sobrepostas.** As caixas seguem o contorno de cada estado, então vizinhos se sobrepõem nas fronteiras. Se
    isso é aceitável é a mesma pergunta do REGIONS-MX.md.
+9. **Fontes de água.** A licença da BHO 6 pela ANA e a licença dos dados do SIAGAS pela CPRM não foram respondidas. As duas
+   falham no teste até que uma seja nomeada.
+10. **CNES.** Confirmar que a licença do conjunto (`cc-by`) vale para os dados do CNES, e não o rodapé do portal
+    (CC BY-ND), e conferir se o arquivo tem coordenadas.
 
 ## O que foi verificado e o que não foi
 
@@ -238,6 +333,12 @@ Cada item precisa de decisão dos mantenedores antes de qualquer mudança de có
 - **Visto só em resultados de busca:** a nota técnica e legal do IBGE e os termos da BC250 (uso restrito); o guia de
   endereçamento dos Correios; uma resolução federal de 2017 sobre dados abertos que lista CC0, PDDL, CC BY 4.0 e ODbL
   como aceitáveis.
+- **Aberto em 20 de novembro de 2026 (água e pontos de ajuda):** a API Overpass (contagens do OSM, oito tags, 27 unidades e
+  o país); os textos das licenças ODbL 1.0 e CC BY 4.0; o registro de metadados da BHO 6 da ANA; o portal web do SIAGAS
+  (sem texto de licença); a página do conjunto CNES (campo de licença `cc-by`); o rodapé do portal do CNES (CC BY-ND 3.0
+  para o site).
+- **Visto só em resultados de busca:** os planos de dados abertos do Ministério da Saúde (CC BY-NC-SA); os acordos da CPRM
+  sobre o SIAGAS; o texto da política de dados abertos da ANA.
 - **Não verificado:** o Online Browsing Platform da ISO (iso.org); a nota técnica e legal do IBGE em si; o cadastro de
   saúde CNES; as listas estaduais de postos de bombeiros e polícia; a licença e a lista de classes do MapBiomas; a
   cobertura do Google Open Buildings no Brasil; contagens do OSM para o Brasil; contagens da Overture por estado; as

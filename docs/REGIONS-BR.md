@@ -127,13 +127,66 @@ Notes:
 | Layer (file) | US source today | Proposed for Brazil | Publisher | Licence | Checked |
 |---|---|---|---|---|---|
 | Terrain (`terrain.sqlite`) | USGS 3DEP | Copernicus DEM GLO-30, as for the fallback in REGIONS-AR.md and REGIONS-MX.md; no Brazil-specific national elevation product was checked here | ESA / Airbus | Copernicus licence | Copernicus as in REGIONS-AR.md; Brazil-specific product not checked |
-| Water (`water.sqlite`) | NHD | OSM waterways and water areas from Geofabrik's Brazil extract; IBGE hydrography not checked for this proposal | OSM contributors | ODbL | OSM as for US; IBGE not checked |
+| Water (`water.sqlite`) | NHD | OSM waterways and water areas, as for the US. ANA's BHO 6 is not proposed: its licence is only "free access" (see Water) | OSM contributors; ANA | ODbL (read 20 Nov 2026) | ODbL opened; ANA metadata opened, no licence named |
 | Dams | NID | No open national dam list was identified in this pass. OSM `waterway=dam` as a fallback, not counted | OSM contributors | ODbL | not checked |
 | Crops (`crops.sqlite`) | USDA Cropland Data Layer | MapBiomas land cover is a candidate, because it covers Brazil's crop classes, but its licence and class list were not checked | MapBiomas | not checked | not checked |
 | Buildings (`buildings.sqlite`) | Microsoft US footprints, OSM heights | Google Open Buildings V3, as in REGIONS-MX.md; Brazil coverage not re-checked here; OSM to fill gaps | Google; OSM contributors | CC BY 4.0; ODbL | as REGIONS-MX.md; not re-opened for Brazil |
 | Places (`places.sqlite`) | GNIS, Census gazetteers, OSM | IBGE malhas for states, municipalities and localities (the state layer was used for the boxes); OSM named places | IBGE; OSM contributors | IBGE terms unclear (see Licence notes); ODbL | state layer opened; licence not confirmed |
 | Addresses (`addresses/<code>.sqlite`) | Overture addresses | Overture addresses: 89,887,635 Brazilian rows in the publisher's per-country table; per-state counts not computed; no open CEP area table found | Overture Maps Foundation; Correios (CEP) | Overture attribution not re-read; CEP not open | Overture guide opened 20 Nov 2026; Correios guide search only |
-| Points of interest (`poi` rows) | OSM | OSM, as today, plus the lists in "Help points" | OSM contributors | ODbL | not counted here |
+| Points of interest (`poi` rows) | OSM | OSM tags for drinking water, hospitals, clinics, fire and police stations (counts in "Water" and "Help points and counts"); CNES as a candidate for health establishments | OSM contributors; Ministério da Saúde (DATASUS) | ODbL (read); CNES dataset cc-by (read) | counted through Overpass, 20 Nov 2026 |
+
+## Help points and counts
+
+- **Health establishments: CNES (candidate).** The DATASUS CNES dataset page (dadosabertos.saude.gov.br, opened 20
+  November 2026) gives its licence field as `cc-by` ("Creative Commons Atribuição"). That passes the test: commercial use
+  and adaptation are allowed with credit. Coordinates were **not verified**, so the file layout must be checked before a
+  build.
+- **Caveat on CNES.** The same portal's footer says the site's content is CC BY-ND 3.0 (no adaptation). That refers to the
+  site's own text, not to the dataset. Maintainers should confirm that the dataset licence governs the data.
+- **Fire and police stations.** The state fire and police lists were not checked. The OSM counts below are the only
+  national figures in this pass.
+- **Shelters.** No open national shelter list was found; OSM `amenity=shelter` is not counted here.
+- **Ministry of Health plan documents** are described in search results as CC BY-NC-SA (not opened). That licence is not
+  used for any dataset here.
+
+| Unit | `amenity=drinking_water` | `man_made=water_tap` | `natural=spring` | `man_made=water_well` | `amenity=hospital` | `amenity=clinic` | `amenity=fire_station` | `amenity=police` |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| `BR-AC` | 1 | 0 | 19 | 1 | 26 | 21 | 1 | 21 |
+| `BR-AL` | 5 | 0 | 6 | 93 | 111 | 154 | 10 | 82 |
+| `BR-AP` | 0 | 0 | 2 | 1 | 38 | 89 | 5 | 46 |
+| `BR-AM` | 14 | 1 | 19 | 6 | 131 | 147 | 11 | 77 |
+| `BR-BA` | 32 | 12 | 103 | 26 | 656 | 1,163 | 25 | 529 |
+| `BR-CE` | 60 | 5 | 15 | 168 | 344 | 680 | 19 | 253 |
+| `BR-DF` | 34 | 12 | 21 | 2 | 126 | 190 | 42 | 202 |
+| `BR-ES` | 41 | 3 | 15 | 3 | 144 | 432 | 20 | 250 |
+| `BR-GO` | 29 | 2 | 111 | 14 | 327 | 312 | 34 | 213 |
+| `BR-MA` | 5 | 1 | 4 | 23 | 228 | 178 | 16 | 118 |
+| `BR-MT` | 4 | 7 | 53,580 | 3 | 181 | 270 | 25 | 172 |
+| `BR-MS` | 9 | 0 | 174 | 6 | 115 | 87 | 19 | 121 |
+| `BR-MG` | 142 | 15 | 1,697 | 54 | 860 | 1,234 | 63 | 656 |
+| `BR-PA` | 42 | 0 | 23 | 16 | 270 | 229 | 16 | 141 |
+| `BR-PB` | 34 | 14 | 15 | 83 | 213 | 271 | 18 | 107 |
+| `BR-PR` | 101 | 37 | 228 | 33 | 510 | 930 | 92 | 454 |
+| `BR-PE` | 18 | 6 | 245 | 40 | 431 | 529 | 30 | 209 |
+| `BR-PI` | 9 | 0 | 9 | 29 | 228 | 478 | 3 | 106 |
+| `BR-RJ` | 71 | 22 | 727 | 54 | 603 | 797 | 118 | 541 |
+| `BR-RN` | 33 | 2 | 5 | 55 | 191 | 439 | 8 | 180 |
+| `BR-RS` | 88 | 30 | 84 | 38 | 560 | 1,056 | 132 | 583 |
+| `BR-RO` | 3 | 0 | 3 | 0 | 52 | 41 | 6 | 71 |
+| `BR-RR` | 12 | 0 | 4 | 2 | 23 | 65 | 6 | 55 |
+| `BR-SC` | 34 | 3 | 484 | 20 | 252 | 1,240 | 193 | 459 |
+| `BR-SP` | 470 | 92 | 2,411 | 136 | 1,370 | 2,663 | 234 | 2,195 |
+| `BR-SE` | 7 | 1 | 7 | 4 | 72 | 274 | 10 | 146 |
+| `BR-TO` | 7 | 0 | 11 | 0 | 52 | 75 | 2 | 28 |
+| **Total (sum of the 27 units)** | **1,305** | **265** | **60,022** | **910** | **8,114** | **14,044** | **1,158** | **8,015** |
+
+The counts are OSM objects as found by Overpass on 20 November 2026, per unit (ISO 3166-2 area); the last row is the sum of the 27
+units. A single country-wide query timed out on the Overpass server, so the country total was not counted separately. Duplicates and closed features were not removed, so these are upper bounds for a
+usable map, not checked totals.
+
+One value is an outlier and is not trusted: Mato Grosso's `natural=spring` count (53,580) is far above every other unit
+(the next highest is 2,411, in São Paulo). It is most likely a bulk import. It was not checked, and it should not be read as
+a count of springs.
 
 ## Licence notes and attribution
 
@@ -148,7 +201,35 @@ Notes:
   Until the note for the state malha is read, the IBGE layers are **not proposed for a build**. The boxes in this file
   are numbers computed from the data, and they should be re-checked against the licence before anyone relies on them.
 
+## Water: drinking and clean water
+
+This is the first priority for Brazil, so it is set out in full. For each source the question is the same as for the
+rest of the map: can the library copy it, and can it be used offline?
+
+**Proposed**
+
+- **Water layer: OpenStreetMap, under the ODbL.** Waterways and water areas, as in the US build. The ODbL 1.0 text was
+  read on its licence page on 20 November 2026 (opened): commercial use is allowed, a database built from OSM data is
+  shared under the same licence, and the credit is "© OpenStreetMap contributors".
+- **Drinking water points: OSM tags.** `amenity=drinking_water` (a public tap or fountain), `man_made=water_tap`,
+  `natural=spring` and `man_made=water_well`. A tag does not say the water is safe to drink, so springs and wells get a
+  plain "not checked for drinking" label, as REGIONS-ES.md proposes for Spain.
+- **Counts per unit** are in "Help points and counts" below (Overpass API, 20 November 2026).
+
+**Not proposed (the licence test fails)**
+
+- **ANA Base Hidrográfica Ottocodificada (BHO 6).** The metadata record (metadados.snirh.gov.br, opened 20 November 2026)
+  gives the licence as "O acesso ao dado é livre." ("access to the data is free"). That names no licence, and nothing says
+  the data may be adapted or used commercially. Not proposed until ANA names one. Next step: ask ANA, and check the
+  dataset page on dadosabertos.ana.gov.br.
+- **CPRM SIAGAS (groundwater wells).** The SIAGAS web portal (siagasweb.sgb.gov.br, opened 20 November 2026) has no
+  licence or terms text. The agreements and reports found describe software licences, not data licences, and a 2008
+  document says full data needs a written request. Not proposed; OSM water wells stand in for it. Next step: ask CPRM for
+  the data licence.
+- **Dams.** Still not checked (see the Sources table). No open national list was found in this pass.
+
 ## Help points
+
 
 The emergency numbers are the part people need most, and they are the same across the country. They are set by Anatel
 (the telecoms regulator), not by each state.
@@ -177,6 +258,16 @@ Notes:
   hold, and `scan_pack.py` lists the allowed files under `derived/geo/` (`GEO_FILES`).
 - Nothing a contributor adds may make the app open a connection. New data comes in through a build tool and ships as a
   file.
+
+Licences read for this proposal (20 November 2026):
+
+- **ODbL 1.0** (OSM water and points): commercial use allowed; a derivative database is shared under the ODbL; credit
+  "© OpenStreetMap contributors". Read on the opendatacommons.org licence page.
+- **CC BY 4.0** (Google Open Buildings; the CNES dataset's `cc-by` field): adapt, including commercially, with attribution.
+  Read on the creativecommons.org deed.
+- **CNES dataset** (`cc-by`, from the dataset licence field): see the caveat under "Help points and counts".
+- **Not licensed, so not proposed:** ANA BHO 6 ("free access" only); CPRM SIAGAS (no licence text); gov.br content
+  (CC BY-ND 3.0, no adaptation).
 
 ## Addresses in Overture, from the publisher's guide
 
@@ -224,6 +315,10 @@ Each of these needs the maintainers' decision before any code changes.
    `tools/build_crops.py` have no Brazilian equivalents yet.
 8. **Overlapping boxes.** Boxes follow each state's outline, so neighbours overlap along borders. Whether that is
    acceptable is the same question as in REGIONS-MX.md.
+9. **Water sources.** ANA's licence for BHO 6 and CPRM's licence for SIAGAS data are both unanswered. Both fail the test
+   until one is named.
+10. **CNES.** Confirm that the dataset licence (`cc-by`) governs the CNES data, not the portal footer (CC BY-ND), and
+    check that the file has coordinates.
 
 ## What was checked, and what was not
 
@@ -236,6 +331,11 @@ Each of these needs the maintainers' decision before any code changes.
   Martim Vaz.
 - **Seen only in search results:** the IBGE technical and legal note and the BC250 terms (restricted use); the Correios
   addressing guide; a 2017 federal open-data resolution that lists CC0, PDDL, CC BY 4.0 and ODbL as acceptable.
+- **Opened on 20 November 2026 (water and help points):** the Overpass API (OSM counts, eight tags, 27 units and the
+  whole country); the ODbL 1.0 and CC BY 4.0 licence texts; the ANA BHO 6 metadata record; the SIAGAS web portal (no
+  licence text); the CNES dataset page (licence field `cc-by`); the CNES portal footer (CC BY-ND 3.0 for the site).
+- **Seen only in search results:** the Ministry of Health open-data plans (CC BY-NC-SA); the CPRM SIAGAS agreements;
+  the ANA open-data policy wording.
 - **Not checked:** the ISO Online Browsing Platform (iso.org); the IBGE technical and legal note itself; the CNES health
   register; state fire and police station lists; MapBiomas licence and class list; Google Open Buildings coverage for
   Brazil; OSM counts for Brazil; per-state Overture address counts; the populations of Trindade and Martim Vaz.
