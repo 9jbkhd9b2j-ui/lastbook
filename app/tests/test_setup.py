@@ -8,7 +8,7 @@ The test server lives only in this file: it serves a small fake pack and model o
 for the run, and can cut the connection mid-file, send wrong bytes, change the file's ETag, ignore Range, or redirect anywhere.
 The product's allowlist is not touched: tests pass their own `allowed` and TLS context to the downloader. Never packaged.
 """
-import hashlib, http.server, importlib.util, io, json, os, shutil, signal, socket, socketserver, ssl, subprocess, sys, threading, time, unittest, zipfile
+import errno, hashlib, http.server, importlib.util, io, json, os, re, shutil, signal, socket, socketserver, ssl, subprocess, sys, threading, time, unittest, zipfile
 from pathlib import Path
 from unittest import mock
 
@@ -2000,6 +2000,112 @@ class Manage(Base):
             self.assertEqual(j['error']['code'], 'cancelled')
             self.assertIn('copy again to the same place', j['error']['message'])
         self.assertTrue(api.install.is_library(lib))
+
+    def test_copy_refuses_a_lastbookdata_that_is_a_file(self):
+        """A plain file called LastbookData on the drive gets the usual folder refusal, not an internal error."""
+        lib = self.installed_library()
+        drive = self.drive()
+        (drive / 'LastbookData').write_text('not a folder')
+        r = self.setup('manage', current=lib).start(copy_to=str(drive))
+        self.assertEqual(r['code'], 'folder', r)
+        self.assertIn('file called LastbookData', r['error'])
+        self.assertEqual((drive / 'LastbookData').read_text(), 'not a folder')
+
+    def test_copy_drive_failure_is_not_the_internet(self):
+        """A drive that fails mid-copy (pulled out, an I/O error) stops as 'copy', about the drive: a copy downloads nothing."""
+        lib = self.installed_library()
+        s = self.setup('manage', current=lib)
+        real = api._open_new
+
+        def failing(path):
+            if str(path).endswith('.partial'):
+                raise OSError(errno.EIO, 'Input/output error')
+            return real(path)
+        with mock.patch.object(api, '_open_new', failing):
+            s.start(copy_to=str(self.drive()))
+            j = self.wait(s)
+        self.assertEqual((j['state'], j['error']['code']), ('failed', 'copy'), j)
+        self.assertIn('drive is still connected', j['error']['message'])
+        self.assertNotIn('internet', j['error']['message'])
+
+    def test_finish_refuses_a_copy(self):
+        """A finished copy has no library to switch to here: finish() says so and switches nothing."""
+        lib = self.installed_library()
+        s = self.setup('manage', current=lib)
+        finished = []
+        s.on_finish = finished.append
+        s.start(copy_to=str(self.drive()))
+        self.assertEqual(self.wait(s)['state'], 'done')
+        r = s.finish()
+        self.assertEqual(r['code'], 'nothing', r)
+        time.sleep(0.6)
+        self.assertEqual(finished, [])
+        self.assertIsNone(api.startup(self.settings)[1])
+
+    @unittest.skipUnless(shutil.which('node'), 'needs Node')
+    def test_copy_screen_offers_pause_while_copying_and_resume_after(self):
+        """waiting -> copying -> paused -> resumed, from the real engine, each drawn by setup.js's own jobControls: Pause stays
+        while copying (it used to vanish once the state became 'copying'), Resume replaces it when paused, Cancel is always there."""
+        lib = self.installed_library()
+        s = self.setup('manage', current=lib)
+        gate, real = threading.Event(), api._read_back
+
+        def held(path, control, progress):        # the copy waits here, mid-file, until the test lets it go (Pause still works)
+            while not gate.wait(0.02):
+                control.check()
+            return real(path, control, progress)
+
+        def until(state):
+            t0 = time.time()
+            while s.public_job()['state'] != state:
+                self.assertLess(time.time() - t0, 20, s.public_job())
+                time.sleep(0.02)
+            return s.public_job()
+        with mock.patch.object(api, '_read_back', held):
+            seen = [s.start(copy_to=str(self.drive())), until('copying'), s.pause(), s.resume(), until('copying')]
+            gate.set()
+            self.assertEqual(self.wait(s)['state'], 'done')
+        self.assertIn(seen[0]['state'], ('waiting', 'copying'))
+        self.assertEqual([j['state'] for j in seen[1:]], ['copying', 'paused', 'waiting', 'copying'])
+        script = r"""
+const src = require('fs').readFileSync(process.argv[1], 'utf8'), jobs = JSON.parse(process.argv[2]);
+const section = (a, b) => src.slice(src.indexOf(a), src.indexOf(b, src.indexOf(a)));
+const ico = () => '';
+eval(section('  function jobControls(', '  async function jobAct('));
+console.log(JSON.stringify(jobs.map(jobControls)));
+"""
+        r = subprocess.run([shutil.which('node'), '-e', script, str(ROOT / 'web' / 'setup.js'), json.dumps(seen)],
+                           check=True, capture_output=True, text=True, encoding='utf-8')
+        for j, html in zip(seen, json.loads(r.stdout)):
+            with self.subTest(state=j['state']):
+                acts = re.findall(r'data-act="([a-z-]+)"', html)
+                self.assertEqual(acts, ['resume', 'cancel'] if j['state'] == 'paused' else ['pause', 'cancel'])
+
+    @unittest.skipUnless(shutil.which('node'), 'needs Node')
+    def test_copy_screen_words(self):
+        """A copy's cancel and stops speak of the copy and the drive, never of a download or the internet."""
+        script = r"""
+const src = require('fs').readFileSync(process.argv[1], 'utf8');
+const section = (a, b) => src.slice(src.indexOf(a), src.indexOf(b, src.indexOf(a)));
+const esc = s => String(s == null ? '' : s), ico = () => '', size = String, diskName = () => 'the drive', diskFor = () => null;
+const errCode = e => e && e.code, errText = e => e && e.message, cur = () => ({});
+let folder = '';
+eval(section('  function errorBox(', '  function itemHTML('));
+const job = code => ({copy: true, folder: '/srv/x/LastbookData', error: {code, message: 'Lastbook could not read or write a file for the copy. Check the drive is still connected, then copy again to the same place to carry on.'}, items: []});
+console.log(JSON.stringify({copy: errorBox(job('copy')), full: errorBox(job('no_space')), cancelled: errorBox(job('cancelled')),
+                            confirm: src.includes("j.copy ? 'Stop copying? What is copied stays on the drive.'"),
+                            live: src.includes("'The copy was stopped. What was copied is on the drive.'")}));
+"""
+        r = subprocess.run([shutil.which('node'), '-e', script, str(ROOT / 'web' / 'setup.js')],
+                           check=True, capture_output=True, text=True, encoding='utf-8')
+        out = json.loads(r.stdout)
+        self.assertIn('The copy stopped.', out['copy'])
+        self.assertIn('The drive is full.', out['full'])
+        self.assertIn('The copy was cancelled.', out['cancelled'])
+        for k in ('copy', 'full', 'cancelled'):
+            self.assertNotIn('internet', out[k])
+            self.assertNotIn('download', out[k].lower())
+        self.assertTrue(out['confirm'] and out['live'])
 
     def test_repair_needs_a_known_pack(self):
         lib = self.parent / 'LastbookData'

@@ -738,6 +738,8 @@ class Setup:
                 return {'error': 'Choose a place outside this library, such as a USB drive.', 'code': 'folder'}
             if target.is_symlink():
                 return {'error': f'The {DATA_NAME} folder there is a link. Choose another drive or folder.', 'code': 'folder'}
+            if target.exists() and not target.is_dir():
+                return {'error': f'There is already a file called {DATA_NAME} there. Choose another drive or folder.', 'code': 'folder'}
             if target.exists() and any(target.iterdir()) and not (target / COPY_MARK).exists():
                 return {'error': f'There is already a {DATA_NAME} folder there. Choose another drive or folder.', 'code': 'folder'}
             if not os.access(target.parent, os.W_OK):
@@ -1029,6 +1031,8 @@ class Setup:
             job = self.job
             if not job or job['state'] != 'done':
                 return {'error': 'Setup has not finished yet.', 'code': 'not_done'}
+            if job.get('copy'):       # a copy went to a drive: there is no library here to switch to
+                return {'error': 'A copy has no library to open here. It is on the drive.', 'code': 'nothing'}
             plan = job['plan']
             folder = plan.get('use_library') or plan['target']
         if not self.on_finish:
@@ -1160,7 +1164,14 @@ class Setup:
         except install.Refused as e:
             self._fail(it, e.code, e.message)
         except OSError as e:
-            if download.disk_full(e):
+            if plan.get('copy'):        # the drive, not the internet: a copy downloads nothing
+                traceback.print_exc()
+                if download.disk_full(e):
+                    self._fail(it, 'no_space', 'The drive filled up. What was copied is kept: use a larger drive, or free some space and copy again to the same place.')
+                else:
+                    self._fail(it, 'copy', f'Lastbook could not read or write a file for the copy ({type(e).__name__}: {e.strerror or e}). '
+                                           'Check the drive is still connected, then copy again to the same place to carry on.')
+            elif download.disk_full(e):
                 self._fail(it, 'no_space', 'The disk filled up. Free some space, then try again.')
             else:
                 traceback.print_exc()
