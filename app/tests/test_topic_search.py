@@ -151,7 +151,9 @@ URGENT = {
     'allergic reaction not responding to epinephrine': ['hurt', 'allergy'],
     'allergic reaction choking': ['hurt', 'allergy'], 'burn and choking on smoke': ['hurt', 'burn'],
 }
-TOPS = sorted({*SAME_AS, *SAME_AS.values(), *SAME_GUIDE, *SAME_GUIDE.values(), *FIRST, *UNDISTURBED, *URGENT, *EVERYDAY, *LISTED})
+# A breathing emergency after a sting must not open routine sting care.
+NOT_STING = ["bee sting can't breathe", 'bee sting cannot breathe', 'bee sting unconscious', 'wasp sting unconscious']
+TOPS = sorted({*SAME_AS, *SAME_AS.values(), *SAME_GUIDE, *SAME_GUIDE.values(), *FIRST, *UNDISTURBED, *URGENT, *EVERYDAY, *LISTED, *NOT_STING})
 
 # A made-up topic in Spanish and Chinese: found by Spanish words and by a single Han character.
 OWN = {'id': 'own', 'title': 'Agua potable', 'short': 'Hervir el agua', 'keywords': ['水'], 'choices': []}
@@ -298,6 +300,13 @@ class TopicSearch(unittest.TestCase):
                 with self.subTest(q=q, segmenter=r['segmenter']):
                     self.assertEqual(top[q][0] if top[q] else None, first)
 
+    def test_breathing_after_a_sting(self):
+        for r in self.modes:
+            top = dict(zip(TOPS, (ok(e) for e in r['tops'])))
+            for q in NOT_STING:
+                with self.subTest(q=q, segmenter=r['segmenter']):
+                    self.assertTrue(top[q])
+                    self.assertNotIn(['hurt', 'sting'], top[q])
 
     def test_urgent_guide_comes_first(self):
         for r in self.modes:
