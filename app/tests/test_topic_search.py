@@ -159,6 +159,21 @@ TOPS = sorted({*SAME_AS, *SAME_AS.values(), *SAME_GUIDE, *SAME_GUIDE.values(), *
 OWN = {'id': 'own', 'title': 'Agua potable', 'short': 'Hervir el agua', 'keywords': ['水'], 'choices': []}
 RANK_OWN = [['agua', [OWN]], ['水', [OWN]], ['hervir', [OWN]]]
 
+# Emergencies where the first choice decides what someone reads first. A cardiac arrest needs CPR, not the
+# long-term care guide that "heart" also matches: [guide, choice] that comes first.
+EMERGENCY_FIRST = {
+    'cardiac arrest': ['hurt', 'breathing'], 'heart stopped': ['hurt', 'breathing'], 'AED': ['hurt', 'breathing'],
+    'aed': ['hurt', 'breathing'], 'defibrillator': ['hurt', 'breathing'], 'heart attack': ['hurt', 'sudden'],
+    'having a heart attack': ['hurt', 'sudden'], 'signs of heart attack': ['hurt', 'sudden'],
+}
+# Searches those words must not disturb: [guide, choice] that comes first.
+EMERGENCY_UNDISTURBED = {
+    'heart': ['health', 'chronic'], 'heart disease': ['health', 'chronic'], 'blood pressure': ['health', 'chronic'],
+    'chest pain': ['hurt', 'sudden'], 'collapsed': ['hurt', 'breathing'], 'not breathing': ['hurt', 'breathing'],
+    'drowning': ['hurt', 'breathing'], 'cpr': ['hurt', None], 'stopped': ['disaster', 'earthquake-after'],
+}
+TOPS = sorted({*TOPS, *EMERGENCY_FIRST, *EMERGENCY_UNDISTURBED})
+
 # A guide whose urgent phrase the search names comes first, even when the other words pull another guide ahead or
 # below the cut; that guide is still offered: query -> (first row, a row that must still be shown).
 GUIDE_URGENT = {
@@ -256,6 +271,12 @@ class TopicSearch(unittest.TestCase):
         for r in self.modes:
             self.assertEqual([ok(e) for e in r['match']], [m[2] for m in MATCH])
 
+    def test_emergency_words_open_first_aid(self):
+        for r in self.modes:
+            top = dict(zip(TOPS, (ok(e) for e in r['tops'])))
+            for q, first in [*EMERGENCY_FIRST.items(), *EMERGENCY_UNDISTURBED.items()]:
+                with self.subTest(q=q, segmenter=r['segmenter']):
+                    self.assertEqual(top[q][:1], [first])   # an empty result fails, not errors
 
     def test_rank_non_english_topic(self):
         for r in self.modes:
