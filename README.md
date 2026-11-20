@@ -106,9 +106,23 @@ unzipping a pack from lastbook.org.
 
 ```bash
 python3 -m venv .venv
-.venv/bin/pip install -r packaging/requirements_macos.txt     # on Windows: packaging/requirements_app.txt
+.venv/bin/pip install -r packaging/requirements_macos.txt
 .venv/bin/python app/main.py --data /path/to/LastbookData
 ```
+
+On Windows:
+
+```powershell
+python -m venv .venv
+.venv\Scripts\pip install -r packaging/requirements_app.txt
+.venv\Scripts\python app\main.py --data C:\path\to\LastbookData
+```
+
+The Windows window also needs three files from the NuGet package `Microsoft.Web.WebView2` 1.0.3856.49 in
+`app/webview2/`: `lib/net462/Microsoft.Web.WebView2.Core.dll`, `lib/net462/Microsoft.Web.WebView2.WinForms.dll` and
+`runtimes/win-x64/native/WebView2Loader.dll`. A `.nupkg` file is a zip file. Download it from
+https://www.nuget.org/api/v2/package/Microsoft.Web.WebView2/1.0.3856.49 and copy the files out. You can check them
+against the hashes in `packaging/build_app_windows.sh`.
 
 On Linux, start it through `packaging/linux/run_source_linux.sh` instead, or videos will not play. The window comes
 from the system (WebKitGTK 4.1 and PyGObject), so make the virtual environment with `--system-site-packages` and install
