@@ -60,6 +60,25 @@ class Notes(unittest.TestCase):
             with self.assertRaises(ValueError):
                 notes.add(empty, None, GUIDES)
 
+    def test_values_of_other_types(self):
+        """#177 review: the request body is JSON, so guide and words can be any JSON value. A guide that is not text (a list or an
+        object could not even be looked up among the guides, and raised) counts as no guide; words that are not text are refused.
+        Through the route, each is a plain answer, never an internal error, and nothing odd is kept."""
+        for guide in (['water'], {'id': 'water'}, 7, True, None):
+            with self.subTest(guide=guide):
+                self.assertIsNone(notes.add('sterilize a needle', guide, GUIDES)['guide'])
+                h = H(body={'words': 'sterilize a needle', 'guide': guide})
+                notes.handle(h, 'POST', '/api/not-found', GUIDES)
+                self.assertEqual((h.status, h.answer()['note']['guide']), (200, None))
+        for words in (['a'], {'w': 1}, 12, False):
+            with self.subTest(words=words):
+                with self.assertRaises(ValueError):
+                    notes.add(words, None, GUIDES)
+                h = H(body={'words': words, 'guide': 'water'})
+                notes.handle(h, 'POST', '/api/not-found', GUIDES)
+                self.assertEqual(h.status, 400)
+        self.assertTrue(all(isinstance(n['words'], str) and n['guide'] is None for n in notes.load()))
+
     def test_delete_one_and_all(self):
         a, b = notes.add('one', None, GUIDES), notes.add('two', 'water', GUIDES)
         self.assertEqual(notes.delete(a['id']), 1)

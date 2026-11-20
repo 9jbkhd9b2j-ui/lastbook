@@ -48,11 +48,16 @@ def _save(notes):
 
 
 def add(words, guide=None, guides=()):
-    """Keeps one note. words: what was typed (trimmed, at most MAX_WORDS). guide: a guide id from guides, else none."""
-    words = ' '.join(str(words or '').split())[:MAX_WORDS]
+    """Keeps one note. words: what was typed (text, trimmed, at most MAX_WORDS). guide: a guide id from guides, else none.
+    Both come from a request body, so their types are checked before anything else: words that are not text are refused, and a
+    guide that is not text (a list or an object, which could not even be looked up) counts as no guide, like an unknown one."""
+    if words is not None and not isinstance(words, str):
+        raise ValueError('There is nothing to keep: the words are not text.')
+    words = ' '.join((words or '').split())[:MAX_WORDS]
     if not words:
         raise ValueError('There is nothing to keep: no words.')
-    note = {'id': uuid.uuid4().hex[:12], 'words': words, 'guide': guide if guide in set(guides) else None, 'at': time.strftime('%Y-%m-%d')}
+    known = isinstance(guide, str) and guide in set(guides)
+    note = {'id': uuid.uuid4().hex[:12], 'words': words, 'guide': guide if known else None, 'at': time.strftime('%Y-%m-%d')}
     with _lock:
         notes = load() + [note]
         _save(notes[-MAX_NOTES:])
