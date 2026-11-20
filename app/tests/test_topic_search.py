@@ -161,6 +161,19 @@ URGENT = {
 NOT_STING = ["bee sting can't breathe", 'bee sting cannot breathe', 'bee sting unconscious', 'wasp sting unconscious']
 TOPS = sorted({*SAME_AS, *SAME_AS.values(), *SAME_GUIDE, *SAME_GUIDE.values(), *FIRST, *UNDISTURBED, *URGENT, *EVERYDAY, *LISTED, *NOT_STING})
 
+# A question about her ranks exactly as the same question about him. A guide word only has to start with a search
+# word, so "she" found "shelter" and put Shelter in place first; "her" and "his" found "here" and "hissing".
+SAME_FOR_HIM = {
+    'she is bleeding': 'he is bleeding', "she can't breathe": "he can't breathe", 'is she breathing': 'is he breathing',
+    'she is choking': 'he is choking', 'she fell and hit her head': 'he fell and hit his head',
+    'she burned her hand': 'he burned his hand', 'she has a fever': 'he has a fever',
+    'her arm is bleeding': 'his arm is bleeding',
+}
+# Typing "shelter" still finds it from "shel": [guide, choice] that comes first.
+STILL_SHELTER = {'shel': ['disaster', 'shelter-in-place'], 'shelter': ['disaster', 'shelter-in-place'],
+                 'shelter in place': ['disaster', 'shelter-in-place']}
+TOPS = sorted({*TOPS, *SAME_FOR_HIM, *SAME_FOR_HIM.values(), *STILL_SHELTER})
+
 # A made-up topic in Spanish and Chinese: found by Spanish words and by a single Han character.
 OWN = {'id': 'own', 'title': 'Agua potable', 'short': 'Hervir el agua', 'keywords': ['水'], 'choices': []}
 RANK_OWN = [['agua', [OWN]], ['水', [OWN]], ['hervir', [OWN]]]
@@ -348,6 +361,17 @@ class TopicSearch(unittest.TestCase):
                 with self.subTest(q=q, segmenter=r['segmenter']):
                     self.assertEqual(top[q][:1], [first])
 
+
+    def test_her_ranks_as_him(self):
+        for r in self.modes:
+            top = dict(zip(TOPS, (ok(e) for e in r['tops'])))
+            for q, him in SAME_FOR_HIM.items():
+                with self.subTest(q=q, segmenter=r['segmenter']):
+                    self.assertTrue(top[him])                      # the question about him does find a guide
+                    self.assertEqual(top[q], top[him])
+            for q, first in STILL_SHELTER.items():
+                with self.subTest(q=q, segmenter=r['segmenter']):
+                    self.assertEqual(top[q][:1], [first])
 
 if __name__ == '__main__':
     unittest.main()
