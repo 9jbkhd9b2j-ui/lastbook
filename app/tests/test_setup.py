@@ -2082,6 +2082,45 @@ console.log(JSON.stringify(jobs.map(jobControls)));
                 self.assertEqual(acts, ['resume', 'cancel'] if j['state'] == 'paused' else ['pause', 'cancel'])
 
     @unittest.skipUnless(shutil.which('node'), 'needs Node')
+    def test_copy_paused_at_100_percent_keeps_its_own_words(self):
+        """#204 review: the last file's read-back has reported 100% and the copy is paused before it finishes. The page used to say
+        "Stopped when Lastbook closed. Resume to finish; nothing needs downloading" with Lastbook open (every paused item looked
+        complete). The copy's own line comes first. Then Resume finishes the copy."""
+        lib = self.installed_library()
+        s = self.setup('manage', current=lib)
+        gate, reached, real = threading.Event(), threading.Event(), api._read_back
+
+        def held(path, control, progress):         # after the read-back that brings the copy to 100%, wait (Pause still works)
+            out = real(path, control, progress)
+            it = s.job['items'][0]
+            if it['bytes_done'] >= it['bytes_total']:
+                reached.set()
+                while not gate.wait(0.02):
+                    control.check()
+            return out
+        with mock.patch.object(api, '_read_back', held):
+            s.start(copy_to=str(self.drive()))
+            self.assertTrue(reached.wait(20))
+            paused = s.pause()
+            self.assertEqual(paused['state'], 'paused')
+            self.assertEqual(paused['items'][0]['bytes_done'], paused['items'][0]['bytes_total'])   # 100%, not finished
+            gate.set()
+            s.resume()
+            self.assertEqual(self.wait(s)['state'], 'done')
+        script = r"""
+const src = require('fs').readFileSync(process.argv[1], 'utf8'), j = JSON.parse(process.argv[2]);
+const section = (a, b) => src.slice(src.indexOf(a), src.indexOf(b, src.indexOf(a)));
+eval(section('  const noDownload = ', '  const STOPPED = ') + section('  function jobLead(', '  /* Resume when paused'));   // one eval: noDownload in jobLead's scope
+console.log(JSON.stringify({copy: jobLead(j), download: jobLead(Object.assign({}, j, {copy: false}))}));
+"""
+        r = subprocess.run([shutil.which('node'), '-e', script, str(ROOT / 'web' / 'setup.js'), json.dumps(paused)],
+                           check=True, capture_output=True, text=True, encoding='utf-8')
+        out = json.loads(r.stdout)
+        self.assertEqual(out['copy'], 'What is copied is kept. Resume when you are ready. If Lastbook closes, copy again to the same place to carry on.')
+        self.assertNotIn('Stopped when Lastbook closed', out['copy'])
+        self.assertIn('Stopped when Lastbook closed', out['download'])   # the same complete item in a download job: unchanged
+
+    @unittest.skipUnless(shutil.which('node'), 'needs Node')
     def test_copy_screen_words(self):
         """A copy's cancel and stops speak of the copy and the drive, never of a download or the internet."""
         script = r"""

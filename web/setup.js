@@ -511,11 +511,7 @@
       lastAct = null;
       const first = !shapeKey;
       shapeKey = key;
-      const quiet = j.state === 'paused' && j.items.filter(i => i.state === 'paused').every(noDownload);
-      const lead = quiet ? 'Stopped when Lastbook closed. Resume to finish; nothing needs downloading.'
-        : j.state === 'paused' && j.copy ? 'What is copied is kept. Resume when you are ready. If Lastbook closes, copy again to the same place to carry on.'
-        : j.state === 'paused' ? 'What is downloaded is kept. Resume when you are ready, even after closing Lastbook.'
-        : j.state === 'failed' ? '' : j.copy ? 'You can keep using this computer. If Lastbook closes, copy again to the same place to carry on.' : 'You can keep using this computer. Closing Lastbook pauses it.';
+      const lead = jobLead(j);
       main.innerHTML = `<h1>${head}</h1>${lead ? `<p class="lead">${lead}</p>` : ''}
         ${j.state === 'failed' ? errorBox(j) : ''}
         <div class="s-items">${j.items.map(it => itemHTML(it, j)).join('')}</div>
@@ -532,6 +528,17 @@
     const fresh = main.querySelectorAll('.s-bar.new');
     j.items.forEach(it => { const el = main.querySelector(`[data-item="${CSS.escape(it.id)}"][data-kind="${CSS.escape(it.kind)}"]`); if (el) fillItem(el, it) });
     if (fresh.length) { void main.offsetWidth; fresh.forEach(b => b.classList.remove('new')) }   // a new screen shows the bar where it is, without growing from nothing
+  }
+  /* The line under the heading. A copy has its own words first: it downloads nothing, and a copy paused at 100% (its last file
+     read back, not yet finished) is not "stopped when Lastbook closed" (#204 review). */
+  function jobLead(j) {
+    if (j.state === 'failed') return '';
+    if (j.copy) return j.state === 'paused' ? 'What is copied is kept. Resume when you are ready. If Lastbook closes, copy again to the same place to carry on.'
+      : 'You can keep using this computer. If Lastbook closes, copy again to the same place to carry on.';
+    const quiet = j.state === 'paused' && j.items.filter(i => i.state === 'paused').every(noDownload);
+    return quiet ? 'Stopped when Lastbook closed. Resume to finish; nothing needs downloading.'
+      : j.state === 'paused' ? 'What is downloaded is kept. Resume when you are ready, even after closing Lastbook.'
+      : 'You can keep using this computer. Closing Lastbook pauses it.';
   }
   /* Resume when paused; Pause while it downloads, waits, or copies (a copy pauses between chunks, as a download does) */
   function jobControls(j) {
