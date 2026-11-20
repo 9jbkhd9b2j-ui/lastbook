@@ -14,7 +14,10 @@ def export(catalog_path, output_path):
         raise ValueError("catalog.json must contain a list of records")
     entries = []
     for record in records:
-        if not isinstance(record, dict) or record.get("kind") not in READING_KINDS:
+        if not isinstance(record, dict):
+            continue
+        kind = record.get("kind")
+        if not isinstance(kind, str) or kind not in READING_KINDS:
             continue
         title = record.get("title")
         if not isinstance(title, str) or not title.strip():
