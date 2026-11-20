@@ -62,6 +62,8 @@
   "swallowed",
   "overdose",
   "pesticide",
+  "burned",
+  "burnt",
   "bites",
   "stings",
   "snakebite",
@@ -157,7 +159,7 @@
   {
    "id": "burn",
    "label": "Burn or scald",
-   "hint": "Fire, hot water, cooking oil, chemicals, electricity",
+   "hint": "Burnt or burned by fire, hot water, cooking oil, chemicals, electricity",
    "read": [
     {
      "doc": "med-2e83e22162a9a006",
@@ -182,7 +184,7 @@
   {
    "id": "bone",
    "label": "Broken bone, dislocation or sprain",
-   "hint": "Fall, twisted ankle, limb looks bent or can't be moved",
+   "hint": "Fall, twisted ankle, fractured or dislocated limb, looks bent or can't be moved",
    "read": [
     {
      "doc": "med-443ae5cfaa6ecc68",
@@ -214,6 +216,7 @@
    "id": "breathing",
    "label": "Not breathing, unconscious or choking",
    "hint": "Collapsed or fainted, not responding, can't breathe, gasping, food stuck in throat, drowning",
+   "urgent": ["not breathing", "stopped breathing", "isn't breathing", "isnt breathing", "unconscious"],
    "read": [
     {
      "doc": "med-2e83e22162a9a006",
@@ -262,7 +265,7 @@
   {
    "id": "head",
    "label": "Head, neck or back injury",
-   "hint": "Fall, car crash, blow to the head, confused or numb after an accident",
+   "hint": "Fall, car crash, blow to the head, spinal or vertebral injury, fractured skull, spine or vertebrae, dislocated neck, confused or numb after an accident",
    "read": [
     {
      "doc": "med-443ae5cfaa6ecc68",
@@ -293,7 +296,7 @@
   {
    "id": "heatcold",
    "label": "Too hot or too cold (heat stroke, hypothermia, frostbite)",
-   "hint": "Heat wave, no AC, confused and hot, shivering, frostnip, numb white fingers",
+   "hint": "Heatstroke or heat wave, no AC, confused and hot, shivering, frostnip, numb white fingers",
    "read": [
     {
      "doc": "med-2e83e22162a9a006",
@@ -406,7 +409,7 @@
   {
    "id": "poison",
    "label": "Poisoning: swallowed a chemical, medicine or pesticide",
-   "hint": "Cleaning product, too many pills (overdose), fuel, button battery, a child got into something",
+   "hint": "Poisoned by a cleaning product, too many pills (overdose), fuel, button battery, a child got into something",
    "read": [
     {
      "doc": "med-2e83e22162a9a006",
@@ -425,7 +428,7 @@
   {
    "id": "diarrhea",
    "label": "Diarrhea, vomiting or dehydration",
-   "hint": "Stomach bug, loose motions, bad water, baby or older person drying out",
+   "hint": "Diarrhoea, throwing up, stomach bug, loose motions, bad water, baby or older person dehydrated or drying out",
    "read": [
     {
      "doc": "med-8bd4770a63b99cc6",
