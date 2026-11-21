@@ -1657,6 +1657,112 @@ class PackCompare(unittest.TestCase):
         self.assertIn('line 2 of', r.stderr)
 
 
+
+class PackPlan(unittest.TestCase):
+    """An update plan for an installed library (issue #144): read-only, and what isn't the pack's is kept, never removed."""
+    HEADER = 'path\tbytes\tsha256\thow\tchanges\n'
+
+    def setUp(self):
+        self.tmp = shorttemp.mkdtemp('lastbook-plan-')
+        self.addCleanup(shutil.rmtree, self.tmp, True)
+        self.lib = self.tmp / 'LastbookData'
+        self.pack = {'pack.json': b'{"name": "small"}', 'library-data/catalog.json': b'[]', 'library-data/a.pdf': b'a' * 100,
+                     'derived/geo/national.sqlite': b'base map' * 10}
+        for rel, data in self.pack.items():
+            self.put(rel, data)
+        self.put('pack-manifest.tsv', self.listing(self.pack).encode())
+
+    def put(self, rel, data):
+        f = self.lib / rel
+        f.parent.mkdir(parents=True, exist_ok=True)
+        f.write_bytes(data)
+
+    def listing(self, files):
+        return self.HEADER + ''.join(f'{rel}\t{len(data)}\t{sha(data)}\tclone\t\n' for rel, data in files.items())
+
+    def rows(self, files):
+        return [(rel, len(data), sha(data)) for rel, data in files.items()]
+
+    def own_map(self):
+        """A state map installed on its own: it replaces the pack's national.sqlite and adds a places index."""
+        self.put('derived/geo/national.sqlite', b'state map' * 30)
+        self.put('derived/geo/places.sqlite', b'p' * 40)
+        files = {'derived/geo/national.sqlite': 270, 'derived/geo/places.sqlite': 40}
+        self.put('map-set.json', json.dumps({'name': 'RI', 'files': files}).encode())
+
+    def test_nothing_changed_fetches_nothing(self):
+        d = install.plan_update(self.lib, self.rows(self.pack))
+        self.assertEqual((d['added'], d['changed'], d['removed'], d['fetch_bytes']), ([], [], [], 0))
+        self.assertEqual(d['unchanged'], sorted(self.pack))
+        self.assertEqual(d['reuse_bytes'], sum(len(v) for v in self.pack.values()))
+        self.assertEqual(d['kept'], {'map': [], 'model': [], 'addresses': [], 'other': []})    # the list itself is not "kept"
+        self.assertIsNone(d['map'])
+
+    def test_one_changed_and_one_new(self):
+        new = {**self.pack, 'library-data/a.pdf': b'A' * 120, 'library-data/b.pdf': b'b' * 30}
+        d = install.plan_update(self.lib, self.rows(new))
+        self.assertEqual((d['changed'], d['added'], d['removed']), (['library-data/a.pdf'], ['library-data/b.pdf'], []))
+        self.assertEqual((d['bytes']['changed'], d['bytes']['added'], d['fetch_bytes']), (120, 30, 150))
+
+    def test_a_map_installed_on_its_own_is_kept(self):
+        self.own_map()
+        new = {k: v for k, v in self.pack.items() if k != 'derived/geo/national.sqlite'}   # say the release drops its own map
+        for release in (new, {**self.pack, 'derived/geo/national.sqlite': b'new base map' * 9}):
+            with self.subTest(len(release)):
+                d = install.plan_update(self.lib, self.rows(release))
+                every = d['added'] + d['changed'] + d['removed'] + d['unchanged']
+                self.assertNotIn('derived/geo/national.sqlite', every)      # neither removed nor fetched over the state map
+                self.assertEqual(d['fetch_bytes'], 0)
+                self.assertEqual([r for r, _ in d['kept']['map']],
+                                 ['derived/geo/national.sqlite', 'derived/geo/places.sqlite', 'map-set.json'])
+                self.assertEqual(d['map'], 'RI')
+
+    def test_without_its_own_map_the_packs_map_is_compared(self):
+        d = install.plan_update(self.lib, self.rows({**self.pack, 'derived/geo/national.sqlite': b'new base map' * 9}))
+        self.assertEqual((d['changed'], d['kept']['map']), (['derived/geo/national.sqlite'], []))
+
+    def test_model_addresses_and_other_files_are_kept(self):
+        self.put('models/model.gguf', b'm' * 50)
+        self.put('derived/geo/addresses/RI.sqlite', b'r' * 20)
+        self.put('derived/llm/state.json', b'{}')
+        self.put('library-data/my-notes.txt', b'mine')
+        d = install.plan_update(self.lib, self.rows({k: v for k, v in self.pack.items() if k != 'library-data/a.pdf'}))
+        self.assertEqual(d['removed'], ['library-data/a.pdf'])          # only the pack's own file
+        self.assertEqual(d['kept']['model'], [('models/model.gguf', 50)])
+        self.assertEqual(d['kept']['addresses'], [('derived/geo/addresses/RI.sqlite', 20)])
+        self.assertEqual(d['kept']['other'], [('derived/llm/state.json', 2), ('library-data/my-notes.txt', 4)])
+        self.assertEqual(d['kept_bytes'], {'map': 0, 'model': 50, 'addresses': 20, 'other': 6})
+
+    def test_nothing_on_disk_changes(self):
+        self.own_map()
+        self.put('models/model.gguf', b'm' * 50)
+
+        def snapshot():
+            return sorted((str(f.relative_to(self.lib)), f.stat().st_size, f.stat().st_mtime_ns, sha(f.read_bytes()))
+                          for f in self.lib.rglob('*') if f.is_file())
+        before = snapshot()
+        install.plan_update(self.lib, self.rows({**self.pack, 'library-data/c.pdf': b'c'}))
+        self.assertEqual(snapshot(), before)
+
+    def test_a_broken_installed_list_plans_nothing(self):
+        (self.lib / 'pack-manifest.tsv').write_text(self.HEADER, encoding='utf-8')
+        with self.assertRaises(ValueError):
+            install.plan_update(self.lib, self.rows(self.pack))
+
+    def test_tool(self):
+        self.own_map()
+        self.put('models/model.gguf', b'm' * 50)
+        new = self.tmp / 'new.tsv'
+        new.write_text(self.listing({**self.pack, 'library-data/b.pdf': b'b' * 30}), encoding='utf-8')
+        r = subprocess.run([sys.executable, '-B', str(ROOT / 'tools' / 'compare_packs.py'), '--data', str(self.lib), str(new), '--list'],
+                           capture_output=True, text=True)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn('Kept as they are, not part of the pack:', r.stdout)
+        self.assertIn('your own map (RI)', r.stdout)
+        self.assertIn('the local AI', r.stdout)
+        self.assertIn('kept (model):\n  models/model.gguf', r.stdout)
+        self.assertIn('To fetch: 30 bytes', r.stdout)
+
 class Manage(Base):
     """Repair, removing the AI, and the folder picker's answer."""
 
