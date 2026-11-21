@@ -304,7 +304,13 @@
     "having the baby",
     "having her baby",
     "she s having the baby",
-    "just had a baby"
+    "just had a baby",
+    "cord came out first",
+    "cord came out before",
+    "contractions won t stop",
+    "contractions wont stop",
+    "contraction won t stop",
+    "contraction wont stop"
    ],
    "weak": [
     "water broke",
@@ -333,7 +339,44 @@
     "waters are brown",
     "waters popped",
     "waters burst",
-    "waters are broken"
+    "waters are broken",
+    "water has broke",
+    "labor pain",
+    "labor is taking",
+    "labor taking",
+    "labor too slow",
+    "labor is too slow",
+    "labor is slow",
+    "labor at home",
+    "labor has started",
+    "labor has begun",
+    "labor has stalled",
+    "labor is starting",
+    "signs of labor",
+    "labor signs",
+    "labor stalled",
+    "labor positions",
+    "labor is progressing",
+    "how long does labor",
+    "how long should labor",
+    "labour pain",
+    "labour is taking",
+    "labour taking",
+    "labour too slow",
+    "labour is too slow",
+    "labour is slow",
+    "labour at home",
+    "labour has started",
+    "labour has begun",
+    "labour has stalled",
+    "labour is starting",
+    "signs of labour",
+    "labour signs",
+    "labour stalled",
+    "labour positions",
+    "labour is progressing",
+    "how long does labour",
+    "how long should labour"
    ],
    "context": [
     "know",
@@ -559,7 +602,11 @@
     "till",
     "midnight",
     "half an hour",
-    "half"
+    "half",
+    "slow",
+    "ease",
+    "drugs",
+    "lower"
    ],
    "who": [
     "my",
@@ -714,7 +761,20 @@
     "went away",
     "were you born",
     "was she born",
-    "was he born"
+    "was he born",
+    "stop bleeding",
+    "stop the bleeding",
+    "bleeding won t",
+    "bleeding wont",
+    "bleeding will not",
+    "phone cord",
+    "cord came out of the",
+    "on the phone",
+    "by phone",
+    "work labor",
+    "pain from work",
+    "has broke out",
+    "broke out again"
    ],
    "alongside": [
     "hurricane",
@@ -754,7 +814,10 @@
     "truck",
     "closed",
     "blocked",
-    "icy"
+    "icy",
+    "phone",
+    "signal",
+    "leaking"
    ],
    "read": [
     {
