@@ -252,6 +252,8 @@ NOT_LABOR_FIRST = [
     'labour hours', 'labour help', 'need labour fast', 'labour first time', 'his water just broke', 'our water just broke',
     'deliver the baby to me', 'baby coming with me', 'baby coming from the hospital', 'water broke up',
     'the water just broke', 'water broke in the car', "the hospital's water has broken", 'emergency water broke',
+    'the cord came out', 'the power cord came out', 'phone cord came out', 'the baby is coming from the hospital',
+    'the baby is coming with her',
     "the baby is coming to my mom's tonight", 'deliver the baby to her', 'contractions around the neck',
     'cord around neck', 'cord around the babys neck', 'baby is coming to the hospital now',
 ]
@@ -275,6 +277,8 @@ LABOR_EVERYDAY = [
     'my water broke what am i supposed to do', 'her water broke we r at home', 'pretty sure my water broke',
     'my water broke now she is pushing', 'baby is coming out of her', 'what to do when your water breaks',
     'her water broke in the car', 'my water broke at work',
+    'going through labour', 'her waters break', 'labor pain relief', "contractions won't stop", 'the cord came out first',
+    'labour has started', 'signs of labour',
 ]
 # Every phrase of the pregnancy choice opens it on its own. Next to a life threat, the first guide is the one the search
 # gets with the choice's phrase fields taken out: a phrase never changes what comes first (Breathing, Bleeding, or
@@ -283,7 +287,8 @@ PREGNANT_CHOICE = next(c for t in TOPICS if t['id'] == 'health' for c in t['choi
 PHRASES_ALONE = [*PREGNANT_CHOICE['phrases'], *PREGNANT_CHOICE.get('weak', []),
                  *(f'my {p}' for p in PREGNANT_CHOICE.get('weak', []) if p.startswith('water'))]
 THREATS = ['not breathing', 'unconscious', 'choking', 'having a seizure', 'chest pain', 'bleeding heavily',
-           'heavy bleeding', 'a lot of blood', 'overdose', 'poisoned']
+           'heavy bleeding', 'a lot of blood', "bleeding won't stop", 'bleeding wont stop', "won't stop bleeding",
+           'overdose', 'poisoned']
 PHRASE_THREATS = sorted({f'{p} {t}' for p in PHRASES_ALONE for t in THREATS} | {f'{t} {p}' for p in PHRASES_ALONE[::7] for t in THREATS})
 PLAIN_TOPICS = [{**t, 'choices': [{k: v for k, v in c.items() if k not in ('phrases', 'weak', 'who', 'context', 'unless', 'alongside')}
                                   for c in t.get('choices', [])]} for t in TOPICS]
@@ -544,6 +549,15 @@ class TopicSearch(unittest.TestCase):
             for q in [*LABOR_EVERYDAY, *PHRASES_ALONE]:
                 with self.subTest(q=q, segmenter=r['segmenter']):
                     self.assertEqual(top[q][:1], [PREGNANT])
+
+    def test_labor_and_labour_alike(self):
+        # Every phrase spelled one way has its twin in the other spelling.
+        for field in ('phrases', 'weak'):
+            entries = set(PREGNANT_CHOICE.get(field, []))
+            for p in entries:
+                twin = p.replace('labour', 'labor') if 'labour' in p else p.replace('labor', 'labour')
+                with self.subTest(field=field, phrase=p):
+                    self.assertIn(twin, entries)
 
     def test_context_never_holds_a_life_threat(self):
         # A word in "context" lets a phrase count next to it, so a life threat there would put the pregnancy choice
