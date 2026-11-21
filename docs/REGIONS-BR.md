@@ -40,9 +40,9 @@ region here; see the note on DF and Goiás below.
 
 ### Codes
 
-ISO 3166-2:BR gives each unit the prefix `BR-` and two letters: `BR-SP` São Paulo, `BR-RJ` Rio de Janeiro, `BR-DF` Distrito
-Federal, and so on (the 27 codes were read from the Wikipedia article "ISO 3166-2:BR", which lists the names as in ISO 3166-2 from the
-ISO 3166/MA; the ISO Online Browsing Platform itself was not opened).
+ISO 3166-2:BR gives each unit the prefix `BR-` and two letters: `BR-SP` São Paulo, `BR-RJ` Rio de Janeiro, `BR-DF`
+Distrito Federal, and so on (the 27 codes were read from the Wikipedia article "ISO 3166-2:BR", which lists the names as
+in ISO 3166-2 from the ISO 3166/MA; the ISO Online Browsing Platform itself was not opened).
 
 - **Seven two-letter codes collide with US codes.** The two-letter Brazilian codes `AL` (Alagoas), `MA` (Maranhão),
   `MS` (Mato Grosso do Sul), `MT` (Mato Grosso), `PA` (Pará), `PR` (Paraná) and `SC` (Santa Catarina) are also codes in
@@ -108,7 +108,8 @@ Notes:
 - **Offshore islands.** The IBGE polygons were checked for every unit: any polygon more than 0.5° from the unit's largest
   polygon was listed. Two detached islands are in the polygons, and two offshore islands are not in them at all.
   - **Fernando de Noronha** (`BR-PE`, about 2.4° east of the mainland) is **kept** in the PE box, because it is a
-    Pernambuco island with people living on it, and no other map would show it. The PE box reaches -32.40° W for it.
+    Pernambuco island with people living on it, and no other map would show it. Its tight edge is -32.40° W, so the PE
+    box with margin reaches -32.24° W.
     Without Noronha the box would end at -34.81° W; the cost is about 2.4° of mostly ocean.
   - **Trindade and Martim Vaz** (`BR-ES`, about 10° east of the mainland, around 20.5° S) are **left out** of the ES
     box. Keeping them would stretch the ES box from -39.67° W to -29.30° W, about 13° wide and mostly ocean, so the
@@ -180,11 +181,17 @@ Notes:
 | `BR-TO` | 7 | 0 | 11 | 0 | 52 | 75 | 2 | 28 |
 | **Total (sum of the 27 units)** | **1,305** | **265** | **not counted** | **910** | **8,114** | **14,044** | **1,158** | **8,015** |
 
-The counts are OSM objects as found by Overpass on 20 November 2026, per unit (ISO 3166-2 area); the last row is the sum of the 27
-units. A single country-wide query timed out on the Overpass server, so the country total was not counted separately. Duplicates and closed features were not removed, so these are upper bounds for a
-usable map, not checked totals.
+The counts are OSM objects as found by Overpass on 20 November 2026, per unit (ISO 3166-2 area); the last row is the sum
+of the 27 units. A single country-wide query timed out on the Overpass server, so the country total was not counted
+separately. Duplicates and closed features were not removed, so these are upper bounds for a usable map, not checked
+totals.
 
-Mato Grosso's `natural=spring` is **not counted**. Overpass gives 53,580 when the state is split into four sub-areas, so the figure is reproducible, but 31,051 of the 31,074 springs in the south-west quarter were created by one OSM user (`danctc`) on 6 November 2025, in four changesets. That is a bulk import, not a count of springs, so no number is shown for that column, and the column total is not counted either.
+Mato Grosso's `natural=spring` is **not counted**. Overpass gives 53,580 when the state is split into four sub-areas, so
+the figure is reproducible, but 31,051 of the 31,074 springs in the south-west quarter were created by one OSM user
+(`danctc`) on 6 November 2025, in four changesets. Those changesets give `SEMA-MT` (the Mato Grosso environment
+department) as their source, so the points may be real springs, but the licence of that import was not checked and it is
+far denser than any other state. Until a maintainer decides, no number is shown for that column, and the column total is
+not counted either.
 
 ## Licence notes and attribution
 
@@ -334,8 +341,9 @@ Each of these needs the maintainers' decision before any code changes.
 - **Seen only in search results:** the IBGE technical and legal note and the BC250 terms (restricted use); the Correios
   addressing guide; a 2017 federal open-data resolution that lists CC0, PDDL, CC BY 4.0 and ODbL as acceptable.
 - **Opened on 20 November 2026 (water and help points):** the Overpass API (OSM counts, eight tags: the 27 unit queries
-  completed; the country-wide query timed out); the ODbL 1.0 and CC BY 4.0 licence texts; the ANA BHO 6 metadata record; the SIAGAS web portal (no
-  licence text); the CNES dataset page (licence field `cc-by`); the CNES portal footer (CC BY-ND 3.0 for the site).
+  completed; the country-wide query timed out); the ODbL 1.0 and CC BY 4.0 licence texts; the ANA BHO 6 metadata record;
+  the SIAGAS web portal (no licence text); the CNES dataset page (licence field `cc-by`); the CNES portal footer (CC
+  BY-ND 3.0 for the site).
 - **Seen only in search results:** the Ministry of Health open-data plans (CC BY-NC-SA); the CPRM SIAGAS agreements;
   the ANA open-data policy wording.
 - **Not checked:** the ISO Online Browsing Platform (iso.org); the IBGE technical and legal note itself; the CNES health

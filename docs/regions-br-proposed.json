@@ -532,7 +532,7 @@
     -32.24,
     -3.68
    ],
-   "notes": "Fernando de Noronha (about 2.4 degrees east of the mainland) is kept; without it the box ends at -34.807 W."
+   "notes": "Fernando de Noronha (about 2.4 degrees east of the mainland) is kept; its tight edge is -32.397 W. Without it the box ends at -34.807 W."
   },
   {
    "code": "BR-AL",
@@ -939,7 +939,7 @@
    "condition": "Redirected to the matching Brazilian emergency service only if technically feasible (Anatel Resolution 777, article 127).",
    "verified": "opened Anatel Resolution 777, article 127, 2026-11-21, https://informacoes.anatel.gov.br/legislacao/resolucoes/2025/2022-resolucao-777"
   },
-  "not_included": "191 (Polícia Rodoviária Federal, listed on the Anatel page) and state or city numbers.",
+  "not_included": "191 (Polícia Rodoviária Federal) and 180 (Central de Atendimento à Mulher), both listed on the Ministry of Communications page (https://www.gov.br/mcom/pt-br/noticias/2026/setembro/emergencia-voce-sabe-para-quem-ligar-quando-precisa-de-ajuda/), and state or city numbers.",
   "cnes_health_establishments": {
    "dataset": "CNES - Cadastro Nacional de Estabelecimentos de Saúde (health establishments)",
    "publisher": "Ministério da Saúde (DATASUS)",
@@ -1248,7 +1248,7 @@
     "amenity=police": 28
    }
   },
-  "note": "MT natural=spring is marked not counted. Overpass gives 53,580 when the state is split into four sub-areas, so the figure is reproducible; 31,051 of the 31,074 springs in the south-west quarter were created by one OSM user (danctc) on 2025-11-06, in four changesets: a bulk import, not a count of springs. The column total is not counted either. Sum of the other 26 units is not shown for that column. The 27-unit sum is used as the total elsewhere; a single country-wide query timed out on the Overpass server. TO was retried after 502/504 errors and then read successfully."
+  "note": "MT natural=spring is marked not counted. Overpass gives 53,580 when the state is split into four sub-areas, so the figure is reproducible; 31,051 of the 31,074 springs in the south-west quarter were created by one OSM user (danctc) on 2025-11-06, in four changesets whose source tag is SEMA-MT (the Mato Grosso environment department). The points may be real springs, but the import's licence was not checked and the density is far above any other state, so no number is shown until maintainers decide. The column total is not counted either. Sum of the other 26 units is not shown for that column. The 27-unit sum is used as the total elsewhere; a single country-wide query timed out on the Overpass server. TO was retried after 502/504 errors and then read successfully."
  },
  "water": {
   "proposed": [

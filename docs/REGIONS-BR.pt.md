@@ -41,7 +41,8 @@ sobre DF e Goiás abaixo.
 ### Códigos
 
 A ISO 3166-2:BR dá a cada unidade o prefixo `BR-` e duas letras: `BR-SP` São Paulo, `BR-RJ` Rio de Janeiro, `BR-DF`
-Distrito Federal, e assim por diante (os 27 códigos foram lidos no artigo da Wikipédia "ISO 3166-2:BR", que lista os nomes como na ISO 3166-2 pela ISO 3166/MA; o site da ISO em si não foi aberto).
+Distrito Federal, e assim por diante (os 27 códigos foram lidos no artigo da Wikipédia "ISO 3166-2:BR", que lista os
+nomes como na ISO 3166-2 pela ISO 3166/MA; o site da ISO em si não foi aberto).
 
 - **Sete códigos de duas letras coincidem com códigos dos EUA.** Os códigos brasileiros `AL` (Alagoas), `MA` (Maranhão),
   `MS` (Mato Grosso do Sul), `MT` (Mato Grosso), `PA` (Pará), `PR` (Paraná) e `SC` (Santa Catarina) também estão em
@@ -108,7 +109,8 @@ Notas:
 - **Ilhas oceânicas.** As malhas do IBGE foram conferidas para todas as unidades: qualquer polígono a mais de 0,5° do
   maior polígono da unidade foi listado. Duas ilhas afastadas estão nas malhas, e duas ilhas oceânicas não estão nelas.
   - **Fernando de Noronha** (`BR-PE`, cerca de 2,4° a leste do continente) é **mantida** na caixa de PE, porque é uma
-    ilha de Pernambuco com moradores, e nenhum outro mapa a cobriria. A caixa de PE vai até -32,40° O por causa dela.
+    ilha de Pernambuco com moradores, e nenhum outro mapa a cobriria. A borda justa dela é -32,40° O, então a caixa de
+    PE com margem vai até -32,24° O.
     Sem Noronha a caixa terminaria em -34,81° O; o custo é cerca de 2,4° de oceano.
   - **Trindade e Martim Vaz** (`BR-ES`, cerca de 10° a leste do continente, perto de 20,5° S) ficam **fora** da caixa do
     ES. Mantê-las esticaria a caixa do ES de -39,67° O até -29,30° O, cerca de 13° de largura quase toda de oceano, e a
@@ -182,10 +184,16 @@ Notas:
 | **Total (soma das 27 unidades)** | **1.305** | **265** | **não contado** | **910** | **8.114** | **14.044** | **1.158** | **8.015** |
 
 As contagens são objetos do OSM como encontrados pela Overpass em 20 de novembro de 2026, por unidade (área ISO 3166-2);
-a última linha é a soma das 27 unidades. Uma consulta nacional única deu timeout no servidor da Overpass, então o total do país não foi contado separadamente. Duplicatas e feições fechadas não foram removidas, então são limites
-superiores, não totais verificados.
+a última linha é a soma das 27 unidades. Uma consulta nacional única deu timeout no servidor da Overpass, então o total
+do país não foi contado separadamente. Duplicatas e feições fechadas não foram removidas, então são limites superiores,
+não totais verificados.
 
-A contagem de `natural=spring` em Mato Grosso está **não contada**. A Overpass dá 53.580 quando o estado é dividido em quatro subáreas, então o número se repete, mas 31.051 das 31.074 nascentes do quadrante sudoeste foram criadas por um único usuário do OSM (`danctc`) em 6 de novembro de 2025, em quatro changesets. É uma importação em massa, não uma contagem de nascentes, então não há número nessa coluna, e o total dela também não é contado.
+A contagem de `natural=spring` em Mato Grosso está **não contada**. A Overpass dá 53.580 quando o estado é dividido em
+quatro subáreas, então o número se repete, mas 31.051 das 31.074 nascentes do quadrante sudoeste foram criadas por um
+único usuário do OSM (`danctc`) em 6 de novembro de 2025, em quatro changesets. Esses changesets dão `SEMA-MT` (a
+secretaria de meio ambiente de Mato Grosso) como fonte, então os pontos podem ser nascentes reais, mas a licença dessa
+importação não foi verificada e a densidade é muito maior que a de qualquer outro estado. Até um mantenedor decidir, não
+há número nessa coluna, e o total dela também não é contado.
 
 ## Notas sobre licença e atribuição
 
@@ -327,18 +335,18 @@ Cada item precisa de decisão dos mantenedores antes de qualquer mudança de có
   unidades; a página "Sobre o portal" do gov.br e o artigo federal do SAMU 192 (licença no rodapé: CC BY-ND 3.0 Brasil);
   a página da Anatel de serviços de utilidade pública e emergência (190, 192, 193, 199, e 112/911 listados como só
   celular); em 21 de novembro de 2026, a notícia do Ministério das Comunicações sobre números de emergência e o art. 127
-  da Resolução Anatel 777 (112/911 redirecionados só se houver viabilidade técnica); o guia de endereços da Overture (Brasil 89.887.635); o artigo da Wikipédia "ISO 3166-2:BR" (27 códigos,
-  nomes da ISO 3166/MA).
+  da Resolução Anatel 777 (112/911 redirecionados só se houver viabilidade técnica); o guia de endereços da Overture
+  (Brasil 89.887.635); o artigo da Wikipédia "ISO 3166-2:BR" (27 códigos, nomes da ISO 3166/MA).
 - **Calculado em 20 de novembro de 2026:** as 27 caixas justas e as margens de 0,15° (para baixo em oeste e sul, para
   cima em leste e norte, até 0,01°); a conferência de ilhas destacadas nas 27 unidades; a caixa do ES sem Trindade e
   Martim Vaz.
 - **Visto só em resultados de busca:** a nota técnica e legal do IBGE e os termos da BC250 (uso restrito); o guia de
   endereçamento dos Correios; uma resolução federal de 2017 sobre dados abertos que lista CC0, PDDL, CC BY 4.0 e ODbL
   como aceitáveis.
-- **Aberto em 20 de novembro de 2026 (água e pontos de ajuda):** a API Overpass (contagens do OSM, oito tags: as 27 consultas
-  por unidade completaram; a consulta nacional deu timeout); os textos das licenças ODbL 1.0 e CC BY 4.0; o registro de metadados da BHO 6 da ANA; o portal web do SIAGAS
-  (sem texto de licença); a página do conjunto CNES (campo de licença `cc-by`); o rodapé do portal do CNES (CC BY-ND 3.0
-  para o site).
+- **Aberto em 20 de novembro de 2026 (água e pontos de ajuda):** a API Overpass (contagens do OSM, oito tags: as 27
+  consultas por unidade completaram; a consulta nacional deu timeout); os textos das licenças ODbL 1.0 e CC BY 4.0; o
+  registro de metadados da BHO 6 da ANA; o portal web do SIAGAS (sem texto de licença); a página do conjunto CNES (campo
+  de licença `cc-by`); o rodapé do portal do CNES (CC BY-ND 3.0 para o site).
 - **Visto só em resultados de busca:** os planos de dados abertos do Ministério da Saúde (CC BY-NC-SA); os acordos da CPRM
   sobre o SIAGAS; o texto da política de dados abertos da ANA.
 - **Não verificado:** o Online Browsing Platform da ISO (iso.org); a nota técnica e legal do IBGE em si; o cadastro de
