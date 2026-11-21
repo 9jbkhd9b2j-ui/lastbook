@@ -6,7 +6,8 @@
 Accented words stay whole and fold (niño finds nino), short words in Chinese, Hindi, Hebrew and Arabic count,
 typed symbols never reach a RegExp, Turkish İ folds to i, and every English query in the list ranks exactly as it
 did before. Words used outside the US (torch, rubbish, 999, 108, 1122, power cut, loadshedding, hydro, forest fire)
-find the guide their US word finds. Needs Node on PATH; skipped without it. Never packaged."""
+find the guide their US word finds. A search that finds nothing is tried again by word form (tourniquets,
+fainting, choked). Needs Node on PATH; skipped without it. Never packaged."""
 import json, re, shutil, subprocess, tempfile, unicodedata, unittest
 from pathlib import Path
 
@@ -249,9 +250,39 @@ HEART_ORDINARY = {
 }
 TOPS = sorted({*TOPS, *HEART_URGENT, *HEART_ORDINARY})
 
+# Another form of a word a guide already has: a plural, -ed or -ing. Alone, each found nothing, because a typed word
+# must start a guide's word and "tourniquets" is longer than "tourniquet". A search for the first must give the same
+# guides and choices, in the same order, as a search for the second.
+FORMS = {
+    'tourniquets': 'tourniquet', 'fainting': 'fainted', 'choked': 'choking', 'choke': 'choking',
+    'drowned': 'drowning', 'bleeds': 'bleeding', 'wounds': 'wound', 'seizures': 'seizure', 'snakes': 'snake',
+    'bees': 'bee', 'earthquakes': 'earthquake', 'evacuating': 'evacuate', 'boiled': 'boil', 'filters': 'filter',
+}
+# Whole searches in which no word starts a guide's word: [guide, choice] that comes first.
+FORMS_FIRST = {
+    'he is fainting': ['hurt', 'breathing'], 'kid choked on a grape': ['hurt', 'breathing'],
+    'applying tourniquets': ['hurt', 'bleeding'], 'swarm of bees': ['hurt', 'sting'],
+}
+TOPS = sorted({*TOPS, *FORMS, *FORMS.values(), *FORMS_FIRST})
+
+# The rule itself, on made-up topics so it doesn't depend on what the guides say: query -> ids found, in order.
+# Only a search that finds nothing is tried by form, so "baby choked" still gives what "baby" gives.
+FORM_TOPICS = [
+    {'id': 'words', 'title': 'Tourniquet, fainted, choking, stopped, batteries, stitches', 'short': 'A plan for incoming missiles',
+     'keywords': ['can', 'bee'], 'choices': []},
+    {'id': 'baby', 'title': 'Baby care', 'short': 'Feeding', 'keywords': [], 'choices': []},
+]
+RANK_FORMS = {
+    'tourniquets': ['words'], 'fainting': ['words'], 'faints': ['words'], 'choked': ['words'], 'choke': ['words'],
+    'stopping': ['words'], 'battery': ['words'], 'stitching': ['words'], 'plans': ['words'], 'planning': ['words'],
+    'bees': ['words'], 'missile': ['words'], 'he is fainting': ['words'], 'babies': ['baby'],
+    'missing': [], 'planes': [], 'cans': [], 'stung': [],         # not missiles, not a plan, "can" is a stop word, irregular
+    'baby': ['baby'], 'baby choked': ['baby'], 'choked baby': ['baby'], 'feeding tourniquets': ['baby'],
+}
+
 CASES = {
     'stop': QSTOP, 'fold': list(FOLD), 'match': [m[:2] for m in MATCH], 'rank': ENGLISH, 'topics': TOPICS,
-    'rankOwn': RANK_OWN,
+    'rankOwn': RANK_OWN, 'rankForms': [[q, FORM_TOPICS] for q in RANK_FORMS],
     'words': list(WORDS_BOTH) + ['怎么净化水', '水をきれいにする方法',
                                  '물 끓이기', 'น้ำ'],
     'tops': TOPS,
@@ -371,9 +402,11 @@ class TopicSearch(unittest.TestCase):
             for q, first in TH_DK_UNDISTURBED.items():
                 with self.subTest(q=q, segmenter=r['segmenter']):
                     self.assertEqual(top[q][:1], [first])
-            for q in ('burning', 'season'):                    # "burning season" was left out for these two
+            # "burning season" was left out for these two, so neither opens the shelter guide on its own. "burning"
+            # is now found by word form, where "burned" already was.
+            for q, found in (('burning', [['hurt', 'burn']]), ('season', [])):
                 with self.subTest(q=q, segmenter=r['segmenter']):
-                    self.assertEqual(top[q], [])
+                    self.assertEqual(top[q], found)
             for q in NOT_FIRST_AID:                             # a fire number does not open the hurt guide
                 with self.subTest(q=q, segmenter=r['segmenter']):
                     self.assertNotIn('hurt', [guide for guide, _ in top[q]])
@@ -392,6 +425,21 @@ class TopicSearch(unittest.TestCase):
             for q, first in [*FIRST.items(), *ALREADY_COVERED.items(), *URGENT_FIRST.items(), *UNDISTURBED.items()]:
                 with self.subTest(q=q, segmenter=r['segmenter']):
                     self.assertEqual(top[q][0], first)
+
+    def test_other_forms_of_a_word(self):
+        for r in self.modes:
+            found = dict(zip(RANK_FORMS, ([row[0] for row in ok(e)] for e in r['rankForms'])))
+            for q, ids in RANK_FORMS.items():
+                with self.subTest(q=q, segmenter=r['segmenter']):
+                    self.assertEqual(found[q], ids)
+            top = dict(zip(TOPS, (ok(e) for e in r['tops'])))
+            for q, word in FORMS.items():
+                with self.subTest(q=q, word=word, segmenter=r['segmenter']):
+                    self.assertTrue(top[word])                     # the guide's own word does find a guide
+                    self.assertEqual(top[q], top[word])
+            for q, first in FORMS_FIRST.items():
+                with self.subTest(q=q, segmenter=r['segmenter']):
+                    self.assertEqual(top[q][:1], [first])
 
     def test_urgent_choice_wins(self):
         for r in self.modes:
