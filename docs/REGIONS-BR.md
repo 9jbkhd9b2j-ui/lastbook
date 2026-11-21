@@ -186,12 +186,14 @@ of the 27 units. A single country-wide query timed out on the Overpass server, s
 separately. Duplicates and closed features were not removed, so these are upper bounds for a usable map, not checked
 totals.
 
-Mato Grosso's `natural=spring` is **not counted**. Overpass gives 53,580 when the state is split into four sub-areas, so
-the figure is reproducible, but 31,051 of the 31,074 springs in the south-west quarter were created by one OSM user
-(`danctc`) on 6 November 2025, in four changesets. Those changesets give `SEMA-MT` (the Mato Grosso environment
-department) as their source, so the points may be real springs, but the licence of that import was not checked and it is
-far denser than any other state. Until a maintainer decides, no number is shown for that column, and the column total is
-not counted either.
+Mato Grosso's `natural=spring` is **not counted**. Overpass gives 53,580 (a whole-state count on 21 November 2026 gave
+the same total), but 31,051 of the 31,074 springs in the south-west quarter were created by one OSM user (`danctc`) on 6
+November 2025, in four changesets tagged `source=SEMA-MT` (the Mato Grosso environment department). No permission for
+SEMA-MT data was found: the OSM wiki Contributors page lists the Minas Gerais environment department but not SEMA-MT,
+the Import/Catalogue has no entry for it, and the SEMA-MT website footer says "Todos os Direitos reservados" (all rights
+reserved). The changesets have no discussion comments. The points may be real springs, but without a documented licence
+they should not be counted or shipped, so no number is shown for that column, and the column total is not counted
+either. Checked on 21 November 2026.
 
 ## Licence notes and attribution
 

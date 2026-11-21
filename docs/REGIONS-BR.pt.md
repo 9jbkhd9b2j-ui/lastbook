@@ -188,12 +188,14 @@ a última linha é a soma das 27 unidades. Uma consulta nacional única deu time
 do país não foi contado separadamente. Duplicatas e feições fechadas não foram removidas, então são limites superiores,
 não totais verificados.
 
-A contagem de `natural=spring` em Mato Grosso está **não contada**. A Overpass dá 53.580 quando o estado é dividido em
-quatro subáreas, então o número se repete, mas 31.051 das 31.074 nascentes do quadrante sudoeste foram criadas por um
-único usuário do OSM (`danctc`) em 6 de novembro de 2025, em quatro changesets. Esses changesets dão `SEMA-MT` (a
-secretaria de meio ambiente de Mato Grosso) como fonte, então os pontos podem ser nascentes reais, mas a licença dessa
-importação não foi verificada e a densidade é muito maior que a de qualquer outro estado. Até um mantenedor decidir, não
-há número nessa coluna, e o total dela também não é contado.
+A contagem de `natural=spring` em Mato Grosso está **não contada**. A Overpass dá 53.580 (uma contagem do estado inteiro
+em 21 de novembro de 2026 deu o mesmo total), mas 31.051 das 31.074 nascentes do quadrante sudoeste foram criadas por um
+único usuário do OSM (`danctc`) em 6 de novembro de 2025, em quatro changesets com `source=SEMA-MT` (a secretaria de
+meio ambiente de Mato Grosso). Não foi encontrada permissão para dados da SEMA-MT: a página Contributors da wiki do OSM
+lista a secretaria de meio ambiente de Minas Gerais, mas não a SEMA-MT; o Import/Catalogue não tem entrada para ela; e o
+rodapé do site da SEMA-MT diz "Todos os Direitos reservados". Os changesets não têm comentários de discussão. Os pontos
+podem ser nascentes reais, mas sem licença documentada não devem ser contados nem distribuídos, então não há número
+nessa coluna, e o total dela também não é contado. Verificado em 21 de novembro de 2026.
 
 ## Notas sobre licença e atribuição
 
