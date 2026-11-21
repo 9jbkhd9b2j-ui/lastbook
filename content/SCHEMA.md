@@ -25,6 +25,7 @@ automatically from `catalog.json` — do not copy them into the topic file.
       "label": "Tap water is off or might be unsafe",
       "hint": "Boil-water notice, earthquake, flood, broken main",
       "urgent": ["not breathing"],     // optional: a search that names one of these phrases shows this guide and choice first
+      "phrases": ["water broke"],      // optional: a search that names one of these phrases counts its words for this choice
       "read": [
         {"doc": "<catalog id>", "page": 9,
          "label": "Short action-style headline of what the page helps with",
@@ -63,3 +64,7 @@ Rules
   rows in all. A search that names no `urgent` phrase is ranked exactly as without the field. Each phrase is matched as
   whole words in order, so "not breathing" does not catch "trouble breathing".
 - Favour fewer, better items: 1–4 readings per choice, 3–8 in prepare, 4–10 in learn.
+- `phrases` is for a wording whose single words point somewhere else ("water broke" is labor, not tap water). When a
+  search names one of them, whole words in order as for `urgent`, the phrase's words count as found for this choice and
+  its topic, and the choice wins a tie in its topic. Unlike `urgent`, it does not move the topic ahead of others: it
+  only scores. A search that names no phrase is ranked exactly as without the field.

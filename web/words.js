@@ -75,7 +75,8 @@
       const shown = (t.choices || []).filter(c => !c.goto);
       m = { hay: matcher([t.title, t.short, ...(t.keywords || [])].join(' ')),
             choices: shown.map(c => ({ c, has: matcher(c.label + ' ' + (c.hint || '')) })),
-            urgent: shown.filter(c => c.urgent).map(c => ({ c, phrases: c.urgent.map(splitWords).filter(p => p.length) })) };
+            urgent: shown.filter(c => c.urgent).map(c => ({ c, phrases: c.urgent.map(splitWords).filter(p => p.length) })),
+            phrases: shown.filter(c => c.phrases).map(c => ({ c, phrases: c.phrases.map(splitWords).filter(p => p.length) })) };
       cache.set(t, m);
     }
     return m;
@@ -90,9 +91,16 @@
     const all = splitWords(q), out = [];
     for (const t of topics) {
       const m = topicMatchers(t);
-      const s = words.filter(m.hay).length;
+      // A choice's "phrases" ("water broke") count their words as found for that choice and its guide, but only when the
+      // search names the whole phrase; on their own, "water" and "broke" still point elsewhere.
+      const named = new Map(m.phrases.map(({ c, phrases }) => [c, phrases.filter(p => names(all, p)).flat()]));
+      const inNamed = w => [...named.values()].some(ws => ws.includes(w));
+      const s = words.filter(w => m.hay(w) || inNamed(w)).length;
       let best = null, bs = 0;
-      for (const { c, has } of m.choices) { const n = words.filter(has).length; if (n > bs) { bs = n; best = c } }
+      for (const { c, has } of m.choices) {
+        const ws = named.get(c) || [], n = words.filter(w => has(w) || ws.includes(w)).length;
+        if (n > bs || (ws.length && n === bs)) { bs = n; best = c }    // a choice whose phrase the search names wins a tie
+      }
       const u = m.urgent.find(x => x.phrases.some(p => names(all, p)));
       if (u) best = u.c;
       if (s || bs) out.push({ t, c: best, s: s + bs * 1.5, u: !!u });

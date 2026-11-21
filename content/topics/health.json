@@ -155,6 +155,7 @@
    "id": "pregnant",
    "label": "Someone is pregnant or in labor",
    "hint": "No prenatal care, labor starting, bleeding after birth",
+   "phrases": ["water broke", "waters broke", "water has broken", "waters have broken", "water broken", "waters broken", "water just broke", "contractions", "minutes apart", "baby is coming", "baby's coming", "babys coming", "baby coming", "deliver a baby", "delivering a baby", "deliver the baby", "delivering the baby", "giving birth", "in labor", "in labour", "going into labor", "going into labour", "childbirth", "umbilical cord"],
    "read": [
     {
      "doc": "med-c8a380e07e30f3e3",
