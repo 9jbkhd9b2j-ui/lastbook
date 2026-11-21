@@ -124,6 +124,22 @@ class Lookup(unittest.TestCase):
         found = library(main.default_parent() / 'LastbookData')
         self.assertEqual(main.data_folder(None), found)
 
+    def test_interrupted_remember_keeps_old_choice(self):
+        # A write that stops halfway (full disk, power cut) must not leave a broken settings.json behind.
+        old = library(self.tmp / 'usb' / 'LastbookData')
+        main.remember(old)
+        new = library(self.tmp / 'other' / 'LastbookData')
+        real_write = Path.write_text
+
+        def half_then_fail(path, text, *args, **kwargs):
+            real_write(path, text[:len(text) // 2], *args, **kwargs)
+            raise OSError('No space left on device')
+
+        with mock.patch.object(Path, 'write_text', half_then_fail):
+            main.remember(new)
+        self.assertEqual(main.remembered(), old)
+        self.assertEqual([p.name for p in self.settings().parent.iterdir()], ['settings.json'])   # no temporary file left
+
     def test_ask_until_good_then_remember(self):
         good = library(self.tmp / 'Lastbook-Small' / 'LastbookData')
         asked = []

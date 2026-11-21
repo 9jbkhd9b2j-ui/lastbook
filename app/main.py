@@ -55,10 +55,13 @@ def remembered():
 
 def remember(folder):
     settings = app_folders()[0] / 'settings.json'
+    tmp = settings.with_name(settings.name + '.tmp')
     try:
         settings.parent.mkdir(parents=True, exist_ok=True)
-        settings.write_text(json.dumps({'library': str(folder)}), encoding='utf-8')
+        tmp.write_text(json.dumps({'library': str(folder)}), encoding='utf-8')
+        os.replace(tmp, settings)   # a write cut short leaves the old choice, never half a file
     except OSError as e:   # it still opens this time; it asks again next time
+        tmp.unlink(missing_ok=True)
         print('could not remember the library:', e, flush=True)
 
 
