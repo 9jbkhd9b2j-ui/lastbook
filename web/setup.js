@@ -368,7 +368,7 @@
     const what = [k.files ? n(k.files, 'file') : '', k.folders ? n(k.folders, 'folder') : ''].filter(Boolean).join(' and ');
     const one = k.files + k.folders === 1;
     return `<p class="s-note" role="status"><b>${what} of this library ${one ? 'is' : 'are'} only in iCloud${k.bytes ? ` (${size(k.bytes)})` : ''}.</b>
-      ${one ? 'It' : 'They'} will not open without internet. Move the LastbookData folder out of iCloud Drive, or in Finder choose Keep Downloaded for it.
+      ${one ? 'It' : 'They'} will not open without internet. Move the LastbookData folder out of iCloud Drive, or in Finder choose Keep Downloaded for it (macOS 15 or later).
       <br><small>For example: ${k.examples.map(esc).join(', ')}</small></p>`;
   }
 
