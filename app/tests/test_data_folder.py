@@ -129,16 +129,40 @@ class Lookup(unittest.TestCase):
         old = library(self.tmp / 'usb' / 'LastbookData')
         main.remember(old)
         new = library(self.tmp / 'other' / 'LastbookData')
-        real_write = Path.write_text
 
-        def half_then_fail(path, text, *args, **kwargs):
-            real_write(path, text[:len(text) // 2], *args, **kwargs)
+        def half_then_fail(data, out):
+            text = json.dumps(data)
+            out.write(text[:len(text) // 2])
             raise OSError('No space left on device')
 
-        with mock.patch.object(Path, 'write_text', half_then_fail):
+        with mock.patch.object(main.json, 'dump', side_effect=half_then_fail):
             main.remember(new)
         self.assertEqual(main.remembered(), old)
         self.assertEqual([p.name for p in self.settings().parent.iterdir()], ['settings.json'])   # no temporary file left
+
+    def test_overlapping_remember_calls_each_publish_their_choice(self):
+        first = self.tmp / 'first' / 'LastbookData'
+        second = self.tmp / 'second' / 'LastbookData'
+        replace = os.replace
+
+        def save_second_before_first(src, dst):
+            with mock.patch.object(os, 'replace', replace):
+                main.remember(second)
+            self.assertEqual(main.remembered(), second)
+            replace(src, dst)
+
+        with mock.patch.object(os, 'replace', save_second_before_first):
+            main.remember(first)
+        self.assertEqual(main.remembered(), first)
+        self.assertEqual(list(self.settings().parent.iterdir()), [self.settings()])
+
+    def test_remember_handles_failed_temporary_file_cleanup(self):
+        old = self.tmp / 'old' / 'LastbookData'
+        main.remember(old)
+        with mock.patch.object(os, 'replace', side_effect=PermissionError('in use')), \
+                mock.patch.object(Path, 'unlink', side_effect=PermissionError('in use')):
+            main.remember(self.tmp / 'new' / 'LastbookData')
+        self.assertEqual(main.remembered(), old)
 
     def test_ask_until_good_then_remember(self):
         good = library(self.tmp / 'Lastbook-Small' / 'LastbookData')
