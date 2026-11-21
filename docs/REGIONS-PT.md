@@ -105,8 +105,9 @@ Notes:
   and Flores sit 550 km north-west of the central group. The INE address dataset already splits the same two groups (its
   ids are `pt.ine.add.AC25…` for Corvo and Flores and `…AC26…` for the rest), so the proposal keeps that split and
   `pt-20w`'s box is the address group's own box, not a NUTS one. GISCO's PT20 box and the address groups' boxes agree
-  at every edge, including the Formigas islets at 36.93° N, which carry one address row each in both the INE data and
-  the NUTS polygon.
+  at every edge. The eastern group's southern edge (36.93° N) sits in open water and is labelled an unverified
+  geocoding outlier in the cross-checks below; it is not the Formigas, whose published bounds lie north-east of Santa
+  Maria.
 - **Madeira includes the Selvagens Islands**, a nature reserve whose municipality is Funchal. One address row sits at
   30.035° N, south of the Selvagem Grande island at 30.14° N, and GISCO's polygon reaches 30.026° N there; both agree,
   and neither carries a settlement. The row is one outlier to re-check before any build.
@@ -197,7 +198,8 @@ WHERE country = 'PT';
   Per-box counts, for scale only, with double counting: Norte 1,952,132; Centro 1,407,800; Oeste e Vale do Tejo
   1,390,895; Grande Lisboa 1,148,767; Península de Setúbal 1,031,877; Alentejo 632,202; Algarve 393,019; Madeira
   130,271; Azores east 108,523; Corvo and Flores 2,374. The three island counts equal their source groups exactly;
-  1,540 rows fall outside every box, all labelled geocoding outliers (including the one at 36.93° N above). Unlike
+  1,540 rows fall outside every box, all labelled geocoding outliers; the 36.93° N row above is not one of them — it
+  supplies the southern edge of the `pt-20e` box itself. Unlike
   Spain — whose province-coded postcodes cut exactly — **a per-region address index for Portugal cannot be cut by
   box**; it needs a municipality→region table from the INE municipality register, or per-municipality cuts keyed on
   the address rows' own city field.
@@ -319,7 +321,8 @@ other proposals.
    addresses, no large settlements) deserve their own map set or should ride with `pt-20e`'s set and a wider box. The
    boxes as proposed leave out the Formigas reserve (see the cross-checks above); widening `pt-20e` eastward to about
    -24.70° would include it, at no practical gain for a street map.
-6. **New crop kinds.** Vineyards and olive groves are large land uses in Portugal (35,746 and 46,597 OSM ways); whether
+6. **New crop kinds.** Vineyards and olive groves are large land uses in Portugal (35,746 vineyard ways and 46,597
+   orchard ways, of which 4,975 carry `trees=olive_trees`); whether
    the crops layer grows kinds beyond orchards, vineyards and berries is the maintainers' decision, the same one
    REGIONS-ES.md leaves open for olives and citrus.
 7. **Mirandese names.** Whether the place finder indexes both forms for Miranda do Douro (one municipality; small

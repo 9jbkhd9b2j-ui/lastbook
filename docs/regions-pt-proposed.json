@@ -61,7 +61,7 @@
   ],
   "not_open_nationwide": [
     "Postcode areas: the CTT dictionary is a commercial product and its terms were not verified (page did not answer from our route on 2026-11-20); expected to mirror the Correos/CNIG case in REGIONS-ES.md. The postcode attached to each address in the INE CC BY 4.0 data is a different thing and is what address search needs.",
-    "Per-region address cuts: Portugal's postcodes carry no province codes, and the region bounding boxes overlap heavily (1,753,186 of 5,911,139 rows fall in two or more boxes). A per-region index needs a municipality-to-region table from the INE municipality register, or per-municipality cuts keyed on the address rows' own city field.",
+    "Per-region address cuts: Portugal's postcodes carry no province codes, and the region bounding boxes overlap heavily (1,752,802 of 5,911,139 rows fall in two or more boxes). A per-region index needs a municipality-to-region table from the INE municipality register, or per-municipality cuts keyed on the address rows' own city field.",
     "Dams and hydrography inventories: APA/SNIAmb did not respond on 2026-11-20; OSM waterway=dam (805 ways, 35 nodes) and 1,922 weirs are the practical source meanwhile."
   ],
   "addressing": {
