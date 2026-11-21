@@ -72,7 +72,7 @@
   let S = null;           // GET state
   let view = 'choose';
   const CLOUD_POLL_MS = 3000, CLOUD_POLLS = 20;   // the iCloud count runs in the engine's background: ask again for about a minute
-  let cloudPolls = 0;
+  let cloudPolls = 0, cloudT = null, cloudFor = '';   // one timer for the open library (cloudFor), at most CLOUD_POLLS asks
   let choice = { pack: null, ai: false, map: null };   // map: the selected state code
   let folder = '';
   let shortfall = null;   // the answer to a start that had no room: {need_bytes, free_bytes}
@@ -372,6 +372,21 @@
       <br><small>For example: ${k.examples.map(esc).join(', ')}</small></p>`;
   }
 
+  // Ask again only while the engine is still counting. Windows and Linux never count (cloud_counting false), so no timer starts
+  // there. Every redraw of Manage calls this; a timer already waiting is not doubled.
+  function cloudPoll(c) {
+    if (c.folder !== cloudFor) { cloudFor = c.folder; cloudPolls = 0 }
+    if (!c.cloud_counting || cloudT || cloudPolls >= CLOUD_POLLS) return;
+    cloudPolls++;
+    cloudT = setTimeout(async () => {
+      cloudT = null;
+      if (view !== 'manage') return;
+      S = await call('state').catch(() => S);
+      const k = cur() || {}, n = k.cloud_only;
+      if (view === 'manage' && (k.cloud_counting || (n && (n.files || n.folders)))) manageView();   // redrawn only to show the note, or to ask again
+    }, CLOUD_POLL_MS);
+  }
+
   function manageView() {
     const c = cur(), p = packById(c.pack), m = model();
     const libraryUpdate = p && p.available !== false && packNeedsInstall(p);
@@ -395,15 +410,7 @@
       <div class="s-go left">${CAN.repair ? `<button class="btn plain" id="repair">${ico('repair')}Check and repair</button>` : ''}
         <button class="s-link" id="otherLib">${ico('folder')}Open another library folder</button></div>
       <p class="s-note${noteOk ? ' ok' : ''}" id="haveNote"${note ? '' : ' hidden'}>${esc(note)}</p>`;
-    if (c.cloud_only === null && cloudPolls < CLOUD_POLLS) {
-      cloudPolls++;
-      setTimeout(async () => {
-        if (view !== 'manage') return;
-        S = await call('state').catch(() => S);
-        const k = (cur() || {}).cloud_only;
-        if (view === 'manage' && (k === null || (k && (k.files || k.folders)))) manageView();   // redrawn only to show the note, or to ask again
-      }, CLOUD_POLL_MS);
-    }
+    cloudPoll(c);
     $('#otherLib').onclick = () => haveLibrary(false, $('#otherLib'), { library: true });   // only another LastbookData, on a USB stick or another drive (#266)
     if ($('#libraryUpdate')) $('#libraryUpdate').onclick = () => { choice.pack = c.pack; choice.ai = !!c.model; go('choose') };
     if ($('#upgrade')) $('#upgrade').onclick = () => { choice.pack = bigger[0].id; choice.ai = !!c.model; go('choose') };

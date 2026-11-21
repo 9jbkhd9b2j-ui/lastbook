@@ -365,16 +365,19 @@ class Setup:
             p = self.current / 'models' / m['file']
             if p.is_file() and p.stat().st_size == m['size']:
                 model = m['id']
-        return {'folder': str(self.current), 'pack': pack, 'content_revision': revision, 'map_bytes': install.map_bytes(self.current), 'model': model, 'map': install.map_name(self.current), 'address_indexes': self.address_indexes(), 'old': self._settings().get('old', []), 'cloud_only': self._cloud_only()}
+        return {'folder': str(self.current), 'pack': pack, 'content_revision': revision, 'map_bytes': install.map_bytes(self.current), 'model': model, 'map': install.map_name(self.current), 'address_indexes': self.address_indexes(), 'old': self._settings().get('old', []), **self._cloud_only()}
 
     def _cloud_only(self):
-        """What of the open library is only in iCloud (#362), or None until it is counted. A large library takes a moment, so the
-        count runs in the background and is kept for CLOUD_RECHECK_S; the page asks again on its next look."""
+        """What of the open library is only in iCloud (#362): {'cloud_only': the count or None, 'cloud_counting': True while a first
+        count runs}. A large library takes a moment, so the count runs in the background and is kept for CLOUD_RECHECK_S; the page
+        asks again only while cloud_counting is True. Other systems cannot tell: None and False, and nothing is started."""
+        if sys.platform != 'darwin':
+            return {'cloud_only': None, 'cloud_counting': False}
         folder = str(self.current)
         with self.lock:
             kept = self.cloud if self.cloud and self.cloud[0] == folder else None
             if kept and time.time() - kept[1] < CLOUD_RECHECK_S:
-                return kept[2]
+                return {'cloud_only': kept[2], 'cloud_counting': False}
             if not (self.cloud_thread and self.cloud_thread.is_alive()):
                 def count():
                     r = hardware.cloud_only(folder)
@@ -382,7 +385,7 @@ class Setup:
                         self.cloud = (folder, time.time(), r)
                 self.cloud_thread = threading.Thread(target=count, daemon=True)
                 self.cloud_thread.start()
-            return kept[2] if kept else None
+            return {'cloud_only': kept[2], 'cloud_counting': False} if kept else {'cloud_only': None, 'cloud_counting': True}
 
     def address_indexes(self):
         if not self.current:

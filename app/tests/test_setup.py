@@ -2501,6 +2501,47 @@ class CloudOnly(Base):
             r = s.current_info()['cloud_only']
         self.assertEqual((r['files'], r['examples']), (2, ['videos/a.mp4', 'videos/b.mp4']))
 
+    def info_on(self, system):
+        """current_info as the page gets it on this system, and whether a count was started."""
+        s = self.setup('manage', current=self.library())
+        with mock.patch.object(hardware.sys, 'platform', system):
+            info = s.current_info()
+        return info, s.cloud_thread
+
+    def test_other_systems_are_not_counting(self):
+        # #370 review: None alone also meant "still counting", so Windows and Linux were asked again up to CLOUD_POLLS times.
+        for system in ('win32', 'linux'):
+            with self.subTest(system=system):
+                info, thread = self.info_on(system)
+                self.assertEqual((info['cloud_only'], info['cloud_counting'], thread), (None, False, None))
+        info, thread = self.info_on('darwin')
+        self.assertEqual((info['cloud_only'], info['cloud_counting']), (None, True))
+        thread.join(10)
+
+    @unittest.skipUnless(shutil.which('node'), 'needs Node')
+    def test_page_asks_again_only_while_counting_with_one_timer(self):
+        """setup.js's own cloudPoll, fed the engine's answer and drawn five times (every redraw of Manage calls it): no timer on
+        Windows or Linux, one timer on a Mac while the count runs, and a new one only after that one has run."""
+        script = r"""
+const src = require('fs').readFileSync(process.argv[1], 'utf8'), infos = JSON.parse(process.argv[2]);
+const section = (a, b) => src.slice(src.indexOf(a), src.indexOf(b, src.indexOf(a)));
+const out = {};
+for (const [system, c] of Object.entries(infos)) {
+  const timers = [];
+  const setTimeout = f => { timers.push(f); return timers.length };
+  let view = 'manage', S = {}, cloudPolls = 0, cloudT = null, cloudFor = '';
+  const CLOUD_POLL_MS = 3000, CLOUD_POLLS = 20, call = async () => S, cur = () => c, manageView = () => cloudPoll(c);
+  eval(section('  function cloudPoll(', '  function manageView('));
+  for (let i = 0; i < 5; i++) cloudPoll(c);
+  out[system] = timers.length;
+}
+console.log(JSON.stringify(out));
+"""
+        infos = {system: self.info_on(system)[0] for system in ('win32', 'linux', 'darwin')}
+        r = subprocess.run([shutil.which('node'), '-e', script, str(ROOT / 'web' / 'setup.js'), json.dumps(infos)],
+                           check=True, capture_output=True, text=True, encoding='utf-8')
+        self.assertEqual(json.loads(r.stdout), {'win32': 0, 'linux': 0, 'darwin': 1})
+
 
 class Maps(Base):
     def map_manifest(self, extra=None):
