@@ -20,7 +20,7 @@ class ReadingCatalogBrowseTests(unittest.TestCase):
             self.assertEqual(export(catalog, output), 3)
             page = output.read_text(encoding="utf-8")
             for expected in ('id="type"', 'id="letter"', 'All formats', 'All titles',
-                             'option>PDF</option>', 'option>HTML</option>', 'option>PPTX</option>',
+                             'option value="PDF">PDF</option>', 'option value="HTML">HTML</option>', 'option value="PPTX">PPTX</option>',
                              'r.cells[1].textContent', 'r.cells[2].textContent===type.value',
                              'title.charAt(0).toLocaleUpperCase()===letter.value',
                              "r.textContent.toLocaleLowerCase().includes(v)",
