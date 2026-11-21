@@ -317,11 +317,11 @@
       summary();
     } catch { b.disabled = false; b.textContent = 'Can’t change here' }
   }
-  async function haveLibrary(files, btn) {
+  async function haveLibrary(files, btn, only) {
     const n = $('#haveNote');
     try {
       const r = await call('pick', { files });
-      if (r && r.path) return useFile(r.path, btn || $(files ? '#haveFile' : '#haveLib'));
+      if (r && r.path) return useFile(r.path, btn || $(files ? '#haveFile' : '#haveLib'), only);
       if (r && (r.cancelled || r.path === null)) return;
       throw 0;
     } catch {
@@ -329,10 +329,10 @@
       n.textContent = 'The picker could not open. Try choosing the file or folder again.';
     }
   }
-  async function useFile(path, btn) {
+  async function useFile(path, btn, only) {
     if (btn) btn.disabled = true;
     try {
-      const r = await call('use', { path });
+      const r = await call('use', { path, ...only });
       if (r && r.error) throw new Error(r.error);
       if (r && r.noted) { S = await call('state').catch(() => S); choice.ai = true; chooseView(); const n = $('#haveNote'); n.hidden = false; n.textContent = 'The local AI file will be used. No need to download it.'; return }
       S.job = r; go(r.state === 'done' ? 'done' : 'job'); poll();
@@ -370,8 +370,10 @@
       ${old ? `<div class="s-row s-old">${ico('folder', 's-ri')}<span><b>The old library is still here</b><small>${esc(home(old.path))}${old.bytes ? ' · ' + size(old.bytes) : ''}</small></span>${confirmOld ? `<span class="s-confirm"><span>Delete it for good?</span><button class="btn danger" id="oldYes">Delete</button><button class="btn plain" id="oldNo">Keep</button></span>` : `<button class="btn plain" id="rmOld">${ico('trash')}Delete it</button>`}</div>` : ''}
       ${computer()}
       <div class="s-have"><div class="s-row">${ico('folder', 's-ri')}<span><b>Copy for someone else</b><small>Puts this library on a drive, with a START-HERE.txt, so someone can set up Lastbook with no internet. Nothing of yours is copied.</small></span><button class="btn plain" id="copyOut">Copy to a drive…</button></div></div>
-      ${CAN.repair ? `<div class="s-go left"><button class="btn plain" id="repair">${ico('repair')}Check and repair</button></div>` : ''}
+      <div class="s-go left">${CAN.repair ? `<button class="btn plain" id="repair">${ico('repair')}Check and repair</button>` : ''}
+        <button class="s-link" id="otherLib">${ico('folder')}Open another library folder</button></div>
       <p class="s-note${noteOk ? ' ok' : ''}" id="haveNote"${note ? '' : ' hidden'}>${esc(note)}</p>`;
+    $('#otherLib').onclick = () => haveLibrary(false, $('#otherLib'), { library: true });   // only another LastbookData, on a USB stick or another drive (#266)
     if ($('#libraryUpdate')) $('#libraryUpdate').onclick = () => { choice.pack = c.pack; choice.ai = !!c.model; go('choose') };
     if ($('#upgrade')) $('#upgrade').onclick = () => { choice.pack = bigger[0].id; choice.ai = !!c.model; go('choose') };
     if ($('#mapCh')) $('#mapCh').onclick = () => { choice.pack = c.pack; choice.ai = !!c.model; choice.map = null; go('choose'); const m = $('#mapSel'); if (m) m.focus() };
@@ -579,7 +581,7 @@
     const j = S.job || { items: [] }, fixed = repair && repair.fixed, checked = repair && !fixed;
     const got = j.items.filter(i => i.id !== 'repair' && i.id !== 'library').map(i => esc(itemTitle(i))).join(', ').replace(/, ([^,]*)$/, ' and $1');
     main.innerHTML = `<div class="s-done">${ico('ok', 's-big')}<h1>${checked ? 'All good' : fixed ? 'Repaired' : 'Ready'}</h1>
-      <p class="lead">${checked ? 'The library was checked and is complete.' : fixed ? 'A damaged part was downloaded again. The damaged copy is kept aside; you can delete it in Library and local AI.' : got ? `Installed: ${got}.` : 'The library is installed.'}</p>
+      <p class="lead">${checked ? 'The library was checked and is complete.' : fixed ? 'A damaged part was downloaded again. The damaged copy is kept aside; you can delete it in Library and local AI.' : got ? `Installed: ${got}.` : j.items.some(i => i.id === 'library') ? 'The library you chose is ready to open.' : 'The library is installed.'}</p>
       <button class="btn big" id="open">Open the library</button><p class="s-note" id="openNote" hidden></p></div>`;
     live.textContent = checked ? 'The library was checked.' : 'Installed. Ready to open.';
     $('#open').onclick = async () => {
