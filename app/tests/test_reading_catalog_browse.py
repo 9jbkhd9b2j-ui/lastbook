@@ -27,6 +27,9 @@ class ReadingCatalogBrowseTests(unittest.TestCase):
                              "n+' of '+rs.length+' titles'"):
                 self.assertIn(expected, page)
             self.assertLess(page.index('<td>A</td><td>Beta'), page.index('<td>B</td><td>Another title'))
+            self.assertLess(page.index('id="type"'), page.index("const q=document.getElementById"))
+            self.assertLess(page.index('id="letter"'), page.index("const q=document.getElementById"))
+            self.assertIn("for(const control of [q,type,letter])", page)
 
     def test_empty_catalog_keeps_filters_and_count(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -39,6 +42,8 @@ class ReadingCatalogBrowseTests(unittest.TestCase):
             self.assertIn('<tbody></tbody>', page)
             self.assertIn('new Set(rs.map(', page)
             self.assertIn("filter();", page)
+            self.assertIn('id="type"', page)
+            self.assertIn('id="letter"', page)
 
 
 if __name__ == "__main__":
