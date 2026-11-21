@@ -76,7 +76,7 @@
   let pollT = 0;
   let confirmCancel = false, confirmRemove = false, confirmOld = false;
   let note = '', noteOk = false;
-  let repair = null;      // a repair under way: {fixed} turns true once it had to download something
+  let repair = null;      // a repair under way: {fixed} turns true once it had to download something; {sure}: this page saw it from the start
 
   const packs = () => (S.manifest && S.manifest.packs) || [];
   const model = () => ((S.manifest && S.manifest.models) || [])[0] || null;
@@ -179,7 +179,7 @@
     else if (view === 'copy') copyView();
     if (focus) { const h = main.querySelector('h1'); if (h) { h.tabIndex = -1; h.focus({ preventScroll: true }) } scrollTo(0, 0) }
   }
-  function go(v) { view = v; confirmCancel = confirmRemove = confirmOld = false; note = ''; render(true) }
+  function go(v) { view = v; confirmCancel = confirmRemove = confirmOld = false; note = ''; if (v === 'manage' || v === 'choose') repair = null; render(true) }
 
   /* ---- this computer */
   function computer() {
@@ -392,7 +392,7 @@
     if ($('#repair')) $('#repair').onclick = async () => {
       const r = await call('start', { repair: true, ai: !!c.model }).catch(e => ({ error: e.message }));
       if (!r || r.error) { note = (r && r.error) || 'Repair could not start.'; manageView(); return }
-      repair = { fixed: false }; S.job = r; go('job'); poll();
+      repair = { fixed: false, sure: true }; S.job = r; go('job'); poll();
     };
   }
   /* ---- copy for someone else (#114): what goes onto the drive, and what does not */
@@ -473,8 +473,8 @@
     const steps = STEPS[it.kind] || STEPS.pack;
     const st = it.state === 'paused' && noDownload(it) ? (it.paused_from && it.paused_from !== 'downloading' ? it.paused_from : 'verifying')
       : it.state === 'paused' || it.state === 'waiting' ? 'downloading' : it.state === 'failed' ? FAILED_AT[errCode(it.error) || errCode(j.error)] || 'downloading' : it.state;
-    const at = it.state === 'done' ? steps.length : (it.state === 'waiting' || it.state === 'paused') && !it.bytes_done && !noDownload(it) ? -1 : Math.max(0, steps.findIndex(s => s[0] === st));
-    const busy = ['verifying', 'activating'].includes(it.state) || (it.state === 'unpacking' && !it.bytes_total);
+    const at = it.state === 'done' ? steps.length : (it.state === 'waiting' || it.state === 'paused') && !it.bytes_done && (!noDownload(it) || it.state === 'waiting') ? -1 : Math.max(0, steps.findIndex(s => s[0] === st));
+    const busy = it.state === 'activating' || (['verifying', 'unpacking'].includes(it.state) && !it.bytes_total);   // the check and the unpacking count their bytes
     return `<div class="s-item${it.state === 'failed' ? ' bad' : ''}${it.state === 'done' ? ' ok' : ''}" data-item="${esc(it.id)}" data-kind="${esc(it.kind)}">
       <div class="s-item-h">${ico(it.kind === 'model' ? 'ai' : it.kind === 'map' ? 'map' : it.kind === 'copy' ? 'folder' : 'book', 's-ri')}<b>${esc(itemTitle(it))}</b><span class="s-state" data-f="word">${it.state === 'done' ? ico('ok') : ''}${Object.hasOwn(WORD, it.state) ? WORD[it.state] : ''}</span></div>
       <div class="s-bar new${busy && j.state !== 'paused' ? ' busy' : ''}" role="progressbar" aria-label="${esc(it.title)}" aria-valuemin="0" aria-valuemax="100" data-f="bar"><i></i></div>
@@ -487,7 +487,18 @@
      source and paused_from come from the engine (docs/SETUP-API.md); without them, a complete download still counts */
   const noDownload = it => it.source === 'found' || (!!it.paused_from && it.paused_from !== 'downloading') || (it.bytes_total > 0 && it.bytes_done >= it.bytes_total);
   const STOPPED = { verifying: 'Checking stopped', unpacking: 'Unpacking stopped', activating: 'Finishing stopped' };
-  const behind = it => { const items = (S.job && S.job.items) || [], i = items.findIndex(x => x.id === it.id && x.kind === it.kind); return items.slice(0, i).some(x => x.state !== 'done' && !noDownload(x)) };
+  const above = it => { const items = (S.job && S.job.items) || [], i = items.findIndex(x => x.id === it.id && x.kind === it.kind); return items.slice(0, Math.max(i, 0)) };
+  const behind = it => above(it).some(x => x.state !== 'done' && !noDownload(x));   // a download waits for the downloads above it
+  const afterAbove = it => above(it).some(x => x.state !== 'done');                // a file already here waits for everything above it
+  const checkOnly = it => noDownload(it) || (!!(S.job && S.job.repair) && it.kind === 'pack' && !(repair && repair.fixed));   // a repair checks the open library before it fetches anything
+  const fetching = j => ['downloading', 'unpacking'].includes(j.state) || j.items.some(i => ['downloading', 'unpacking'].includes(i.state) || ['downloading', 'unpacking'].includes(i.paused_from));
+  /* a page opened again during a repair learns it from the engine's job (repair: true). It is sure of what the done screen says
+     only if nothing could have been fetched before it looked. fixed stays true once a download is seen */
+  function syncRepair(j) {
+    if (!j) return;
+    if (!repair && j.repair) { const f = fetching(j); repair = { fixed: f, sure: f || j.items.every(i => i.state === 'waiting' || i.state === 'verifying') } }
+    else if (repair && fetching(j)) repair.fixed = true;
+  }
   function fillItem(el, it) {
     const pct = it.bytes_total ? Math.min(100, it.bytes_done / it.bytes_total * 100) : it.state === 'done' ? 100 : 0;
     const bar = el.querySelector('[data-f=bar]'), line = el.querySelector('[data-f=line]');
@@ -498,10 +509,18 @@
     if (it.state === 'done') t = it.bytes_total ? size(it.bytes_total) : '';
     else if (it.state === 'downloading') t = [`${size(it.bytes_done)} of ${size(it.bytes_total)}`, it.retry_in_s ? retryIn(it.retry_in_s) : rate(it.rate_bps), eta(it.eta_s)].filter(Boolean).join(' · ');
     else if (it.state === 'paused' && noDownload(it)) t = `${STOPPED[it.paused_from] || 'Stopped'}${it.paused_from === 'unpacking' && it.bytes_done && it.bytes_total ? ` at ${size(it.bytes_done)} of ${size(it.bytes_total)}` : ''}. Nothing to download.`;
+    else if (it.state === 'waiting' && !it.bytes_done && checkOnly(it)) t = it.bytes_total ? `Already on this computer: ${size(it.bytes_total)} to check${afterAbove(it) ? ', after the one above' : ''}` : '';
     else if ((it.state === 'waiting' || it.state === 'paused') && !it.bytes_done) t = it.bytes_total ? `${size(it.bytes_total)} to download${behind(it) ? ', after the one above' : ''}` : '';
  else if (it.state === 'paused' || it.state === 'waiting' || it.state === 'failed') t = it.bytes_total && it.bytes_done ? `${size(it.bytes_done)} of ${size(it.bytes_total)}` : '';
     else if (it.kind === 'copy' && (it.state === 'copying' || it.state === 'paused' || it.state === 'failed')) t = [`${size(it.bytes_done)} of ${size(it.bytes_total)} copied and checked`, it.state === 'copying' ? rate(it.rate_bps) : '', it.state === 'copying' ? eta(it.eta_s) : ''].filter(Boolean).join(' · ');
-    else if (it.state === 'verifying') t = 'Making sure every byte is right';
+    else if (it.state === 'verifying') {
+      /* a resumed download re-reads the part it already has while the job stays 'downloading'; a check of a whole item (a repair,
+         or a file already here) sets the job to 'verifying' too. Only that whole check has a true time left */
+      const resumed = !!(S.job && S.job.state === 'downloading'), whole = !resumed && (it.source === 'found' || !!(S.job && S.job.repair));
+      t = !it.bytes_total ? 'Making sure every byte is right'
+        : resumed ? `Checking what is already downloaded: ${size(it.bytes_done)} so far`
+        : [`Checking: ${size(Math.min(it.bytes_done, it.bytes_total))} of ${size(it.bytes_total)}`, whole ? eta(it.eta_s) : ''].filter(Boolean).join(' · ');
+    }
     else if (it.state === 'unpacking') t = it.bytes_total ? `Unpacking: ${size(it.bytes_done)} of ${size(it.bytes_total)}${it.eta_s != null ? ' · ' + eta(it.eta_s) : ''}` : 'Opening the files into the library folder';
     else if (it.state === 'activating') t = it.kind === 'map' ? 'Switching to the new map' : 'Switching to the new library';
     line.textContent = t;
@@ -509,6 +528,7 @@
   function jobView(j) {
     if (!j) { go(cur() ? 'manage' : 'choose'); return }
     if (j.state === 'done') { go('done'); return }
+    syncRepair(j);
     const key = j.state + '|' + errCode(j.error) + '|' + confirmCancel + '|' + j.items.map(i => i.kind + ':' + i.id + ':' + i.state).join(',');
     const head = { paused: 'Paused', failed: errCode(j.error) === 'cancelled' ? 'Cancelled' : 'Stopped' }[j.state] || (j.copy ? 'Copying to the drive' : repair && !repair.fixed ? 'Checking the library' : repair ? 'Repairing' : 'Installing');
     if (key !== shapeKey) {
@@ -547,7 +567,7 @@
   }
   /* Resume when paused; Pause while it downloads, waits, or copies (a copy pauses between chunks, as a download does) */
   function jobControls(j) {
-    return `${j.state === 'paused' ? `<button class="btn" data-act="resume">${ico('play')}Resume</button>` : ['downloading', 'waiting', 'copying'].includes(j.state) ? `<button class="btn plain" data-act="pause">${ico('pause')}Pause</button>` : ''}
+    return `${j.state === 'paused' ? `<button class="btn" data-act="resume">${ico('play')}Resume</button>` : (j.state === 'downloading' || j.state === 'copying' || (j.state === 'waiting' && !j.repair)) ? `<button class="btn plain" data-act="pause">${ico('pause')}Pause</button>` : ''}
              <button class="btn plain" data-act="cancel">${ico('x')}Cancel</button>`;
   }
   async function jobAct(a, b) {
@@ -567,7 +587,6 @@
     if (!S.job || !ACTIVE.has(S.job.state)) return;
     pollT = setTimeout(async () => {
       try { const j = await call('job'); if (j) S.job = j } catch { pollT = setTimeout(poll, 3000); return }
-      if (repair && S.job && S.job.items.some(i => i.state === 'downloading' || i.state === 'unpacking')) repair.fixed = true;
       if (view !== 'job') return;
       if (S.job && S.job.state === 'done') { go('done'); return }
       jobView(S.job);
@@ -578,12 +597,13 @@
   /* ---- done */
   function doneView() {
     if (S.job && S.job.copy) return copiedView();
-    const j = S.job || { items: [] }, fixed = repair && repair.fixed, checked = repair && !fixed;
+    syncRepair(S.job);
+    const j = S.job || { items: [] }, fixed = repair && repair.fixed, checked = repair && !fixed, unsure = checked && !repair.sure;   // unsure: opened again late in a repair
     const got = j.items.filter(i => i.id !== 'repair' && i.id !== 'library').map(i => esc(itemTitle(i))).join(', ').replace(/, ([^,]*)$/, ' and $1');
-    main.innerHTML = `<div class="s-done">${ico('ok', 's-big')}<h1>${checked ? 'All good' : fixed ? 'Repaired' : 'Ready'}</h1>
-      <p class="lead">${checked ? 'The library was checked and is complete.' : fixed ? 'A damaged part was downloaded again. The damaged copy is kept aside; you can delete it in Library and local AI.' : got ? `Installed: ${got}.` : j.items.some(i => i.id === 'library') ? 'The library you chose is ready to open.' : 'The library is installed.'}</p>
+    main.innerHTML = `<div class="s-done">${ico('ok', 's-big')}<h1>${unsure ? 'Checked' : checked ? 'All good' : fixed ? 'Repaired' : 'Ready'}</h1>
+      <p class="lead">${unsure ? 'The library was checked and is complete. Anything that was damaged was downloaded again.' : checked ? 'The library was checked and is complete.' : fixed ? 'A damaged part was downloaded again. The damaged copy is kept aside; you can delete it in Library and local AI.' : got ? `Installed: ${got}.` : j.items.some(i => i.id === 'library') ? 'The library you chose is ready to open.' : 'The library is installed.'}</p>
       <button class="btn big" id="open">Open the library</button><p class="s-note" id="openNote" hidden></p></div>`;
-    live.textContent = checked ? 'The library was checked.' : 'Installed. Ready to open.';
+    live.textContent = checked ? 'The library was checked.' : fixed ? 'Repaired. Ready to open.' : 'Installed. Ready to open.';
     $('#open').onclick = async () => {
       const b = $('#open'); b.disabled = true; b.textContent = 'Opening your library…';
       const r = await call('finish', {}).catch(e => ({ error: e.message }));   // on {ok} the app relaunches itself into the library
