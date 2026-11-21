@@ -8,7 +8,7 @@ The test server lives only in this file: it serves a small fake pack and model o
 for the run, and can cut the connection mid-file, send wrong bytes, change the file's ETag, ignore Range, or redirect anywhere.
 The product's allowlist is not touched: tests pass their own `allowed` and TLS context to the downloader. Never packaged.
 """
-import hashlib, http.server, importlib.util, io, json, os, shutil, signal, socket, socketserver, ssl, subprocess, sys, threading, time, unittest, zipfile
+import errno, hashlib, http.server, importlib.util, io, json, os, re, shutil, signal, socket, socketserver, ssl, subprocess, sys, threading, time, unittest, zipfile
 from pathlib import Path
 from unittest import mock
 
@@ -1701,6 +1701,450 @@ class Manage(Base):
         self.assertEqual(sha((new / 'models' / 'model.gguf').read_bytes()), sha(self.model))
         self.assertEqual(s._check_library({'state': '', 'bytes_done': 0}, new, Control()), [])
         self.assertTrue(Path(note['old']).exists())        # the damaged copy is kept aside until deleted
+
+    def drive(self):
+        d = self.tmp / 'drive'
+        d.mkdir()
+        return d
+
+    def test_copy_to_a_drive_holds_the_library_and_nothing_personal(self):
+        lib = self.installed_library()
+        personal = {'derived/geo/addresses/CA.sqlite': b'addresses', 'derived/index/semantic.sqlite': b'index',
+                    'derived/llm/state.json': b'{}', 'notes.txt': b'mine'}
+        for rel, data in personal.items():
+            (lib / rel).parent.mkdir(parents=True, exist_ok=True)
+            (lib / rel).write_bytes(data)
+        (lib.parent / 'LastbookMine').mkdir()
+        (lib.parent / 'LastbookMine' / 'medication.txt').write_text('private')
+        before = {p.relative_to(lib).as_posix(): sha(p.read_bytes()) for p in lib.rglob('*') if p.is_file()}
+        s = self.setup('manage', current=lib)
+        self.files.log.clear()
+        drive = self.drive()
+        j = s.start(copy_to=str(drive))
+        self.assertTrue(j['copy'])
+        j = self.wait(s)
+        self.assertEqual(j['state'], 'done', j)
+        out = drive / 'LastbookData'
+        got = sorted(p.relative_to(out).as_posix() for p in out.rglob('*') if p.is_file())
+        self.assertEqual(got, ['library-data/big.bin', 'library-data/catalog.json', 'pack-manifest.tsv', 'pack.json'])   # the list, and only the list
+        for rel in got:
+            self.assertEqual((out / rel).read_bytes(), (lib / rel).read_bytes())
+        self.assertEqual(self.files.log, [])                                   # nothing downloaded
+        self.assertEqual(before, {p.relative_to(lib).as_posix(): sha(p.read_bytes()) for p in lib.rglob('*') if p.is_file()})   # the library untouched
+        start = (drive / 'START-HERE.txt').read_text(encoding='utf-8')
+        self.assertIn('Small library', start)
+        self.assertIn('LastbookData', start)
+        self.assertIn('Nothing personal', start)
+        self.assertFalse((out / api.COPY_MARK).exists())
+        self.assertEqual(j['result']['files'], 4)
+        self.assertEqual(sorted(p.name for p in drive.iterdir()), ['LastbookData', 'START-HERE.txt'])   # no work folder, no LastbookMine
+        self.assertIsNone(api.startup(self.settings)[1])                       # no switch staged
+        self.assertEqual(self.setup('manage', current=lib).job, None)          # a copy is not carried over a restart
+
+    def test_copy_carries_on_and_replaces_a_bad_file(self):
+        lib = self.installed_library()
+        drive = self.drive()
+        out = drive / 'LastbookData'
+        (out / 'library-data').mkdir(parents=True)
+        (out / api.COPY_MARK).write_text('copying')
+        (out / 'library-data' / 'catalog.json').write_bytes((lib / 'library-data' / 'catalog.json').read_bytes())
+        good = (out / 'library-data' / 'catalog.json').stat().st_mtime_ns
+        bad = bytearray((lib / 'library-data' / 'big.bin').read_bytes())
+        bad[5] ^= 1
+        (out / 'library-data' / 'big.bin').write_bytes(bad)                    # right size, wrong bytes
+        (out / 'library-data' / 'big.bin.partial').write_bytes(b'half')        # an earlier copy stopped here
+        s = self.setup('manage', current=lib)
+        s.start(copy_to=str(drive))
+        j = self.wait(s)
+        self.assertEqual(j['state'], 'done', j)
+        self.assertEqual((out / 'library-data' / 'big.bin').read_bytes(), (lib / 'library-data' / 'big.bin').read_bytes())
+        self.assertEqual((out / 'library-data' / 'catalog.json').stat().st_mtime_ns, good)   # a good file is kept, not copied again
+        self.assertFalse((out / 'library-data' / 'big.bin.partial').exists())
+
+    def test_copy_stops_on_a_damaged_library_file(self):
+        lib = self.installed_library()
+        data = bytearray((lib / 'library-data' / 'big.bin').read_bytes())
+        data[0] ^= 1
+        (lib / 'library-data' / 'big.bin').write_bytes(data)
+        s = self.setup('manage', current=lib)
+        drive = self.drive()
+        s.start(copy_to=str(drive))
+        j = self.wait(s)
+        self.assertEqual((j['state'], j['error']['code']), ('failed', 'copy'), j)
+        self.assertIn('big.bin does not match its published copy', j['error']['message'])
+        self.assertFalse((drive / 'LastbookData' / 'library-data' / 'big.bin').exists())          # the damage is not passed on
+        self.assertFalse((drive / 'LastbookData' / 'library-data' / 'big.bin.partial').exists())
+        self.assertFalse((drive / 'START-HERE.txt').exists())
+
+    def test_copy_with_a_state_map_takes_the_state_map(self):
+        lib = self.installed_library()
+        files = {'derived/geo/map.sqlite': b'state map', 'derived/geo/national-status.json': b'{}'}
+        for rel, data in files.items():
+            (lib / rel).parent.mkdir(parents=True, exist_ok=True)
+            (lib / rel).write_bytes(data)
+        (lib / 'map-set.json').write_text(json.dumps({'name': 'CA', 'files': {k: len(v) for k, v in files.items()}}))
+        s = self.setup('manage', current=lib)
+        drive = self.drive()
+        s.start(copy_to=str(drive))
+        j = self.wait(s)
+        self.assertEqual(j['state'], 'done', j)
+        out = drive / 'LastbookData'
+        for rel, data in files.items():
+            self.assertEqual((out / rel).read_bytes(), data)
+        self.assertTrue((out / 'map-set.json').is_file())
+
+    def test_copy_refuses_places_that_would_go_wrong(self):
+        lib = self.installed_library()
+        s = self.setup('manage', current=lib)
+        self.assertEqual(s.start(copy_to=str(lib / 'library-data'))['code'], 'folder')            # inside the library
+        self.assertEqual(s.start(copy_to=str(lib.parent))['code'], 'folder')                      # onto the library itself
+        taken = self.drive() / 'LastbookData'
+        taken.mkdir()
+        (taken / 'something.txt').write_text('not ours')
+        self.assertEqual(s.start(copy_to=str(taken.parent))['code'], 'folder')                    # someone else's folder
+        self.assertEqual(s.start(copy_to=str(self.tmp / 'nowhere'))['code'], 'missing')
+        with mock.patch.object(hardware, 'disk_of', return_value=(10, 10)):
+            other = self.tmp / 'small-drive'
+            other.mkdir()
+            self.assertEqual(s.start(copy_to=str(other))['code'], 'no_space')
+        self.assertEqual(self.setup().start(copy_to=str(self.tmp))['code'], 'nothing')
+        self.assertEqual(sorted(p.name for p in taken.iterdir()), ['something.txt'])
+
+    def test_copy_reads_each_file_back_from_the_drive(self):
+        """A drive that gives back other bytes than were written (a fake-capacity stick) stops the copy, for listed files and a
+        state map's files (which the list has no SHA-256 for) alike, and nothing of that file is left as if whole."""
+        lib = self.installed_library()
+        files = {'derived/geo/map.sqlite': b'state map'}
+        (lib / 'derived' / 'geo').mkdir(parents=True)
+        (lib / 'derived' / 'geo' / 'map.sqlite').write_bytes(b'state map')
+        (lib / 'map-set.json').write_text(json.dumps({'name': 'CA', 'files': {k: len(v) for k, v in files.items()}}))
+        real = api._read_back
+        for lying in ('big.bin.partial', 'map.sqlite.partial'):
+            with self.subTest(lying=lying):
+                drive = self.tmp / ('drive-' + lying)
+                drive.mkdir()
+                fake = lambda path, control, progress, lying=lying: '0' * 64 if Path(path).name == lying else real(path, control, progress)
+                s = self.setup('manage', current=lib)
+                with mock.patch.object(api, '_read_back', fake):
+                    s.start(copy_to=str(drive))
+                    j = self.wait(s)
+                self.assertEqual((j['state'], j['error']['code']), ('failed', 'copy'), j)
+                self.assertIn('The drive gave back different bytes', j['error']['message'])
+                name = lying[:-len('.partial')]
+                self.assertFalse(any(p.name in (name, lying) for p in drive.rglob('*')))   # neither the file nor its .partial
+                self.assertFalse((drive / 'START-HERE.txt').exists())
+
+    def test_copy_refuses_fat_for_a_file_of_4_gb_before_starting(self):
+        lib = self.installed_library()
+        rows = (lib / 'pack-manifest.tsv').read_text().rstrip('\n') + f'\nlibrary-data/collections/big.zim\t{5 * 2 ** 30}\t{"0" * 64}\tclone\t\n'
+        (lib / 'pack-manifest.tsv').write_text(rows)
+        s = self.setup('manage', current=lib)
+        drive = self.drive()
+        with mock.patch.object(hardware, 'disk_of', return_value=(10 ** 12, 10 ** 12)):
+            with mock.patch.object(hardware, 'fs_type', return_value='vfat'):
+                r = s.start(copy_to=str(drive))
+            self.assertEqual(r['code'], 'fat')
+            self.assertIn('exFAT', r['error'])
+            self.assertEqual(list(drive.iterdir()), [])                          # refused before anything was written
+            with mock.patch.object(hardware, 'fs_type', return_value='exfat'):
+                self.assertNotEqual(s.start(copy_to=str(drive)).get('code'), 'fat')
+        s.cancel()
+
+    def test_copy_counts_room_in_the_drives_clusters(self):
+        lib = self.installed_library()
+        s = self.setup('manage', current=lib)
+        drive = self.drive()
+        with mock.patch.object(hardware, 'disk_of', return_value=(2 * 2 ** 30, 10 ** 12)), \
+             mock.patch.object(hardware, 'cluster_size', return_value=2 ** 30):        # each file takes a whole cluster
+            r = s.start(copy_to=str(drive))
+        self.assertEqual(r['code'], 'no_space')
+        self.assertGreater(r['need_bytes'], 4 * 2 ** 30)                           # 4 files and 2 folders of 1 GB clusters, not ~1 MB
+        with mock.patch.object(hardware, 'cluster_size', return_value=4096):
+            s.start(copy_to=str(drive))
+            self.assertEqual(self.wait(s)['state'], 'done')
+
+    def test_copy_keeps_someone_elses_start_here(self):
+        lib = self.installed_library()
+        drive = self.drive()
+        (drive / 'START-HERE.txt').write_text('My camping photos are in DCIM.')
+        s = self.setup('manage', current=lib)
+        s.start(copy_to=str(drive))
+        j = self.wait(s)
+        self.assertEqual(j['result']['start_here'], 'START-HERE (Lastbook).txt')
+        self.assertEqual((drive / 'START-HERE.txt').read_text(), 'My camping photos are in DCIM.')
+        self.assertIn('LastbookData', (drive / 'START-HERE (Lastbook).txt').read_text(encoding='utf-8'))
+        s.job = None
+        (drive / 'START-HERE.txt').unlink()
+        (drive / 'START-HERE (Lastbook).txt').rename(drive / 'START-HERE.txt')     # our own from an earlier copy: replaced
+        shutil.rmtree(drive / 'LastbookData')                                      # a finished copy is not copied over: start afresh
+        s.start(copy_to=str(drive))
+        self.assertEqual(self.wait(s)['result']['start_here'], 'START-HERE.txt')
+
+    def link_or_skip(self, target, link):
+        try:
+            os.symlink(target, link)
+        except OSError:
+            self.skipTest('cannot make a symbolic link here')
+
+    def test_copy_never_writes_through_a_link_on_the_drive(self):
+        """The review case: an unfinished copy whose library-data is a link to someone else's folder. Nothing is written there."""
+        lib = self.installed_library()
+        drive = self.drive()
+        out = drive / 'LastbookData'
+        out.mkdir()
+        (out / api.COPY_MARK).write_text('copying')
+        theirs = self.tmp / 'their-folder'
+        theirs.mkdir()
+        (theirs / 'catalog.json').write_text('their own file')
+        self.link_or_skip(theirs, out / 'library-data')
+        s = self.setup('manage', current=lib)
+        s.start(copy_to=str(drive))
+        j = self.wait(s)
+        self.assertEqual((j['state'], j['error']['code']), ('failed', 'copy'), j)
+        self.assertIn('goes through a link', j['error']['message'])
+        self.assertEqual((theirs / 'catalog.json').read_text(), 'their own file')
+        self.assertEqual(sorted(p.name for p in theirs.iterdir()), ['catalog.json'])             # nothing new written there
+        self.assertFalse((drive / 'START-HERE.txt').exists())
+
+    def test_copy_never_writes_through_a_partial_link(self):
+        lib = self.installed_library()
+        drive = self.drive()
+        out = drive / 'LastbookData'
+        out.mkdir()
+        (out / api.COPY_MARK).write_text('copying')
+        theirs = self.tmp / 'their-file.txt'
+        theirs.write_text('their own file')
+        self.link_or_skip(theirs, out / 'pack.json.partial')
+        s = self.setup('manage', current=lib)
+        s.start(copy_to=str(drive))
+        j = self.wait(s)
+        self.assertEqual((j['state'], j['error']['code']), ('failed', 'copy'), j)
+        self.assertEqual(theirs.read_text(), 'their own file')
+
+    def test_copy_refuses_a_lastbookdata_that_is_a_link(self):
+        lib = self.installed_library()
+        drive = self.drive()
+        theirs = self.tmp / 'their-folder'
+        theirs.mkdir()
+        self.link_or_skip(theirs, drive / 'LastbookData')
+        r = self.setup('manage', current=lib).start(copy_to=str(drive))
+        self.assertEqual(r['code'], 'folder')
+        self.assertEqual(list(theirs.iterdir()), [])
+
+    def test_copy_keeps_both_start_here_names_of_someone_else(self):
+        """The review case: someone else's START-HERE.txt and START-HERE (Lastbook).txt both stay as they were."""
+        lib = self.installed_library()
+        drive = self.drive()
+        (drive / 'START-HERE.txt').write_text('first')
+        (drive / 'START-HERE (Lastbook).txt').write_text('second')
+        s = self.setup('manage', current=lib)
+        s.start(copy_to=str(drive))
+        j = self.wait(s)
+        self.assertEqual(j['state'], 'done', j)
+        self.assertEqual(((drive / 'START-HERE.txt').read_text(), (drive / 'START-HERE (Lastbook).txt').read_text()), ('first', 'second'))
+        self.assertEqual(j['result']['start_here'], 'START-HERE (Lastbook 2).txt')
+        self.assertIn('LastbookData', (drive / 'START-HERE (Lastbook 2).txt').read_text(encoding='utf-8'))
+        self.assertEqual(sorted(p.name for p in drive.iterdir() if p.name.endswith('.partial')), [])   # no temporary file left behind
+
+    def test_start_here_is_never_written_through_a_link(self):
+        lib = self.installed_library()
+        drive = self.drive()
+        theirs = self.tmp / 'their-file.txt'
+        theirs.write_text('their own file')
+        (drive / 'START-HERE.txt').write_text('mine')
+        self.link_or_skip(theirs, drive / 'START-HERE (Lastbook).txt')
+        s = self.setup('manage', current=lib)
+        s.start(copy_to=str(drive))
+        j = self.wait(s)
+        self.assertEqual(j['result']['start_here'], 'START-HERE (Lastbook 2).txt')
+        self.assertEqual(theirs.read_text(), 'their own file')
+
+    def test_copy_refuses_a_link_out_of_the_library(self):
+        lib = self.installed_library()
+        outside = self.tmp / 'outside-catalog.json'
+        outside.write_bytes((lib / 'library-data' / 'catalog.json').read_bytes())    # the same bytes: only the link gives it away
+        (lib / 'library-data' / 'catalog.json').unlink()
+        try:
+            os.symlink(outside, lib / 'library-data' / 'catalog.json')
+        except OSError:
+            self.skipTest('cannot make a symbolic link here')
+        drive = self.drive()
+        r = self.setup('manage', current=lib).start(copy_to=str(drive))
+        self.assertEqual(r['code'], 'copy')
+        self.assertIn('leads outside the library', r['error'])
+        self.assertEqual(list(drive.iterdir()), [])
+
+    def test_fs_type_from_mountinfo(self):
+        info = self.tmp / 'mountinfo'
+        info.write_text('22 1 0:21 / / rw,relatime - btrfs /dev/root rw\n'
+                        '30 22 8:17 / /media/you/MY\\040DRIVE rw,nosuid - vfat /dev/sdb1 rw\n'
+                        '31 22 8:33 / /media/you/MY rw - exfat /dev/sdc1 rw\n')
+        with mock.patch.object(hardware.os.path, 'realpath', side_effect=lambda p: p):
+            self.assertEqual(hardware._linux_fs_type('/media/you/MY DRIVE/folder', info), 'vfat')   # the escaped space, longest match
+            self.assertEqual(hardware._linux_fs_type('/media/you/MY', info), 'exfat')
+            self.assertEqual(hardware._linux_fs_type('/media/you/MYOTHER', info), 'btrfs')           # not inside /media/you/MY
+            self.assertEqual(hardware._linux_fs_type('/srv/x', info), 'btrfs')
+        self.assertIsNone(hardware._linux_fs_type('/x', self.tmp / 'missing'))
+
+    def test_cancel_a_copy_keeps_the_library_and_a_waiting_switch(self):
+        lib = self.installed_library()
+        s = self.setup('manage', current=lib)
+        self.assertEqual(api._pending_file(self.settings).exists(), False)
+        s.start(copy_to=str(self.drive()))
+        api._pending_file(self.settings).parent.mkdir(parents=True, exist_ok=True)
+        api._pending_file(self.settings).write_text('{}')                       # as if an upgrade were waiting for a restart
+        j = s.cancel()
+        self.assertTrue(api._pending_file(self.settings).exists())            # a copy's cancel never drops it
+        self.assertIn(j['state'], ('failed', 'done'))
+        if j['state'] == 'failed':
+            self.assertEqual(j['error']['code'], 'cancelled')
+            self.assertIn('copy again to the same place', j['error']['message'])
+        self.assertTrue(api.install.is_library(lib))
+
+    def test_copy_refuses_a_lastbookdata_that_is_a_file(self):
+        """A plain file called LastbookData on the drive gets the usual folder refusal, not an internal error."""
+        lib = self.installed_library()
+        drive = self.drive()
+        (drive / 'LastbookData').write_text('not a folder')
+        r = self.setup('manage', current=lib).start(copy_to=str(drive))
+        self.assertEqual(r['code'], 'folder', r)
+        self.assertIn('file called LastbookData', r['error'])
+        self.assertEqual((drive / 'LastbookData').read_text(), 'not a folder')
+
+    def test_copy_drive_failure_is_not_the_internet(self):
+        """A drive that fails mid-copy (pulled out, an I/O error) stops as 'copy', about the drive: a copy downloads nothing."""
+        lib = self.installed_library()
+        s = self.setup('manage', current=lib)
+        real = api._open_new
+
+        def failing(path):
+            if str(path).endswith('.partial'):
+                raise OSError(errno.EIO, 'Input/output error')
+            return real(path)
+        with mock.patch.object(api, '_open_new', failing):
+            s.start(copy_to=str(self.drive()))
+            j = self.wait(s)
+        self.assertEqual((j['state'], j['error']['code']), ('failed', 'copy'), j)
+        self.assertIn('drive is still connected', j['error']['message'])
+        self.assertNotIn('internet', j['error']['message'])
+
+    def test_finish_refuses_a_copy(self):
+        """A finished copy has no library to switch to here: finish() says so and switches nothing."""
+        lib = self.installed_library()
+        s = self.setup('manage', current=lib)
+        finished = []
+        s.on_finish = finished.append
+        s.start(copy_to=str(self.drive()))
+        self.assertEqual(self.wait(s)['state'], 'done')
+        r = s.finish()
+        self.assertEqual(r['code'], 'nothing', r)
+        time.sleep(0.6)
+        self.assertEqual(finished, [])
+        self.assertIsNone(api.startup(self.settings)[1])
+
+    @unittest.skipUnless(shutil.which('node'), 'needs Node')
+    def test_copy_screen_offers_pause_while_copying_and_resume_after(self):
+        """waiting -> copying -> paused -> resumed, from the real engine, each drawn by setup.js's own jobControls: Pause stays
+        while copying (it used to vanish once the state became 'copying'), Resume replaces it when paused, Cancel is always there."""
+        lib = self.installed_library()
+        s = self.setup('manage', current=lib)
+        gate, real = threading.Event(), api._read_back
+
+        def held(path, control, progress):        # the copy waits here, mid-file, until the test lets it go (Pause still works)
+            while not gate.wait(0.02):
+                control.check()
+            return real(path, control, progress)
+
+        def until(state):
+            t0 = time.time()
+            while s.public_job()['state'] != state:
+                self.assertLess(time.time() - t0, 20, s.public_job())
+                time.sleep(0.02)
+            return s.public_job()
+        with mock.patch.object(api, '_read_back', held):
+            seen = [s.start(copy_to=str(self.drive())), until('copying'), s.pause(), s.resume(), until('copying')]
+            gate.set()
+            self.assertEqual(self.wait(s)['state'], 'done')
+        self.assertIn(seen[0]['state'], ('waiting', 'copying'))
+        self.assertEqual([j['state'] for j in seen[1:]], ['copying', 'paused', 'waiting', 'copying'])
+        script = r"""
+const src = require('fs').readFileSync(process.argv[1], 'utf8'), jobs = JSON.parse(process.argv[2]);
+const section = (a, b) => src.slice(src.indexOf(a), src.indexOf(b, src.indexOf(a)));
+const ico = () => '';
+eval(section('  function jobControls(', '  async function jobAct('));
+console.log(JSON.stringify(jobs.map(jobControls)));
+"""
+        r = subprocess.run([shutil.which('node'), '-e', script, str(ROOT / 'web' / 'setup.js'), json.dumps(seen)],
+                           check=True, capture_output=True, text=True, encoding='utf-8')
+        for j, html in zip(seen, json.loads(r.stdout)):
+            with self.subTest(state=j['state']):
+                acts = re.findall(r'data-act="([a-z-]+)"', html)
+                self.assertEqual(acts, ['resume', 'cancel'] if j['state'] == 'paused' else ['pause', 'cancel'])
+
+    @unittest.skipUnless(shutil.which('node'), 'needs Node')
+    def test_copy_paused_at_100_percent_keeps_its_own_words(self):
+        """#204 review: the last file's read-back has reported 100% and the copy is paused before it finishes. The page used to say
+        "Stopped when Lastbook closed. Resume to finish; nothing needs downloading" with Lastbook open (every paused item looked
+        complete). The copy's own line comes first. Then Resume finishes the copy."""
+        lib = self.installed_library()
+        s = self.setup('manage', current=lib)
+        gate, reached, real = threading.Event(), threading.Event(), api._read_back
+
+        def held(path, control, progress):         # after the read-back that brings the copy to 100%, wait (Pause still works)
+            out = real(path, control, progress)
+            it = s.job['items'][0]
+            if it['bytes_done'] >= it['bytes_total']:
+                reached.set()
+                while not gate.wait(0.02):
+                    control.check()
+            return out
+        with mock.patch.object(api, '_read_back', held):
+            s.start(copy_to=str(self.drive()))
+            self.assertTrue(reached.wait(20))
+            paused = s.pause()
+            self.assertEqual(paused['state'], 'paused')
+            self.assertEqual(paused['items'][0]['bytes_done'], paused['items'][0]['bytes_total'])   # 100%, not finished
+            gate.set()
+            s.resume()
+            self.assertEqual(self.wait(s)['state'], 'done')
+        script = r"""
+const src = require('fs').readFileSync(process.argv[1], 'utf8'), j = JSON.parse(process.argv[2]);
+const section = (a, b) => src.slice(src.indexOf(a), src.indexOf(b, src.indexOf(a)));
+eval(section('  const noDownload = ', '  const STOPPED = ') + section('  function jobLead(', '  /* Resume when paused'));   // one eval: noDownload in jobLead's scope
+console.log(JSON.stringify({copy: jobLead(j), download: jobLead(Object.assign({}, j, {copy: false}))}));
+"""
+        r = subprocess.run([shutil.which('node'), '-e', script, str(ROOT / 'web' / 'setup.js'), json.dumps(paused)],
+                           check=True, capture_output=True, text=True, encoding='utf-8')
+        out = json.loads(r.stdout)
+        self.assertEqual(out['copy'], 'What is copied is kept. Resume when you are ready. If Lastbook closes, copy again to the same place to carry on.')
+        self.assertNotIn('Stopped when Lastbook closed', out['copy'])
+        self.assertIn('Stopped when Lastbook closed', out['download'])   # the same complete item in a download job: unchanged
+
+    @unittest.skipUnless(shutil.which('node'), 'needs Node')
+    def test_copy_screen_words(self):
+        """A copy's cancel and stops speak of the copy and the drive, never of a download or the internet."""
+        script = r"""
+const src = require('fs').readFileSync(process.argv[1], 'utf8');
+const section = (a, b) => src.slice(src.indexOf(a), src.indexOf(b, src.indexOf(a)));
+const esc = s => String(s == null ? '' : s), ico = () => '', size = String, diskName = () => 'the drive', diskFor = () => null;
+const errCode = e => e && e.code, errText = e => e && e.message, cur = () => ({});
+let folder = '';
+eval(section('  function errorBox(', '  function itemHTML('));
+const job = code => ({copy: true, folder: '/srv/x/LastbookData', error: {code, message: 'Lastbook could not read or write a file for the copy. Check the drive is still connected, then copy again to the same place to carry on.'}, items: []});
+console.log(JSON.stringify({copy: errorBox(job('copy')), full: errorBox(job('no_space')), cancelled: errorBox(job('cancelled')),
+                            confirm: src.includes("j.copy ? 'Stop copying? What is copied stays on the drive.'"),
+                            live: src.includes("'The copy was stopped. What was copied is on the drive.'")}));
+"""
+        r = subprocess.run([shutil.which('node'), '-e', script, str(ROOT / 'web' / 'setup.js')],
+                           check=True, capture_output=True, text=True, encoding='utf-8')
+        out = json.loads(r.stdout)
+        self.assertIn('The copy stopped.', out['copy'])
+        self.assertIn('The drive is full.', out['full'])
+        self.assertIn('The copy was cancelled.', out['cancelled'])
+        for k in ('copy', 'full', 'cancelled'):
+            self.assertNotIn('internet', out[k])
+            self.assertNotIn('download', out[k].lower())
+        self.assertTrue(out['confirm'] and out['live'])
 
     def test_repair_needs_a_known_pack(self):
         lib = self.parent / 'LastbookData'

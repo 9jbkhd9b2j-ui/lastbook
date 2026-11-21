@@ -4,6 +4,7 @@ import ctypes
 import json
 import os
 import platform
+import re
 import shutil
 import subprocess
 import sys
@@ -229,6 +230,69 @@ def disk_name(path):
     except Exception:
         return None
     return None
+
+
+FAT = {'vfat', 'msdos', 'fat', 'fat12', 'fat16', 'fat32'}     # file systems that cannot hold a file of 4 GB or more
+
+
+def _unescape_mount(s):
+    """mountinfo writes a space in a mount point as \\040 (and tab, newline and backslash likewise)."""
+    return re.sub(r'\\([0-7]{3})', lambda m: chr(int(m.group(1), 8)), s)
+
+
+def _linux_fs_type(path, mountinfo='/proc/self/mountinfo'):
+    """The file system type of the mount that holds path, from mountinfo (the longest mount point that contains it)."""
+    want = os.path.realpath(path)
+    best, kind = None, None
+    try:
+        lines = Path(mountinfo).read_text(encoding='utf-8', errors='replace').splitlines()
+    except OSError:
+        return None
+    for line in lines:
+        left, sep, right = line.partition(' - ')
+        fields = left.split()
+        if not sep or len(fields) < 5 or not right.split():
+            continue
+        mp = _unescape_mount(fields[4])
+        inside = want == mp or want.startswith(mp.rstrip('/') + '/')
+        if inside and (best is None or len(mp) > len(best)):
+            best, kind = mp, right.split()[0]
+    return kind
+
+
+def _windows_fs_type(path):
+    root = os.path.splitdrive(os.path.abspath(path))[0] + '\\'
+    name = ctypes.create_unicode_buffer(64)
+    ok = ctypes.windll.kernel32.GetVolumeInformationW(ctypes.c_wchar_p(root), None, 0, None, None, None, name, len(name))
+    return name.value if ok else None
+
+
+def fs_type(path):
+    """The file system that holds path ('ext4', 'exfat', 'vfat', 'NTFS', 'FAT32'…), or None where this cannot tell (macOS for now:
+    a file too large for FAT there fails as it is written, with EFBIG). Read only; nothing is mounted or changed."""
+    try:
+        if sys.platform.startswith('linux'):
+            return _linux_fs_type(path)
+        if sys.platform == 'win32':
+            return _windows_fs_type(path)
+    except Exception:
+        return None
+    return None
+
+
+def cluster_size(path):
+    """The smallest space a file takes on the drive that holds path, in bytes (exFAT on a large drive: often 128 KB), or None."""
+    try:
+        if sys.platform == 'win32':
+            spc, bps, free, total = (ctypes.c_ulong() for _ in range(4))
+            root = os.path.splitdrive(os.path.abspath(path))[0] + '\\'
+            if ctypes.windll.kernel32.GetDiskFreeSpaceW(ctypes.c_wchar_p(root), ctypes.byref(spc), ctypes.byref(bps), ctypes.byref(free), ctypes.byref(total)):
+                return spc.value * bps.value or None
+            return None
+        st = os.statvfs(path)
+        return st.f_frsize or st.f_bsize or None
+    except (OSError, AttributeError, ValueError):
+        return None
 
 
 def candidate_disks(extra=()):

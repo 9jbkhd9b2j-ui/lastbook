@@ -162,7 +162,7 @@
     }
     const j = S.job;
     if (j && j.state && j.state !== 'done' && !(j.state === 'failed' && errCode(j.error) === 'cancelled')) view = 'job';
-    else if (j && j.state === 'done') view = 'done';
+    else if (j && j.state === 'done') view = j.copy && cur() ? 'manage' : 'done';   // a finished copy: back to Library and local AI
     else if (cur() || S.mode === 'manage' || MANAGE_ASKED) view = cur() ? 'manage' : 'choose';
     $('#sBack').hidden = !cur();
     render(true);
@@ -176,6 +176,7 @@
     else if (view === 'choose') chooseView();
     else if (view === 'job') jobView(S.job);
     else if (view === 'done') doneView();
+    else if (view === 'copy') copyView();
     if (focus) { const h = main.querySelector('h1'); if (h) { h.tabIndex = -1; h.focus({ preventScroll: true }) } scrollTo(0, 0) }
   }
   function go(v) { view = v; confirmCancel = confirmRemove = confirmOld = false; note = ''; render(true) }
@@ -368,6 +369,7 @@
       </div>
       ${old ? `<div class="s-row s-old">${ico('folder', 's-ri')}<span><b>The old library is still here</b><small>${esc(home(old.path))}${old.bytes ? ' · ' + size(old.bytes) : ''}</small></span>${confirmOld ? `<span class="s-confirm"><span>Delete it for good?</span><button class="btn danger" id="oldYes">Delete</button><button class="btn plain" id="oldNo">Keep</button></span>` : `<button class="btn plain" id="rmOld">${ico('trash')}Delete it</button>`}</div>` : ''}
       ${computer()}
+      <div class="s-have"><div class="s-row">${ico('folder', 's-ri')}<span><b>Copy for someone else</b><small>Puts this library on a drive, with a START-HERE.txt, so someone can set up Lastbook with no internet. Nothing of yours is copied.</small></span><button class="btn plain" id="copyOut">Copy to a drive…</button></div></div>
       ${CAN.repair ? `<div class="s-go left"><button class="btn plain" id="repair">${ico('repair')}Check and repair</button></div>` : ''}
       <p class="s-note${noteOk ? ' ok' : ''}" id="haveNote"${note ? '' : ' hidden'}>${esc(note)}</p>`;
     if ($('#libraryUpdate')) $('#libraryUpdate').onclick = () => { choice.pack = c.pack; choice.ai = !!c.model; go('choose') };
@@ -380,11 +382,45 @@
     if ($('#rmOld')) $('#rmOld').onclick = () => { confirmOld = true; manageView(); $('#oldNo').focus() };
     if ($('#oldNo')) $('#oldNo').onclick = () => { confirmOld = false; manageView(); $('#rmOld').focus() };
     if ($('#oldYes')) $('#oldYes').onclick = () => act('delete-old', 'The old library is being deleted.', { path: old.path });
+    if ($('#copyOut')) $('#copyOut').onclick = async () => {   // #114: choose the drive, then say what will be copied before copying
+      const r = await call('pick', {}).catch(() => null);
+      if (!r || !r.path) { if (!r) { note = 'The picker could not open. Try again.'; manageView() } return }
+      copyTo = r; go('copy');
+    };
     if ($('#repair')) $('#repair').onclick = async () => {
       const r = await call('start', { repair: true, ai: !!c.model }).catch(e => ({ error: e.message }));
       if (!r || r.error) { note = (r && r.error) || 'Repair could not start.'; manageView(); return }
       repair = { fixed: false }; S.job = r; go('job'); poll();
     };
+  }
+  /* ---- copy for someone else (#114): what goes onto the drive, and what does not */
+  let copyTo = null;
+  function copyView() {
+    const c = cur() || {}, p = packById(c.pack), r = copyTo || {};
+    const need = p && p.installed_bytes;
+    main.innerHTML = `<h1>Copy for someone else</h1>
+      <p class="lead">Copy the ${esc(p ? p.title : 'Lastbook')} library${need ? ` (${size(need)})` : ''} to ${esc(r.disk || home(r.path || ''))}, with a START-HERE.txt that says how to set it up on another computer.</p>
+      <div class="s-have"><div class="s-row">${ico('folder', 's-ri')}<span><b>${esc(home(r.path || ''))}</b><small>${r.free_bytes != null ? size(r.free_bytes) + ' free there' : ''}</small></span></div></div>
+      <p class="s-note">Not copied: your settings, saved things, chats, notes, address search and the local AI. Only the library’s own files go onto the drive, and each is read back from the drive to make sure it arrived whole.</p>
+      <p class="s-two"><button class="btn big" id="copyGo">Copy</button> <button class="btn big plain" id="copyBack">Back</button></p>
+      <p class="s-note" id="haveNote"${note ? '' : ' hidden'}>${esc(note)}</p>`;
+    $('#copyBack').onclick = () => go('manage');
+    $('#copyGo').onclick = async () => {
+      $('#copyGo').disabled = true;
+      const x = await call('start', { copy_to: r.path }).catch(e => ({ error: e.message }));
+      if (!x || x.error) { note = (x && x.error) || 'The copy could not start.'; copyView(); return }
+      repair = null; S.job = x; go('job'); poll();
+    };
+  }
+  function copiedView() {
+    const r = (S.job && S.job.result) || {};
+    main.innerHTML = `<div class="s-done">${ico('ok', 's-big')}<h1>Copied</h1>
+      <p class="lead">The drive now holds the library (${r.files || 0} files${r.bytes ? ', ' + size(r.bytes) : ''}, each read back and checked) and ${esc(r.start_here || 'START-HERE.txt')}, which says how to set it up on another computer.</p>
+      <p class="s-note"><b>Eject the drive before you unplug it</b>, so the last files are written.</p>
+      <button class="btn big" id="back">Back to Library and local AI</button></div>`;
+    live.textContent = 'Copied.';
+    S.job = null;
+    $('#back').onclick = async () => { S = await call('state').catch(() => S); go('manage') };
   }
   async function act(path, done, body) {
     const r = await call(path, body || {}).catch(e => ({ error: e.status === 404 ? 'This Lastbook cannot do that yet.' : e.message }));
@@ -401,8 +437,9 @@
                   model: [['downloading', 'Download'], ['verifying', 'Check'], ['activating', 'Finish']] };
   STEPS.map = [['downloading', 'Download'], ['unpacking', 'Unpack']];   // the engine's map item: waiting, downloading, unpacking, done
   STEPS.addresses = STEPS.map;
-  const WORD = { waiting: 'Waiting', downloading: 'Downloading', paused: 'Paused', verifying: 'Checking', unpacking: 'Unpacking', activating: 'Finishing', done: 'Done', failed: 'Stopped' };
-  const ACTIVE = new Set(['waiting', 'downloading', 'verifying', 'unpacking', 'activating']);
+  STEPS.copy = [['copying', 'Copy']];
+  const WORD = { waiting: 'Waiting', downloading: 'Downloading', paused: 'Paused', verifying: 'Checking', unpacking: 'Unpacking', activating: 'Finishing', copying: 'Copying', done: 'Done', failed: 'Stopped' };
+  const ACTIVE = new Set(['waiting', 'downloading', 'verifying', 'unpacking', 'activating', 'copying']);
   let shapeKey = '', lastAct = null;   // lastAct: the button just pressed, so focus lands on what replaced it
 
   function errorBox(j) {
@@ -414,13 +451,14 @@
         const f = String((e && e.file) || ''), name = f.split(/[\\/]/).pop() || 'file', at = f.split(/[\\/]/).slice(-2, -1)[0];
         return [`The ${esc(name)}${at ? ' in ' + esc(at) : ''} doesn’t match the published file, so it was not used.`, 'It was left as it is. Download it instead?', 'download'];
       })(),
-      no_space: [`Not enough room on ${esc(diskName(d))}${e && e.need_bytes ? `: this needs ${size(e.need_bytes)}, and ${size(e.free_bytes)} is free` : ''}.`, 'Free some space, then retry, or go back and choose less.', 'retry'],
+      no_space: j.copy ? ['The drive is full.', 'What was copied is kept. Free some space on it, then retry.', 'retry'] : [`Not enough room on ${esc(diskName(d))}${e && e.need_bytes ? `: this needs ${size(e.need_bytes)}, and ${size(e.free_bytes)} is free` : ''}.`, 'Free some space, then retry, or go back and choose less.', 'retry'],
       network: ['The internet connection dropped.', 'What is downloaded is kept. Retry when you are online again.', 'retry'],
       server: ['The download server stayed busy.', 'Your internet connection is fine, and what is downloaded is kept. Retry in a while.', 'retry'],
       checksum: ['The download came out damaged twice, so it was not used.', 'Retry to download it once more.', 'retry'],
       unpack: ['Unpacking did not finish.', 'Check there is room on the disk, then retry.', 'retry'],
       activate: ['The new library is ready but could not be switched in.', 'Retry, or close Lastbook and open it again.', 'retry'],
-      cancelled: ['The download was cancelled.', 'Start again when you are ready.', 'back'],
+      copy: ['The copy stopped.', esc(errText(e) || 'Copy again to the same place to carry on.'), 'retry'],
+      cancelled: j.copy ? ['The copy was cancelled.', 'What was copied is still on the drive: copy again to the same place to carry on.', 'back'] : ['The download was cancelled.', 'Start again when you are ready.', 'back'],
     }[code] || [esc(errText(e) || 'Something went wrong.'), 'Retry, or go back and choose again.', 'retry'];
     return `<div class="s-err" role="alert">${ico('warn')}<div><b>${T[0]}</b><p>${T[1]}${code === 'found_mismatch' && !c ? '' : ' ' + safe}</p>
       <p class="s-acts">${T[2] === 'retry' ? `<button class="btn" data-act="retry">${ico('retry')}Retry</button>` : T[2] === 'download' ? `<button class="btn" data-act="retry">${ico('down')}Download it</button>` : ''}<button class="btn ${T[2] === 'back' ? '' : 'plain'}" data-act="back">Choose again</button></p></div></div>`;
@@ -433,7 +471,7 @@
     const at = it.state === 'done' ? steps.length : (it.state === 'waiting' || it.state === 'paused') && !it.bytes_done && !noDownload(it) ? -1 : Math.max(0, steps.findIndex(s => s[0] === st));
     const busy = ['verifying', 'activating'].includes(it.state) || (it.state === 'unpacking' && !it.bytes_total);
     return `<div class="s-item${it.state === 'failed' ? ' bad' : ''}${it.state === 'done' ? ' ok' : ''}" data-item="${esc(it.id)}" data-kind="${esc(it.kind)}">
-      <div class="s-item-h">${ico(it.kind === 'model' ? 'ai' : it.kind === 'map' ? 'map' : 'book', 's-ri')}<b>${esc(itemTitle(it))}</b><span class="s-state" data-f="word">${it.state === 'done' ? ico('ok') : ''}${Object.hasOwn(WORD, it.state) ? WORD[it.state] : ''}</span></div>
+      <div class="s-item-h">${ico(it.kind === 'model' ? 'ai' : it.kind === 'map' ? 'map' : it.kind === 'copy' ? 'folder' : 'book', 's-ri')}<b>${esc(itemTitle(it))}</b><span class="s-state" data-f="word">${it.state === 'done' ? ico('ok') : ''}${Object.hasOwn(WORD, it.state) ? WORD[it.state] : ''}</span></div>
       <div class="s-bar new${busy && j.state !== 'paused' ? ' busy' : ''}" role="progressbar" aria-label="${esc(it.title)}" aria-valuemin="0" aria-valuemax="100" data-f="bar"><i></i></div>
       <p class="s-line" data-f="line"></p>
       <ol class="s-steps" aria-label="Steps">${steps.map((s, i) => `<li class="${i < at ? 'done' : i === at && it.state !== 'failed' ? 'now' : i === at ? 'stop' : ''}">${s[1]}</li>`).join('')}</ol>
@@ -457,6 +495,7 @@
     else if (it.state === 'paused' && noDownload(it)) t = `${STOPPED[it.paused_from] || 'Stopped'}${it.paused_from === 'unpacking' && it.bytes_done && it.bytes_total ? ` at ${size(it.bytes_done)} of ${size(it.bytes_total)}` : ''}. Nothing to download.`;
     else if ((it.state === 'waiting' || it.state === 'paused') && !it.bytes_done) t = it.bytes_total ? `${size(it.bytes_total)} to download${behind(it) ? ', after the one above' : ''}` : '';
  else if (it.state === 'paused' || it.state === 'waiting' || it.state === 'failed') t = it.bytes_total && it.bytes_done ? `${size(it.bytes_done)} of ${size(it.bytes_total)}` : '';
+    else if (it.kind === 'copy' && (it.state === 'copying' || it.state === 'paused' || it.state === 'failed')) t = [`${size(it.bytes_done)} of ${size(it.bytes_total)} copied and checked`, it.state === 'copying' ? rate(it.rate_bps) : '', it.state === 'copying' ? eta(it.eta_s) : ''].filter(Boolean).join(' · ');
     else if (it.state === 'verifying') t = 'Making sure every byte is right';
     else if (it.state === 'unpacking') t = it.bytes_total ? `Unpacking: ${size(it.bytes_done)} of ${size(it.bytes_total)}${it.eta_s != null ? ' · ' + eta(it.eta_s) : ''}` : 'Opening the files into the library folder';
     else if (it.state === 'activating') t = it.kind === 'map' ? 'Switching to the new map' : 'Switching to the new library';
@@ -466,23 +505,19 @@
     if (!j) { go(cur() ? 'manage' : 'choose'); return }
     if (j.state === 'done') { go('done'); return }
     const key = j.state + '|' + errCode(j.error) + '|' + confirmCancel + '|' + j.items.map(i => i.kind + ':' + i.id + ':' + i.state).join(',');
-    const head = { paused: 'Paused', failed: errCode(j.error) === 'cancelled' ? 'Cancelled' : 'Stopped' }[j.state] || (repair && !repair.fixed ? 'Checking the library' : repair ? 'Repairing' : 'Installing');
+    const head = { paused: 'Paused', failed: errCode(j.error) === 'cancelled' ? 'Cancelled' : 'Stopped' }[j.state] || (j.copy ? 'Copying to the drive' : repair && !repair.fixed ? 'Checking the library' : repair ? 'Repairing' : 'Installing');
     if (key !== shapeKey) {
       const had = lastAct || (document.activeElement && document.activeElement.dataset ? document.activeElement.dataset.act : null);
       lastAct = null;
       const first = !shapeKey;
       shapeKey = key;
-      const quiet = j.state === 'paused' && j.items.filter(i => i.state === 'paused').every(noDownload);
-      const lead = quiet ? 'Stopped when Lastbook closed. Resume to finish; nothing needs downloading.'
-        : j.state === 'paused' ? 'What is downloaded is kept. Resume when you are ready, even after closing Lastbook.'
-        : j.state === 'failed' ? '' : 'You can keep using this computer. Closing Lastbook pauses it.';
+      const lead = jobLead(j);
       main.innerHTML = `<h1>${head}</h1>${lead ? `<p class="lead">${lead}</p>` : ''}
         ${j.state === 'failed' ? errorBox(j) : ''}
         <div class="s-items">${j.items.map(it => itemHTML(it, j)).join('')}</div>
         ${j.state === 'failed' ? '' : `<div class="s-go left">${confirmCancel
-          ? `<span class="s-confirm"><span>Stop and throw away the download?</span><button class="btn danger" data-act="cancel-yes">Stop</button><button class="btn plain" data-act="cancel-no">Keep going</button></span>`
-          : `${j.state === 'paused' ? `<button class="btn" data-act="resume">${ico('play')}Resume</button>` : j.state === 'downloading' || j.state === 'waiting' ? `<button class="btn plain" data-act="pause">${ico('pause')}Pause</button>` : ''}
-             <button class="btn plain" data-act="cancel">${ico('x')}Cancel</button>`}</div>`}`;
+          ? `<span class="s-confirm"><span>${j.copy ? 'Stop copying? What is copied stays on the drive.' : 'Stop and throw away the download?'}</span><button class="btn danger" data-act="cancel-yes">Stop</button><button class="btn plain" data-act="cancel-no">Keep going</button></span>`
+          : jobControls(j)}</div>`}`;
       main.querySelectorAll('[data-act]').forEach(b => b.onclick = () => jobAct(b.dataset.act, b));
       const again = had && main.querySelector(`[data-act="${had}"]`) || (had && main.querySelector('[data-act]'));
       if (again) again.focus();
@@ -494,6 +529,22 @@
     j.items.forEach(it => { const el = main.querySelector(`[data-item="${CSS.escape(it.id)}"][data-kind="${CSS.escape(it.kind)}"]`); if (el) fillItem(el, it) });
     if (fresh.length) { void main.offsetWidth; fresh.forEach(b => b.classList.remove('new')) }   // a new screen shows the bar where it is, without growing from nothing
   }
+  /* The line under the heading. A copy has its own words first: it downloads nothing, and a copy paused at 100% (its last file
+     read back, not yet finished) is not "stopped when Lastbook closed" (#204 review). */
+  function jobLead(j) {
+    if (j.state === 'failed') return '';
+    if (j.copy) return j.state === 'paused' ? 'What is copied is kept. Resume when you are ready. If Lastbook closes, copy again to the same place to carry on.'
+      : 'You can keep using this computer. If Lastbook closes, copy again to the same place to carry on.';
+    const quiet = j.state === 'paused' && j.items.filter(i => i.state === 'paused').every(noDownload);
+    return quiet ? 'Stopped when Lastbook closed. Resume to finish; nothing needs downloading.'
+      : j.state === 'paused' ? 'What is downloaded is kept. Resume when you are ready, even after closing Lastbook.'
+      : 'You can keep using this computer. Closing Lastbook pauses it.';
+  }
+  /* Resume when paused; Pause while it downloads, waits, or copies (a copy pauses between chunks, as a download does) */
+  function jobControls(j) {
+    return `${j.state === 'paused' ? `<button class="btn" data-act="resume">${ico('play')}Resume</button>` : ['downloading', 'waiting', 'copying'].includes(j.state) ? `<button class="btn plain" data-act="pause">${ico('pause')}Pause</button>` : ''}
+             <button class="btn plain" data-act="cancel">${ico('x')}Cancel</button>`;
+  }
   async function jobAct(a, b) {
     if (a === 'back') { S = await call('state').catch(() => S); S.job = null; shortfall = null; go('choose'); return }   // fresh: found[] may now mark a file as not matching
     if (a === 'cancel') { confirmCancel = true; jobView(S.job); main.querySelector('[data-act="cancel-no"]').focus(); return }
@@ -501,7 +552,7 @@
     if (a === 'cancel-yes') { confirmCancel = false; a = 'cancel' }
     b.disabled = true; lastAct = a;
     try { const j = await call(a, {}); if (j && j.items) S.job = j } catch { }
-    if (a === 'cancel') { S = await call('state').catch(() => S); S.job = null; go(cur() ? 'manage' : 'choose'); live.textContent = 'The download was cancelled.'; return }
+    if (a === 'cancel') { const was = S.job && S.job.copy; S = await call('state').catch(() => S); S.job = null; go(cur() ? 'manage' : 'choose'); live.textContent = was ? 'The copy was stopped. What was copied is on the drive.' : 'The download was cancelled.'; return }
     jobView(S.job);
     poll();
   }
@@ -520,6 +571,7 @@
 
   /* ---- done */
   function doneView() {
+    if (S.job && S.job.copy) return copiedView();
     const j = S.job || { items: [] }, fixed = repair && repair.fixed, checked = repair && !fixed;
     const got = j.items.filter(i => i.id !== 'repair' && i.id !== 'library').map(i => esc(itemTitle(i))).join(', ').replace(/, ([^,]*)$/, ' and $1');
     main.innerHTML = `<div class="s-done">${ico('ok', 's-big')}<h1>${checked ? 'All good' : fixed ? 'Repaired' : 'Ready'}</h1>
