@@ -40,6 +40,7 @@
   "setup.changeLibrary": "Change the library",
   "setup.error": "Setup could not start.",
   "setup.tryAgain": "Try again",
+  "setup.copyTitle": "Copy for someone else",
   "language.label": "Interface language",
   "language.preview": "The Latin American Spanish preview covers navigation and parts of Setup and Settings. The rest of the interface is in English.",
   "language.save": "Save language",
