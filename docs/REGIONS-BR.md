@@ -184,9 +184,10 @@ The counts are OSM objects as found by Overpass on 20 November 2026, per unit (I
 units. A single country-wide query timed out on the Overpass server, so the country total was not counted separately. Duplicates and closed features were not removed, so these are upper bounds for a
 usable map, not checked totals.
 
-One value is an outlier and is not trusted: Mato Grosso's `natural=spring` count (53,580) is far above every other unit
-(the next highest is 2,411, in São Paulo). It is most likely a bulk import. It was not checked, and it should not be read as
-a count of springs.
+One value stands out: Mato Grosso's `natural=spring` count (53,580) is far above every other unit (the next highest is
+2,411, in São Paulo). A second count on 2026-11-21 gave the same total (53,575 nodes and 5 ways), so the number is what OSM
+holds. Where these points came from (for example a bulk import) was not checked, because the Overpass servers timed out on
+that query. Until it is checked, read it as OSM points tagged as springs, not as a survey of springs.
 
 ## Licence notes and attribution
 

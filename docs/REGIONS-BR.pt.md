@@ -185,9 +185,11 @@ As contagens são objetos do OSM como encontrados pela Overpass em 20 de novembr
 a última linha é a soma das 27 unidades. Uma consulta nacional única deu timeout no servidor da Overpass, então o total do país não foi contado separadamente. Duplicatas e feições fechadas não foram removidas, então são limites
 superiores, não totais verificados.
 
-Um valor é um outlier e não é confiável: a contagem de `natural=spring` em Mato Grosso (53.580) está muito acima de todas as
-outras unidades (a seguinte é 2.411, em São Paulo). Provavelmente é uma importação em massa. Não foi verificada e não deve ser
-lida como contagem de nascentes.
+Um valor se destaca: a contagem de `natural=spring` em Mato Grosso (53.580) está muito acima de todas as outras unidades
+(a seguinte é 2.411, em São Paulo). Uma segunda contagem em 21/11/2026 deu o mesmo total (53.575 nós e 5 vias), então o
+número é o que o OSM contém. A origem desses pontos (por exemplo, uma importação em massa) não foi verificada, porque os
+servidores Overpass não responderam a essa consulta. Até isso ser verificado, leia como pontos do OSM marcados como nascente,
+não como um levantamento de nascentes.
 
 ## Notas sobre licença e atribuição
 

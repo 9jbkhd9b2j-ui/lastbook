@@ -1246,7 +1246,7 @@
     "amenity=police": 28
    }
   },
-  "note": "Outlier not trusted: MT natural=spring is 53,580, far above every other unit (next 2,411, SP); likely a bulk import, not checked. Sum of the 27 units is used as the total; a single country-wide query timed out on the Overpass server. TO was retried once after 502/504 errors and then read successfully."
+  "note": "MT natural=spring is 53,580, far above every other unit (next 2,411, SP). A second count on 2026-11-21 gave the same total (53,575 nodes, 5 ways); the origin (for example a bulk import) was not checked because Overpass timed out. Sum of the 27 units is used as the total; a single country-wide query timed out on the Overpass server. TO was retried once after 502/504 errors and then read successfully."
  },
  "water": {
   "proposed": [
