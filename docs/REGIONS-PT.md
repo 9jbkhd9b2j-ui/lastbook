@@ -85,8 +85,15 @@ Cross-checks between the two datasets:
 - Madeira's address group (`MAD`) sits inside the GISCO polygon box on every edge: its raw points reach
   -17.2578…-15.8637 and 30.0351…33.0886 against the polygon's -17.2660…-15.8554 and 30.0257…33.1040.
 - GISCO's own PT20 polygon box is -31.2679, 36.9305, -25.0142, 39.7262: its west edge matches the Corvo-and-Flores
-  address points to 0.002° and its south edge (36.93°, the Formigas islets) matches the eastern group's addresses
-  exactly, which is what let the island split follow the address data.
+  address points to 0.002°. Its south edge sits at 36.93° N, as does the eastern address group's lowest row — but what
+  feature that edge covers is **not verified**: the Formigas reserve, per the regional government's published bounds
+  (the document linked in the review, placed at about 37.25–37.27° N, 24.71–24.75° W) lies north-east of Santa Maria,
+  at 36.92–36.94° N only in older references, and the single address row at 36.93° N sits in open water. That row is
+  an **unverified geocoding outlier**, not a Formigas address.
+- **The proposal's boxes do not include the Formigas.** The `pt-20e` box's eastern edge is -24.86°, and the islets sit
+  at about -24.71°, so they fall outside it (they fall outside GISCO's own PT20 polygon too). The islets carry no
+  addressable settlement, so a street map loses nothing practical; if the maintainers want the reserve inside the
+  map's coverage, `pt-20e`'s eastern edge would widen to about -24.70°.
 
 Notes:
 
@@ -139,11 +146,12 @@ Notes:
   built from OSM must read the `waterway` tag, which the US builder does not (it reads NID records). APA's own
   inventories (barragens, hidrografia) did not answer from our route; they are the strong source when a person can open
   them in a browser.
-- **Crops.** `tools/build_crops.py` keeps orchards, vineyards and berries. OSM alone holds 46,597 orchard ways and
-  35,746 vineyard ways in Portugal (the Douro alone is one of Europe's densest vineyard landscapes), which is enough
-  for a first pass. COS 2018 is the national land-use map and the right permanent source, but its site did not resolve
-  on the day; CORINE classes 221–223 (vineyards; fruit and berry plantations; olive groves) are the fallback the Spain
-  proposal also names.
+- **Crops.** `tools/build_crops.py` keeps orchards, vineyards and berries. OSM alone holds 46,597 `landuse=orchard`
+  ways and 35,746 `landuse=vineyard` ways in Portugal (the Douro alone is one of Europe's densest vineyard
+  landscapes); of the orchard ways, **4,975 carry `trees=olive_trees`** — the olive groves are a subset of the orchard
+  count, not a separate figure — which is enough for a first pass. COS 2018 is the national land-use map and the right
+  permanent source, but its site did not resolve on the day; CORINE classes 221–223 (vineyards; fruit and berry
+  plantations; olive groves) are the fallback the Spain proposal also names.
 - **Places.** GeoNames' Portugal extract is small (1.2 MB) but holds the main gazetteer; INE's own municipality codes
   and the DGT's toponymy would be the official sources once the portals are reachable. OSM named places come with the
   base map regardless.
@@ -180,15 +188,19 @@ WHERE country = 'PT';
   collision risk: the builder's `state = address_levels[1].value.upper()[:2]` turns MAIA into `MA` (Massachusetts),
   ALMADA into `AL` (Alabama) and COIMBRA into `CO` (Colorado). A region
   cut must come from the postcode or the box, never from this field.
-- **Coverage by region.** The INE CSV's rows were counted against the ten region boxes (the un-margined column of the
-  table above). The totals double-count at borders: **1,753,186 of 5,911,139 rows fall inside two or more boxes**,
-  because neighbouring regions' bounding boxes overlap over large areas (the Norte and Centro boxes alone share a
-  2°-by-0.3° band). Per-box counts, for scale only, with double counting: Norte 1,952,345; Centro 1,407,876; Oeste e
-  Vale do Tejo 1,391,025; Grande Lisboa 1,148,816; Península de Setúbal 1,031,881; Alentejo 632,217; Algarve 393,027;
-  Madeira 130,268; Azores east 108,520; Corvo and Flores 2,371. 1,543 rows fall outside every box (geocoding
-  outliers). Unlike Spain — whose province-coded postcodes cut exactly — **a per-region address index for Portugal
-  cannot be cut by box**; it needs a municipality→region table from the INE municipality register, or per-municipality
-  cuts keyed on the address rows' own city field.
+- **Coverage by region.** The INE CSV's rows were counted against the ten region boxes at **full precision** — the
+  GISCO polygon bounds and the address groups' own exact extremes, not the four-decimal figures printed in the table
+  (counting against those printed figures drops three rows in each island group, whose true extremes carry more
+  decimals; an earlier revision of this proposal made exactly that mistake, and the counts below supersede it). The
+  totals double-count at borders: **1,752,802 of 5,911,139 rows fall inside two or more boxes**, because neighbouring
+  regions' bounding boxes overlap over large areas (the Norte and Centro boxes alone share a 2°-by-0.3° band).
+  Per-box counts, for scale only, with double counting: Norte 1,952,132; Centro 1,407,800; Oeste e Vale do Tejo
+  1,390,895; Grande Lisboa 1,148,767; Península de Setúbal 1,031,877; Alentejo 632,202; Algarve 393,019; Madeira
+  130,271; Azores east 108,523; Corvo and Flores 2,374. The three island counts equal their source groups exactly;
+  1,540 rows fall outside every box, all labelled geocoding outliers (including the one at 36.93° N above). Unlike
+  Spain — whose province-coded postcodes cut exactly — **a per-region address index for Portugal cannot be cut by
+  box**; it needs a municipality→region table from the INE municipality register, or per-municipality cuts keyed on
+  the address rows' own city field.
 - **Postcode prefixes.** The first two digits do not carry province codes the way Spain's do (01–52). The exact
   prefix→locality table is the CTT dictionary, which is not open. A per-region index cut would come from a
   municipality→region table built from INE's municipality register.
@@ -269,8 +281,9 @@ where the maintainers keep data licences.
 - **Order.** Street type first, then street, number, floor and door, then postcode and town: "Rua das Flores, 12,
   1.º Dto., 1200-195 Lisboa". Common types: *Rua*, *Avenida*, *Travessa*, *Praça*, *Largo*, *Calçada*, abbreviated
   *R.*, *Av.*, *Tv.*, *Pça.*. The number often carries a floor and door: "45, 3.º Esq.".
-- **Postcode.** Four digits, hyphen, three (`1200-195`); the -3 suffix is the locality extension. No leading zeros were
-  seen (the smallest prefixes observed start at 20). It must stay text because of the hyphen.
+- **Postcode.** Four digits, hyphen, three (`1200-195`); the -3 suffix is the locality extension. No leading zeros:
+  postcodes run 1000–9999, and the smallest two-digit prefix, 10 (Lisbon), holds 32,775 rows in the INE CSV. It must
+  stay text because of the hyphen.
 - **Names.** Portuguese street names carry accents and cedillas, and Overture's source keeps them: the INE CSV holds
   cities such as `BARCOUÇO`. **The current code breaks these words, worse than Spain's case**: `normalize()` and
   `norm()` keep only `a-z0-9`, so `BARCOUÇO` normalises to `barcou o`, `São Pedro` to `s o pedro`, `Póvoa` to
@@ -303,7 +316,9 @@ other proposals.
    REGIONS-ES.md). Postcode *areas* are not proposed; the per-address postcode in the CC BY 4.0 INE data is what
    address search needs.
 5. **The Azores split.** Whether `pt-20w` / `pt-20e` are acceptable codes, and whether Corvo and Flores (2,374
-   addresses, no large settlements) deserve their own map set or should ride with `pt-20e`'s set and a wider box.
+   addresses, no large settlements) deserve their own map set or should ride with `pt-20e`'s set and a wider box. The
+   boxes as proposed leave out the Formigas reserve (see the cross-checks above); widening `pt-20e` eastward to about
+   -24.70° would include it, at no practical gain for a street map.
 6. **New crop kinds.** Vineyards and olive groves are large land uses in Portugal (35,746 and 46,597 OSM ways); whether
    the crops layer grows kinds beyond orchards, vineyards and berries is the maintainers' decision, the same one
    REGIONS-ES.md leaves open for olives and citrus.
@@ -326,7 +341,12 @@ other proposals.
   counts and checks, from the INE CSV and from Overture.
 - **Also opened on 20 November 2026:** Eurostat's statistical geometry terms page (the GISCO licence note above).
 - **Seen only in search results:** the Mirandese law (Lei 7/99; the DRE page rendered as a JavaScript shell); the CTT
-  postcode dictionary's commercial terms.
+  postcode dictionary's commercial terms; the Formigas reserve's published bounds (the regional government document
+  cited in review, placed at about 37.25–37.27° N, 24.71–24.75° W).
+- **Also opened on 21 November 2026:** Portuguese Wikipedia's coordinates for the Formigas islets (37.2697° N,
+  -24.7137° W — which corrected this proposal's earlier identification of the 36.93° N edge) and Nominatim's search for
+  the name (two street-level matches, no islet match, consistent with the reserve being outside OSM's addressable
+  data); taginfo for Geofabrik's Portugal extract for `trees=olive_trees` (4,975 ways) and `produce=olives` (2).
 - **Not checked:** the CAOP download and licence (DGT is a JavaScript application); the INE INSPIRE portal (under
   maintenance on the day); COS 2018 (site did not resolve); APA/SNIAmb hydrography and dam inventories (did not
   respond); the MDT-DGT products and licence; the INE municipality register; the ISO 3166-2:PT codes against the ISO
