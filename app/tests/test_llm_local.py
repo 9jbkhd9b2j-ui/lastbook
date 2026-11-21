@@ -109,6 +109,7 @@ class SlowLoad(Base):
         self.local.state, self.local.pct, self.local.message = 'loading', 0, ''
         self.local.proc = self.proc
         self.local.t_spawn = self.local.t_progress = self.clock.time()
+        self.local.furthest = 0
         llm_local.threading.Thread(target=self.local._read, args=(self.proc, queue.Queue()), daemon=True).start()
 
     def say(self, ev, seen):
@@ -128,8 +129,8 @@ class SlowLoad(Base):
                 due[0] += seconds
                 ev = next(events, None)
                 if ev:
-                    before = (self.local.state, self.local.pct)
-                    self.say(ev, lambda: (self.local.state, self.local.pct) != before or ev.get('p') == before[1])
+                    self.say(ev, self.lines.empty)
+                    self.say({'ev': 'fit'}, self.lines.empty)      # once this one is taken, the one before is fully handled
         self.clock.tick = tick
 
     def test_load_that_keeps_getting_further_is_left_to_finish(self):
@@ -157,6 +158,14 @@ class SlowLoad(Base):
         t0 = self.clock.now
         self.assertEqual(self.local.ensure_running(), 'The local AI took too long to start.')
         self.assertAlmostEqual(self.clock.now - t0, step + llm_local.START_WAIT, delta=1)
+
+    def test_going_back_and_forth_does_not_keep_it_waiting(self):
+        step = llm_local.START_WAIT / 2
+        self.every(step, [{'ev': 'progress', 'p': 20}] + [{'ev': 'progress', 'p': p} for p in (19, 20)] * 25)
+        t0 = self.clock.now
+        self.assertEqual(self.local.ensure_running(), 'The local AI took too long to start.')
+        self.assertAlmostEqual(self.clock.now - t0, step + llm_local.START_WAIT, delta=1)   # counted from the first 20
+        self.assertEqual(self.local.furthest, 20)
 
     def test_load_that_never_reports_is_stopped_after_the_wait(self):
         t0 = self.clock.now

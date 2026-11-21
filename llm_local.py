@@ -111,7 +111,8 @@ class Local:
         self.state, self.pct, self.message = 'absent', None, ''
         self.path, self.fit, self.ready_info = None, None, None
         self.proc, self.events, self.last_used = None, None, 0
-        self.t_progress = 0       # when the load last got further (it started, or its percentage went up)
+        self.t_progress = 0       # when the load last got further (it started, or its percentage passed the furthest so far)
+        self.furthest = 0         # the highest percentage this load has reported
         self.next_id = 0
         self.failed_loads = 0     # loads in a row that ended before the model was ready
         self.saved = _load()
@@ -295,6 +296,7 @@ class Local:
         err.close()
         self.events = queue.Queue()
         self.t_spawn = self.t_progress = time.time()
+        self.furthest = 0
         threading.Thread(target=self._read, args=(self.proc, self.events), daemon=True, name='local-ai-read').start()
 
     def _read(self, proc, events):
@@ -308,8 +310,10 @@ class Local:
                 with self.lock:
                     if self.proc is proc:
                         p = ev.get('p')
-                        if isinstance(p, (int, float)) and p > (self.pct or 0):   # only a higher figure counts, so the wait has an end
-                            self.t_progress = time.time()
+                        # Only a figure past the furthest so far counts, so the wait has an end: the same figure again,
+                        # or a lower one and then the old one (20, 19, 20), is not a step forward.
+                        if isinstance(p, (int, float)) and not isinstance(p, bool) and p > self.furthest:
+                            self.furthest, self.t_progress = p, time.time()
                         self.pct = p
             elif kind == 'ready':
                 with self.lock:
