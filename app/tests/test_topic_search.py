@@ -181,6 +181,7 @@ EMERGENCY_UNDISTURBED = {
     'chest pain': ['hurt', 'sudden'], 'collapsed': ['hurt', 'breathing'], 'not breathing': ['hurt', 'breathing'],
     'drowning': ['hurt', 'breathing'], 'cpr': ['hurt', None], 'stopped': ['disaster', 'earthquake-after'],
     'heat stroke': ['hurt', 'heatcold'], 'sun stroke': ['hurt', 'heatcold'], 'heat stroke symptoms': ['hurt', 'heatcold'],
+    'stroke from the heat': ['hurt', 'heatcold'], 'stroke in the heat': ['hurt', 'heatcold'],   # heat phrases win over "stroke"
     'signs of a stroke': ['hurt', 'sudden'],
 }
 TOPS = sorted({*TOPS, *EMERGENCY_FIRST, *EMERGENCY_UNDISTURBED})
