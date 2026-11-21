@@ -162,7 +162,7 @@ Notas:
 | `BR-ES` | 41 | 3 | 15 | 3 | 144 | 432 | 20 | 250 |
 | `BR-GO` | 29 | 2 | 111 | 14 | 327 | 312 | 34 | 213 |
 | `BR-MA` | 5 | 1 | 4 | 23 | 228 | 178 | 16 | 118 |
-| `BR-MT` | 4 | 7 | 53.580 | 3 | 181 | 270 | 25 | 172 |
+| `BR-MT` | 4 | 7 | não contado | 3 | 181 | 270 | 25 | 172 |
 | `BR-MS` | 9 | 0 | 174 | 6 | 115 | 87 | 19 | 121 |
 | `BR-MG` | 142 | 15 | 1.697 | 54 | 860 | 1.234 | 63 | 656 |
 | `BR-PA` | 42 | 0 | 23 | 16 | 270 | 229 | 16 | 141 |
@@ -179,17 +179,13 @@ Notas:
 | `BR-SP` | 470 | 92 | 2.411 | 136 | 1.370 | 2.663 | 234 | 2.195 |
 | `BR-SE` | 7 | 1 | 7 | 4 | 72 | 274 | 10 | 146 |
 | `BR-TO` | 7 | 0 | 11 | 0 | 52 | 75 | 2 | 28 |
-| **Total (soma das 27 unidades)** | **1.305** | **265** | **60.022** | **910** | **8.114** | **14.044** | **1.158** | **8.015** |
+| **Total (soma das 27 unidades)** | **1.305** | **265** | **não contado** | **910** | **8.114** | **14.044** | **1.158** | **8.015** |
 
 As contagens são objetos do OSM como encontrados pela Overpass em 20 de novembro de 2026, por unidade (área ISO 3166-2);
 a última linha é a soma das 27 unidades. Uma consulta nacional única deu timeout no servidor da Overpass, então o total do país não foi contado separadamente. Duplicatas e feições fechadas não foram removidas, então são limites
 superiores, não totais verificados.
 
-Um valor se destaca: a contagem de `natural=spring` em Mato Grosso (53.580) está muito acima de todas as outras unidades
-(a seguinte é 2.411, em São Paulo). Uma segunda contagem em 21/11/2026 deu o mesmo total (53.575 nós e 5 vias), então o
-número é o que o OSM contém. A origem desses pontos (por exemplo, uma importação em massa) não foi verificada, porque os
-servidores Overpass não responderam a essa consulta. Até isso ser verificado, leia como pontos do OSM marcados como nascente,
-não como um levantamento de nascentes.
+A contagem de `natural=spring` em Mato Grosso está **não contada**. A Overpass dá 53.580 quando o estado é dividido em quatro subáreas, então o número se repete, mas 31.051 das 31.074 nascentes do quadrante sudoeste foram criadas por um único usuário do OSM (`danctc`) em 6 de novembro de 2025, em quatro changesets. É uma importação em massa, não uma contagem de nascentes, então não há número nessa coluna, e o total dela também não é contado.
 
 ## Notas sobre licença e atribuição
 

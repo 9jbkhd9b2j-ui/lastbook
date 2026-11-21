@@ -161,7 +161,7 @@ Notes:
 | `BR-ES` | 41 | 3 | 15 | 3 | 144 | 432 | 20 | 250 |
 | `BR-GO` | 29 | 2 | 111 | 14 | 327 | 312 | 34 | 213 |
 | `BR-MA` | 5 | 1 | 4 | 23 | 228 | 178 | 16 | 118 |
-| `BR-MT` | 4 | 7 | 53,580 | 3 | 181 | 270 | 25 | 172 |
+| `BR-MT` | 4 | 7 | not counted | 3 | 181 | 270 | 25 | 172 |
 | `BR-MS` | 9 | 0 | 174 | 6 | 115 | 87 | 19 | 121 |
 | `BR-MG` | 142 | 15 | 1,697 | 54 | 860 | 1,234 | 63 | 656 |
 | `BR-PA` | 42 | 0 | 23 | 16 | 270 | 229 | 16 | 141 |
@@ -178,16 +178,13 @@ Notes:
 | `BR-SP` | 470 | 92 | 2,411 | 136 | 1,370 | 2,663 | 234 | 2,195 |
 | `BR-SE` | 7 | 1 | 7 | 4 | 72 | 274 | 10 | 146 |
 | `BR-TO` | 7 | 0 | 11 | 0 | 52 | 75 | 2 | 28 |
-| **Total (sum of the 27 units)** | **1,305** | **265** | **60,022** | **910** | **8,114** | **14,044** | **1,158** | **8,015** |
+| **Total (sum of the 27 units)** | **1,305** | **265** | **not counted** | **910** | **8,114** | **14,044** | **1,158** | **8,015** |
 
 The counts are OSM objects as found by Overpass on 20 November 2026, per unit (ISO 3166-2 area); the last row is the sum of the 27
 units. A single country-wide query timed out on the Overpass server, so the country total was not counted separately. Duplicates and closed features were not removed, so these are upper bounds for a
 usable map, not checked totals.
 
-One value stands out: Mato Grosso's `natural=spring` count (53,580) is far above every other unit (the next highest is
-2,411, in São Paulo). A second count on 2026-11-21 gave the same total (53,575 nodes and 5 ways), so the number is what OSM
-holds. Where these points came from (for example a bulk import) was not checked, because the Overpass servers timed out on
-that query. Until it is checked, read it as OSM points tagged as springs, not as a survey of springs.
+Mato Grosso's `natural=spring` is **not counted**. Overpass gives 53,580 when the state is split into four sub-areas, so the figure is reproducible, but 31,051 of the 31,074 springs in the south-west quarter were created by one OSM user (`danctc`) on 6 November 2025, in four changesets. That is a bulk import, not a count of springs, so no number is shown for that column, and the column total is not counted either.
 
 ## Licence notes and attribution
 
