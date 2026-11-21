@@ -22,8 +22,8 @@ são uma proposta até que isso seja resolvido.
 
 ## Por que o Brasil é um caso útil
 
-O Brasil tem um esquema nacional próprio de números de emergência (190, 192, 193 e 199, veja "Pontos de ajuda"), e seus
-estados usam códigos de duas letras que, em um caso, coincidem com códigos dos EUA neste repositório. Não foi verificada
+O Brasil tem um esquema nacional próprio de números de emergência (190, 192, 193 e 199, veja "Pontos de ajuda"), e sete
+de seus estados usam códigos de duas letras que coincidem com códigos dos EUA neste repositório. Não foi verificada
 nesta proposta uma camada aberta de áreas de CEP. Duas coisas são diferentes dos EUA e vale decidi-las uma vez, porque
 outros países de língua portuguesa e espanhola vão levantar o mesmo ponto:
 
@@ -107,7 +107,7 @@ Notas:
   download não foi estimado nesta proposta.
 - **Ilhas oceânicas.** As malhas do IBGE foram conferidas para todas as unidades: qualquer polígono a mais de 0,5° do
   maior polígono da unidade foi listado. Duas ilhas afastadas estão nas malhas, e duas ilhas oceânicas não estão nelas.
-  - **Fernando de Noronha** (`BR-PE`, cerca de 3,4° a leste do continente) é **mantida** na caixa de PE, porque é uma
+  - **Fernando de Noronha** (`BR-PE`, cerca de 2,4° a leste do continente) é **mantida** na caixa de PE, porque é uma
     ilha de Pernambuco com moradores, e nenhum outro mapa a cobriria. A caixa de PE vai até -32,40° O por causa dela.
     Sem Noronha a caixa terminaria em -34,81° O; o custo é cerca de 2,4° de oceano.
   - **Trindade e Martim Vaz** (`BR-ES`, cerca de 10° a leste do continente, perto de 20,5° S) ficam **fora** da caixa do
@@ -230,23 +230,26 @@ a biblioteca pode copiar, e dá para usar offline?
 
 ## Pontos de ajuda
 
-Os números de emergência são a parte de que as pessoas mais precisam, e são os mesmos no país inteiro. Eles são definidos
-pela Anatel (o regulador de telecomunicações), não por cada estado.
+Os números de emergência são a parte de que as pessoas mais precisam, e são os mesmos no país inteiro. Os números
+principais têm como fonte o Ministério das Comunicações. 112 e 911 não são números de emergência próprios: são
+redirecionamentos condicionais (veja a nota abaixo da tabela).
 
 | Serviço | Número | Fonte do número | Dados de localização |
 |---|---|---|---|
-| Ambulância (SAMU) | 192 | gov.br, "SAMU 192: saiba quando acionar o serviço de urgência", publicado em 29 de agosto de 2022, atualizado em 26 de outubro de 2026 (aberta) | não verificados |
-| Incêndio (Corpo de Bombeiros) | 193 | página da Anatel, aberta em 20/11/2026: "Corpo de Bombeiros 193" | serviços estaduais de bombeiros: não verificados |
-| Polícia (Polícia Militar) | 190 | página da Anatel, aberta em 20/11/2026: "Polícia Militar 190" | polícia estadual: não verificada |
-| Polícia, só celular (Polícia Militar) | 112 e 911 | página da Anatel, aberta em 20/11/2026: "Polícia Militar - SOMENTE CELULAR 112/911" | polícia estadual: não verificada |
-| Defesa civil (Defesa Civil) | 199 | página da Anatel, aberta em 20/11/2026: "Defesa Civil 199" | não verificados |
+| Ambulância (SAMU) | 192 | Ministério das Comunicações, "Emergência: você sabe para quem ligar quando precisa de ajuda?", publicado em 11/09/2026, atualizado em 27/10/2026 (aberto em 21/11/2026), [link](https://www.gov.br/mcom/pt-br/noticias/2026/setembro/emergencia-voce-sabe-para-quem-ligar-quando-precisa-de-ajuda/) | não verificados |
+| Incêndio (Corpo de Bombeiros) | 193 | Ministério das Comunicações, "Emergência: você sabe para quem ligar quando precisa de ajuda?", publicado em 11/09/2026, atualizado em 27/10/2026 (aberto em 21/11/2026), [link](https://www.gov.br/mcom/pt-br/noticias/2026/setembro/emergencia-voce-sabe-para-quem-ligar-quando-precisa-de-ajuda/) | serviços estaduais de bombeiros: não verificados |
+| Polícia (Polícia Militar) | 190 | Ministério das Comunicações, "Emergência: você sabe para quem ligar quando precisa de ajuda?", publicado em 11/09/2026, atualizado em 27/10/2026 (aberto em 21/11/2026), [link](https://www.gov.br/mcom/pt-br/noticias/2026/setembro/emergencia-voce-sabe-para-quem-ligar-quando-precisa-de-ajuda/) | polícia estadual: não verificada |
+| Redirecionamento condicional ao serviço de emergência brasileiro (celular) | 112 e 911 | [Resolução Anatel 777, art. 127](https://informacoes.anatel.gov.br/legislacao/resolucoes/2025/2022-resolucao-777) (aberta em 21/11/2026): redirecionados só "se houver viabilidade técnica"; a página de códigos da Anatel os lista como só celular | polícia estadual: não verificada |
+| Defesa civil (Defesa Civil) | 199 | Ministério das Comunicações, "Emergência: você sabe para quem ligar quando precisa de ajuda?", publicado em 11/09/2026, atualizado em 27/10/2026 (aberto em 21/11/2026), [link](https://www.gov.br/mcom/pt-br/noticias/2026/setembro/emergencia-voce-sabe-para-quem-ligar-quando-precisa-de-ajuda/) | não verificados |
 
 Notas:
 
-- A designação desses códigos pela Anatel vem do ato de numeração de 2004 (só trecho de busca; a página do ato não foi
-  encontrada no endereço retornado, então não foi lida).
-- Estabelecimentos de saúde com coordenadas (o cadastro nacional, CNES) e postos de bombeiros ou polícia não foram
-  verificados nesta proposta, então não há contagens para eles.
+- 112 e 911 são redirecionamentos condicionais. O art. 127 da Resolução Anatel 777 diz que, "se houver viabilidade
+  técnica", a chamada para 112 ou 911 é redirecionada ao respectivo serviço público de emergência brasileiro. Quem ler
+  deve ligar primeiro para 190, 192, 193 ou 199; 112 e 911 podem não completar.
+- As listas oficiais não foram verificadas: o cadastro nacional de saúde (CNES) e as listas estaduais de postos de
+  bombeiros e polícia. As contagens do OSM de hospitais, clínicas, bombeiros e polícia estão em "Pontos de ajuda e
+  contagens".
 - A tabela de números em si pertence à [issue #261](https://github.com/Immortal-Protocols/lastbook/issues/261), não a esta
   proposta de mapa. Ela aparece aqui para que o mapa e a tabela de números coincidam.
 
@@ -323,7 +326,8 @@ Cada item precisa de decisão dos mantenedores antes de qualquer mudança de có
 - **Aberto em 20 de novembro de 2026:** a API de malhas do IBGE, polígonos estaduais em qualidade máxima, para as 27
   unidades; a página "Sobre o portal" do gov.br e o artigo federal do SAMU 192 (licença no rodapé: CC BY-ND 3.0 Brasil);
   a página da Anatel de serviços de utilidade pública e emergência (190, 192, 193, 199, e 112/911 listados como só
-  celular); o guia de endereços da Overture (Brasil 89.887.635); o artigo da Wikipédia "ISO 3166-2:BR" (27 códigos,
+  celular); em 21 de novembro de 2026, a notícia do Ministério das Comunicações sobre números de emergência e o art. 127
+  da Resolução Anatel 777 (112/911 redirecionados só se houver viabilidade técnica); o guia de endereços da Overture (Brasil 89.887.635); o artigo da Wikipédia "ISO 3166-2:BR" (27 códigos,
   nomes da ISO 3166/MA).
 - **Calculado em 20 de novembro de 2026:** as 27 caixas justas e as margens de 0,15° (para baixo em oeste e sul, para
   cima em leste e norte, até 0,01°); a conferência de ilhas destacadas nas 27 unidades; a caixa do ES sem Trindade e
@@ -331,13 +335,13 @@ Cada item precisa de decisão dos mantenedores antes de qualquer mudança de có
 - **Visto só em resultados de busca:** a nota técnica e legal do IBGE e os termos da BC250 (uso restrito); o guia de
   endereçamento dos Correios; uma resolução federal de 2017 sobre dados abertos que lista CC0, PDDL, CC BY 4.0 e ODbL
   como aceitáveis.
-- **Aberto em 20 de novembro de 2026 (água e pontos de ajuda):** a API Overpass (contagens do OSM, oito tags, 27 unidades e
-  o país); os textos das licenças ODbL 1.0 e CC BY 4.0; o registro de metadados da BHO 6 da ANA; o portal web do SIAGAS
+- **Aberto em 20 de novembro de 2026 (água e pontos de ajuda):** a API Overpass (contagens do OSM, oito tags: as 27 consultas
+  por unidade completaram; a consulta nacional deu timeout); os textos das licenças ODbL 1.0 e CC BY 4.0; o registro de metadados da BHO 6 da ANA; o portal web do SIAGAS
   (sem texto de licença); a página do conjunto CNES (campo de licença `cc-by`); o rodapé do portal do CNES (CC BY-ND 3.0
   para o site).
 - **Visto só em resultados de busca:** os planos de dados abertos do Ministério da Saúde (CC BY-NC-SA); os acordos da CPRM
   sobre o SIAGAS; o texto da política de dados abertos da ANA.
 - **Não verificado:** o Online Browsing Platform da ISO (iso.org); a nota técnica e legal do IBGE em si; o cadastro de
   saúde CNES; as listas estaduais de postos de bombeiros e polícia; a licença e a lista de classes do MapBiomas; a
-  cobertura do Google Open Buildings no Brasil; contagens do OSM para o Brasil; contagens da Overture por estado; as
+  cobertura do Google Open Buildings no Brasil; contagens da Overture por estado; as
   populações de Trindade e Martim Vaz.

@@ -532,7 +532,7 @@
     -32.24,
     -3.68
    ],
-   "notes": "Fernando de Noronha (about 3.4 degrees east of the mainland) is kept; without it the box ends at -34.807 W."
+   "notes": "Fernando de Noronha (about 2.4 degrees east of the mainland) is kept; without it the box ends at -34.807 W."
   },
   {
    "code": "BR-AL",
@@ -918,24 +918,26 @@
  "help_points": {
   "ambulance_samu": {
    "number": "192",
-   "verified": "opened gov.br, 'SAMU 192: saiba quando acionar o serviço de urgência', published 29/08/2022, updated 26/10/2026"
+   "verified": "Ministry of Communications, 'Emergência: você sabe para quem ligar quando precisa de ajuda?', published 2026-09-11, updated 2026-10-27, opened 2026-11-21, https://www.gov.br/mcom/pt-br/noticias/2026/setembro/emergencia-voce-sabe-para-quem-ligar-quando-precisa-de-ajuda/"
   },
   "fire_corpo_de_bombeiros": {
    "number": "193",
-   "verified": "opened Anatel SUP page 2026-11-20 ('Corpo de Bombeiros 193')"
+   "verified": "Ministry of Communications, 'Emergência: você sabe para quem ligar quando precisa de ajuda?', published 2026-09-11, updated 2026-10-27, opened 2026-11-21, https://www.gov.br/mcom/pt-br/noticias/2026/setembro/emergencia-voce-sabe-para-quem-ligar-quando-precisa-de-ajuda/"
   },
   "police_policia_militar": {
    "number": "190",
-   "verified": "opened Anatel SUP page 2026-11-20 ('Polícia Militar 190')"
-  },
-  "police_mobile_only": {
-   "number": "112 and 911",
-   "works_from": "mobile only",
-   "verified": "opened Anatel SUP page 2026-11-20 ('Polícia Militar - SOMENTE CELULAR 112/911')"
+   "verified": "Ministry of Communications, 'Emergência: você sabe para quem ligar quando precisa de ajuda?', published 2026-09-11, updated 2026-10-27, opened 2026-11-21, https://www.gov.br/mcom/pt-br/noticias/2026/setembro/emergencia-voce-sabe-para-quem-ligar-quando-precisa-de-ajuda/"
   },
   "civil_defence": {
    "number": "199",
-   "verified": "opened Anatel SUP page 2026-11-20 ('Defesa Civil 199')"
+   "verified": "Ministry of Communications, 'Emergência: você sabe para quem ligar quando precisa de ajuda?', published 2026-09-11, updated 2026-10-27, opened 2026-11-21, https://www.gov.br/mcom/pt-br/noticias/2026/setembro/emergencia-voce-sabe-para-quem-ligar-quando-precisa-de-ajuda/"
+  },
+  "conditional_redirect_112_911": {
+   "number": "112 and 911",
+   "type": "conditional redirect",
+   "works_from": "mobile (the Anatel codes page lists them as mobile only)",
+   "condition": "Redirected to the matching Brazilian emergency service only if technically feasible (Anatel Resolution 777, article 127).",
+   "verified": "opened Anatel Resolution 777, article 127, 2026-11-21, https://informacoes.anatel.gov.br/legislacao/resolucoes/2025/2022-resolucao-777"
   },
   "not_included": "191 (Polícia Rodoviária Federal, listed on the Anatel page) and state or city numbers.",
   "cnes_health_establishments": {
@@ -1264,7 +1266,7 @@
     "licence": "ODbL-1.0",
     "verified": "counts per unit read through Overpass on 2026-11-20 (see osm_counts)",
     "role": "help point",
-    "notes": "Springs and wells are shown with a plain 'not checked for drinking' label, as in REGIONS-ES.md. Drinking fountains are counted only when drinking_water=yes."
+    "notes": "Springs and wells are shown with a plain 'not checked for drinking' label, as in REGIONS-ES.md."
    }
   ],
   "not_proposed": [

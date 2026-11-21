@@ -22,8 +22,8 @@ licence of those polygons is **not** settled (see "Licence notes"), so the boxes
 
 ## Why Brazil is a useful case
 
-Brazil has its own national scheme for emergency numbers (190, 192, 193 and 199, see "Help points"), and its states use
-two-letter codes that, in one case, collide with US codes in this repository. Brazil has no open postal-code
+Brazil has its own national scheme for emergency numbers (190, 192, 193 and 199, see "Help points"), and seven of its states use
+two-letter codes that collide with US codes in this repository. Brazil has no open postal-code
 (CEP) area layer that was checked for this proposal. Two things are different from the US and worth deciding once,
 because other Portuguese- and Spanish-speaking countries will raise them too:
 
@@ -107,7 +107,7 @@ Notes:
   size of the download has not been estimated for this proposal.
 - **Offshore islands.** The IBGE polygons were checked for every unit: any polygon more than 0.5° from the unit's largest
   polygon was listed. Two detached islands are in the polygons, and two offshore islands are not in them at all.
-  - **Fernando de Noronha** (`BR-PE`, about 3.4° east of the mainland) is **kept** in the PE box, because it is a
+  - **Fernando de Noronha** (`BR-PE`, about 2.4° east of the mainland) is **kept** in the PE box, because it is a
     Pernambuco island with people living on it, and no other map would show it. The PE box reaches -32.40° W for it.
     Without Noronha the box would end at -34.81° W; the cost is about 2.4° of mostly ocean.
   - **Trindade and Martim Vaz** (`BR-ES`, about 10° east of the mainland, around 20.5° S) are **left out** of the ES
@@ -229,23 +229,25 @@ rest of the map: can the library copy it, and can it be used offline?
 ## Help points
 
 
-The emergency numbers are the part people need most, and they are the same across the country. They are set by Anatel
-(the telecoms regulator), not by each state.
+The emergency numbers are the part people need most, and they are the same across the country. The primary numbers are
+sourced to the Ministry of Communications. 112 and 911 are not emergency numbers in their own right: they are
+conditional redirects (see the note below the table).
 
 | Service | Number | Source for the number | Location data |
 |---|---|---|---|
-| Ambulance (SAMU) | 192 | gov.br, "SAMU 192: saiba quando acionar o serviço de urgência", published 29 August 2022, updated 26 October 2026 (opened) | not checked |
-| Fire (Corpo de Bombeiros) | 193 | Anatel page, opened 20 Nov 2026: "Corpo de Bombeiros 193" | state fire services: not checked |
-| Police (Polícia Militar) | 190 | Anatel page, opened 20 Nov 2026: "Polícia Militar 190" | state police: not checked |
-| Police, mobile phones only (Polícia Militar) | 112 and 911 | Anatel page, opened 20 Nov 2026: "Polícia Militar - SOMENTE CELULAR 112/911" | state police: not checked |
-| Civil defence (Defesa Civil) | 199 | Anatel page, opened 20 Nov 2026: "Defesa Civil 199" | not checked |
+| Ambulance (SAMU) | 192 | Ministry of Communications, "Emergência: você sabe para quem ligar quando precisa de ajuda?", published 11 Sep 2026, updated 27 Oct 2026 (opened 21 Nov 2026), [link](https://www.gov.br/mcom/pt-br/noticias/2026/setembro/emergencia-voce-sabe-para-quem-ligar-quando-precisa-de-ajuda/) | not checked |
+| Fire (Corpo de Bombeiros) | 193 | Ministry of Communications, "Emergência: você sabe para quem ligar quando precisa de ajuda?", published 11 Sep 2026, updated 27 Oct 2026 (opened 21 Nov 2026), [link](https://www.gov.br/mcom/pt-br/noticias/2026/setembro/emergencia-voce-sabe-para-quem-ligar-quando-precisa-de-ajuda/) | state fire services: not checked |
+| Police (Polícia Militar) | 190 | Ministry of Communications, "Emergência: você sabe para quem ligar quando precisa de ajuda?", published 11 Sep 2026, updated 27 Oct 2026 (opened 21 Nov 2026), [link](https://www.gov.br/mcom/pt-br/noticias/2026/setembro/emergencia-voce-sabe-para-quem-ligar-quando-precisa-de-ajuda/) | state police: not checked |
+| Conditional redirect to the Brazilian emergency service (mobile phones) | 112 and 911 | [Anatel Resolution 777, article 127](https://informacoes.anatel.gov.br/legislacao/resolucoes/2025/2022-resolucao-777) (opened 21 Nov 2026): redirected only "if technically feasible"; the Anatel codes page lists them as mobile only | state police: not checked |
+| Civil defence (Defesa Civil) | 199 | Ministry of Communications, "Emergência: você sabe para quem ligar quando precisa de ajuda?", published 11 Sep 2026, updated 27 Oct 2026 (opened 21 Nov 2026), [link](https://www.gov.br/mcom/pt-br/noticias/2026/setembro/emergencia-voce-sabe-para-quem-ligar-quando-precisa-de-ajuda/) | not checked |
 
 Notes:
 
-- The Anatel designation of these codes dates from the 2004 numbering act (search snippet only; the act's own page was
-  not found at the URL returned, so it was not read).
-- Health establishments with coordinates (the national register, CNES) and fire or police stations were not checked for
-  this proposal, so no counts are given for them.
+- 112 and 911 are conditional redirects. Anatel Resolution 777, article 127, says that, "if technically feasible", a call
+  to 112 or 911 is redirected to the matching Brazilian emergency service. A reader should dial 190, 192, 193 or 199
+  first; 112 and 911 may not connect.
+- The official lists were not checked: the national health register (CNES) and the state fire and police station lists.
+  OSM counts for hospitals, clinics, fire and police stations are given under "Help points and counts".
 - The number table itself belongs to [issue #261](https://github.com/Immortal-Protocols/lastbook/issues/261), not to
   this map proposal. It is listed here so that the map and the number table agree.
 
@@ -322,19 +324,21 @@ Each of these needs the maintainers' decision before any code changes.
 
 - **Opened on 20 November 2026:** the IBGE malhas API, state polygons at maximum quality, for all 27 units; the gov.br
   "Sobre o portal" page and the federal SAMU 192 article (footer licence CC BY-ND 3.0 Brazil); the Anatel public-utility
-  and emergency codes page (190, 192, 193, 199, and 112/911 listed as mobile only); the Overture addresses guide
+  and emergency codes page (190, 192, 193, 199, and 112/911 listed as mobile only); on 21 November 2026, the Ministry of
+  Communications emergency numbers article and Anatel Resolution 777, article 127 (112/911 redirected only if technically
+  feasible); the Overture addresses guide
   (Brazil 89,887,635); the Wikipedia article "ISO 3166-2:BR" (27 codes, names from the ISO 3166/MA).
 - **Computed on 20 November 2026:** the 27 tight boxes and the 0.15° margins (floor for west and south, ceiling for
   east and north, to 0.01°); the detached-island check across all 27 units; the Espírito Santo box without Trindade and
   Martim Vaz.
 - **Seen only in search results:** the IBGE technical and legal note and the BC250 terms (restricted use); the Correios
   addressing guide; a 2017 federal open-data resolution that lists CC0, PDDL, CC BY 4.0 and ODbL as acceptable.
-- **Opened on 20 November 2026 (water and help points):** the Overpass API (OSM counts, eight tags, 27 units and the
-  whole country); the ODbL 1.0 and CC BY 4.0 licence texts; the ANA BHO 6 metadata record; the SIAGAS web portal (no
+- **Opened on 20 November 2026 (water and help points):** the Overpass API (OSM counts, eight tags: the 27 unit queries
+  completed; the country-wide query timed out); the ODbL 1.0 and CC BY 4.0 licence texts; the ANA BHO 6 metadata record; the SIAGAS web portal (no
   licence text); the CNES dataset page (licence field `cc-by`); the CNES portal footer (CC BY-ND 3.0 for the site).
 - **Seen only in search results:** the Ministry of Health open-data plans (CC BY-NC-SA); the CPRM SIAGAS agreements;
   the ANA open-data policy wording.
 - **Not checked:** the ISO Online Browsing Platform (iso.org); the IBGE technical and legal note itself; the CNES health
   register; state fire and police station lists; MapBiomas licence and class list; Google Open Buildings coverage for
-  Brazil; OSM counts for Brazil; per-state Overture address counts; the populations of Trindade and Martim Vaz.
+  Brazil; per-state Overture address counts; the populations of Trindade and Martim Vaz.
 
