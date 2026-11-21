@@ -402,9 +402,11 @@ class TopicSearch(unittest.TestCase):
             for q, first in TH_DK_UNDISTURBED.items():
                 with self.subTest(q=q, segmenter=r['segmenter']):
                     self.assertEqual(top[q][:1], [first])
-            for q in ('burning', 'season'):                    # "burning season" was left out for these two
+            # "burning season" was left out for these two, so neither opens the shelter guide on its own. "burning"
+            # is now found by word form, where "burned" already was.
+            for q, found in (('burning', [['hurt', 'burn']]), ('season', [])):
                 with self.subTest(q=q, segmenter=r['segmenter']):
-                    self.assertEqual(top[q], [])
+                    self.assertEqual(top[q], found)
             for q in NOT_FIRST_AID:                             # a fire number does not open the hurt guide
                 with self.subTest(q=q, segmenter=r['segmenter']):
                     self.assertNotIn('hurt', [guide for guide, _ in top[q]])
