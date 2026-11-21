@@ -18,6 +18,7 @@ requests, and adds a few read-only endpoints:
   /api/map/near?lat=&lon=     nearest help points (hospital, pharmacy, water, fire station...)
   /api/places?q=              place finder (ZIP codes, towns, named places)
   /api/battery                this computer's battery (Linux so far), read when asked; this computer only
+  /api/not-found              notes of things the person couldn't find, kept only when they ask; this computer only
 
 Nothing in library-data is written. Caches go to derived/cache.
 """
@@ -1885,6 +1886,9 @@ class Handler(library.Handler):
         if rpath.startswith('/api/update/'):  # Check for updates, when the person asks: engine/update.py, this computer only
             from engine import update
             return update.handle(self, 'POST', rpath)
+        if rpath == '/api/not-found' or rpath.startswith('/api/not-found/'):  # Things I couldn't find: engine/notes.py, this computer only
+            from engine import notes
+            return notes.handle(self, 'POST', rpath, [t.get('id') for t in topics()])
         if rpath.startswith('/api/tool/'):  # the assistant's read-only tools, for other local DeepSeek clients
             name = rpath[10:]
             if name not in {t['function']['name'] for t in assistant.TOOLS}:
@@ -1979,6 +1983,9 @@ class Handler(library.Handler):
             if path == '/api/battery':   # this computer's battery, read when asked: engine/setup/hardware.py, this computer only
                 from engine.setup import hardware
                 return hardware.handle_battery(self)
+            if path == '/api/not-found':   # Things I couldn't find: engine/notes.py, this computer only
+                from engine import notes
+                return notes.handle(self, 'GET', path)
             if path in ('/', '/index.html'):
                 return self.send_static(WEB / 'index.html')
             if path.startswith('/ui/'):
