@@ -26,6 +26,7 @@ automatically from `catalog.json` — do not copy them into the topic file.
       "hint": "Boil-water notice, earthquake, flood, broken main",
       "urgent": ["not breathing"],     // optional: a search that names one of these phrases shows this guide and choice first
       "phrases": ["water broke"],      // optional: a search that names one of these phrases counts its words for this choice
+      "context": ["my", "at home"],    // optional, with phrases: other words a search may hold for a phrase to count
       "read": [
         {"doc": "<catalog id>", "page": 9,
          "label": "Short action-style headline of what the page helps with",
@@ -64,7 +65,14 @@ Rules
   rows in all. A search that names no `urgent` phrase is ranked exactly as without the field. Each phrase is matched as
   whole words in order, so "not breathing" does not catch "trouble breathing".
 - Favour fewer, better items: 1–4 readings per choice, 3–8 in prepare, 4–10 in learn.
-- `phrases` is for a wording whose single words point somewhere else ("water broke" is labor, not tap water). When a
-  search names one of them, whole words in order as for `urgent`, the phrase's words count as found for this choice and
-  its topic, and the choice wins a tie in its topic. Unlike `urgent`, it does not move the topic ahead of others: it
-  only scores. A search that names no phrase is ranked exactly as without the field.
+- `phrases` is for a wording whose single words point somewhere else ("water broke" is labor, not tap water). A
+  phrase counts only in context: the search names it, whole words in order as for `urgent`, and every other word in the
+  search is the choice's own, from its label, its hint or a `context` entry the search names ("my", "at home"). Then
+  the phrase's words count as found for this choice and its topic, and the choice wins a tie. "the baby is
+  coming" counts; "the baby is coming down with a fever" does not, so a word nobody foresaw leaves the search ranked as
+  without the field. Write "contractions ... minutes" for parts in order, at most four words apart. A guide that finds
+  a label or hint word the search also holds ("bleeding") stays listed below the choice even under the 60% cut, so put
+  label and hint words that name nothing else ("someone", "after", "care") in `context` too. Unlike `urgent`, a phrase
+  does not move the topic ahead of others: it only scores. Before adding one, try it in searches where it means
+  something else (medicine "minutes apart", plumbing "water has broken"), and keep `context` to words that cannot
+  name another emergency.
