@@ -53,6 +53,8 @@ other Linux distributions have not been validated for this release.
   picks the state; Lastbook never detects location.
 - **Optional local AI.** Ask questions in plain words and get answers that cite library pages, from a model that runs on
   the computer itself (see "The local AI" below). Without it, Chat still finds the right pages.
+- **Saved video moments.** Keep several named positions in a video and open them from the player or Saved. Names and
+  positions stay on this device; the video and its captions are unchanged.
 - **One-download setup.** On first run, setup defaults to Small and selects local AI when the computer can run it.
   The person can choose Small, Medium or All, selects a state map, and starts the checked downloads. A library already on the
   computer (a folder or a pack zip) can be used instead of downloading.
