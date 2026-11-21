@@ -127,6 +127,26 @@ Coverage outside the US needs a decision on each of these first: which open sour
 what licence, what a "state" is elsewhere, and how addresses are written. That is a design discussion to have in an
 issue before any code.
 
+### To do: maps for every place on Earth
+
+The goal is a detailed map for any place a person lives, not only the United States. What is still open, from the
+code as it is today:
+
+- [ ] **Region ids.** A map's id must be two capital letters (`engine/setup/manifest.py`, `engine/setup/install.py`,
+  `packaging/build_packs.py`, `packaging/state_maps.py`), so `DE-BE` or `CA-ON` cannot be installed. Most proposals
+  below use ISO 3166-2 ids, because a bare country code such as `DE` or `CA` is already a US state.
+- [ ] **Sources.** Pick an open replacement for each US dataset, region by region, with its licence. The region
+  proposals below do this.
+- [ ] **No Southern California box.** `server.py` assumes `map.sqlite` covers Southern California (`_poi_sources`,
+  `socal_classes`).
+- [ ] **Setup.** First run asks for a US state map (#267). Installing several maps, or one built locally, is #53.
+- [ ] **Address search.** It knows US state names and US street words. Other countries write the number after the
+  street, fold accents, or have no postcode.
+- [ ] **Units.** The map shows distances in miles above 1.6 km and contour lines in feet (`web/map.js`).
+- [ ] **Emergency number** for the person's country (#261).
+
+The design discussion is in #23, #25, #31 and #95.
+
 [REGIONS.md](REGIONS.md) proposes answers for Ontario, British Columbia and Guyana, as a starting point for that issue.
 [REGIONS-AR.md](REGIONS-AR.md) does the same for Argentina's provinces and the Autonomous City of Buenos Aires.
 [REGIONS-LK.md](REGIONS-LK.md) does the same for Sri Lanka as one island-wide region.
