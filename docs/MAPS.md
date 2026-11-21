@@ -35,13 +35,21 @@ Two kinds of table carry the things a person can tap:
 
 The setup picker lists published maps. To preview a map you built, keep it in its own writable folder with
 `map-set.json` at the top and the map files under `derived/geo/`. The desktop app also requires a
-`library-data/catalog.json` in that folder. For a map-only preview, create that file with `[]` as its contents.
+`library-data/catalog.json` in that folder. For a new map-only folder, the commands below create an empty
+catalog without a byte order mark. Keep any existing catalog intact.
 
 Open PowerShell and replace `C:\path\to\LastbookData` with your map folder. This example uses the default
 location of the installed Windows app.
 
 ```powershell
-& "$env:LOCALAPPDATA\Programs\Lastbook\Lastbook.exe" --data "C:\path\to\LastbookData"
+$map = "C:\path\to\LastbookData"
+$library = Join-Path $map "library-data"
+$catalog = Join-Path $library "catalog.json"
+if (-not (Test-Path -LiteralPath $catalog)) {
+    New-Item -ItemType Directory -Path $library -Force | Out-Null
+    Set-Content -LiteralPath $catalog -Value '[]' -Encoding ASCII
+}
+& "$env:LOCALAPPDATA\Programs\Lastbook\Lastbook.exe" --data $map
 ```
 
 Select **Map** in Lastbook and look up a place within the map's coverage to check that the detail loads.
