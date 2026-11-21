@@ -188,14 +188,18 @@ a última linha é a soma das 27 unidades. Uma consulta nacional única deu time
 do país não foi contado separadamente. Duplicatas e feições fechadas não foram removidas, então são limites superiores,
 não totais verificados.
 
-A contagem de `natural=spring` em Mato Grosso está **não contada**. A Overpass dá 53.580 (uma contagem do estado inteiro
-em 21 de novembro de 2026 deu o mesmo total), mas 31.051 das 31.074 nascentes do quadrante sudoeste foram criadas por um
-único usuário do OSM (`danctc`) em 6 de novembro de 2025, em quatro changesets com `source=SEMA-MT` (a secretaria de
-meio ambiente de Mato Grosso). Não foi encontrada permissão para dados da SEMA-MT: a página Contributors da wiki do OSM
-lista a secretaria de meio ambiente de Minas Gerais, mas não a SEMA-MT; o Import/Catalogue não tem entrada para ela; e o
-rodapé do site da SEMA-MT diz "Todos os Direitos reservados". Os changesets não têm comentários de discussão. Os pontos
-podem ser nascentes reais, mas sem licença documentada não devem ser contados nem distribuídos, então não há número
-nessa coluna, e o total dela também não é contado. Verificado em 21 de novembro de 2026.
+A contagem de `natural=spring` em Mato Grosso está **não contada**. A Overpass dá 53.580 objetos. Para ver de onde eles
+vêm, a caixa justa do IBGE para BR-MT (O -61,6334, S -18,0416, L -50,2248, N -7,3490) foi cortada ao meio nos pontos
+médios, latitude -12,6953 e longitude -55,9291, e cada quarto foi cruzado com a área BR-MT do OSM. Os quartos têm 31.074
+(sudoeste), 19.825 (sudeste), 40 (noroeste) e 2.641 (nordeste), que somam 53.580; uma consulta do estado inteiro em 21
+de novembro de 2026 deu o mesmo total. Pelos metadados dos objetos dos dois quartos do sul, 50.807 nascentes (31.006 no
+sudoeste e 19.801 no sudeste) estão em oito changesets feitos por um único usuário do OSM (`danctc`) em 6 de novembro de
+2025 (174297625, 174297760, 174297826, 174297902, 174298479, 174298489, 174298500 e 174298643). Os oito têm
+`source=SEMA-MT` (a secretaria de meio ambiente de Mato Grosso) e nenhum comentário de discussão. Não foi encontrada
+permissão para dados da SEMA-MT: a página Contributors da wiki do OSM lista a secretaria de meio ambiente de Minas
+Gerais, mas não a SEMA-MT; o Import/Catalogue não tem entrada para ela; e o rodapé do site da SEMA-MT diz "Todos os
+Direitos reservados". Os pontos podem ser nascentes reais, mas sem licença documentada não devem ser contados nem
+distribuídos, então não há número nessa coluna, e o total dela também não é contado.
 
 ## Notas sobre licença e atribuição
 
@@ -349,6 +353,12 @@ Cada item precisa de decisão dos mantenedores antes de qualquer mudança de có
   consultas por unidade completaram; a consulta nacional deu timeout); os textos das licenças ODbL 1.0 e CC BY 4.0; o
   registro de metadados da BHO 6 da ANA; o portal web do SIAGAS (sem texto de licença); a página do conjunto CNES (campo
   de licença `cc-by`); o rodapé do portal do CNES (CC BY-ND 3.0 para o site).
+- **Verificado em 21 de novembro de 2026 (nascentes de Mato Grosso):** a contagem da Overpass em quatro quartos descrita
+  em "Pontos de ajuda e contagens" (31.074 + 19.825 + 40 + 2.641 = 53.580) e uma contagem do estado inteiro (53.580); os
+  metadados dos objetos dos quartos sudoeste e sudeste; os oito changesets na API do OSM (usuário, data, número criado,
+  `source=SEMA-MT`, sem comentários); a página Contributors e o Import/Catalogue da wiki do OSM (sem entrada da
+  SEMA-MT); o rodapé da página inicial da SEMA-MT e o catálogo de dados abertos de Mato Grosso (sem licença para dados
+  de nascentes). O portal GeoDados MT não carregou sem navegador, então não foi lido.
 - **Visto só em resultados de busca:** os planos de dados abertos do Ministério da Saúde (CC BY-NC-SA); os acordos da CPRM
   sobre o SIAGAS; o texto da política de dados abertos da ANA.
 - **Não verificado:** o Online Browsing Platform da ISO (iso.org); a nota técnica e legal do IBGE em si; o cadastro de

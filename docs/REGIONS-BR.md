@@ -186,14 +186,18 @@ of the 27 units. A single country-wide query timed out on the Overpass server, s
 separately. Duplicates and closed features were not removed, so these are upper bounds for a usable map, not checked
 totals.
 
-Mato Grosso's `natural=spring` is **not counted**. Overpass gives 53,580 (a whole-state count on 21 November 2026 gave
-the same total), but 31,051 of the 31,074 springs in the south-west quarter were created by one OSM user (`danctc`) on 6
-November 2025, in four changesets tagged `source=SEMA-MT` (the Mato Grosso environment department). No permission for
-SEMA-MT data was found: the OSM wiki Contributors page lists the Minas Gerais environment department but not SEMA-MT,
-the Import/Catalogue has no entry for it, and the SEMA-MT website footer says "Todos os Direitos reservados" (all rights
-reserved). The changesets have no discussion comments. The points may be real springs, but without a documented licence
-they should not be counted or shipped, so no number is shown for that column, and the column total is not counted
-either. Checked on 21 November 2026.
+Mato Grosso's `natural=spring` is **not counted**. Overpass gives 53,580 objects. To see where they come from, the IBGE
+tight box for BR-MT (W -61.6334, S -18.0416, E -50.2248, N -7.3490) was cut in half at its midpoints, latitude -12.6953
+and longitude -55.9291, and each quarter was intersected with the OSM BR-MT area. The quarters hold 31,074 (south-west),
+19,825 (south-east), 40 (north-west) and 2,641 (north-east), which sum to 53,580; a whole-state query on 21 November
+2026 gave the same total. Reading the object metadata of the two southern quarters, 50,807 springs (31,006 south-west
+and 19,801 south-east) are in eight changesets made by one OSM user (`danctc`) on 6 November 2025 (174297625, 174297760,
+174297826, 174297902, 174298479, 174298489, 174298500 and 174298643). All eight are tagged `source=SEMA-MT` (the Mato
+Grosso environment department) and have no discussion comments. No permission for SEMA-MT data was found: the OSM wiki
+Contributors page lists the Minas Gerais environment department but not SEMA-MT, the Import/Catalogue has no entry for
+it, and the SEMA-MT website footer says "Todos os Direitos reservados" (all rights reserved). The points may be real
+springs, but without a documented licence they should not be counted or shipped, so no number is shown for that column,
+and the column total is not counted either.
 
 ## Licence notes and attribution
 
@@ -346,6 +350,12 @@ Each of these needs the maintainers' decision before any code changes.
   completed; the country-wide query timed out); the ODbL 1.0 and CC BY 4.0 licence texts; the ANA BHO 6 metadata record;
   the SIAGAS web portal (no licence text); the CNES dataset page (licence field `cc-by`); the CNES portal footer (CC
   BY-ND 3.0 for the site).
+- **Checked on 21 November 2026 (Mato Grosso springs):** the four-quarter Overpass count described under "Help points
+  and counts" (31,074 + 19,825 + 40 + 2,641 = 53,580) and a whole-state count (53,580); the object metadata of the
+  south-west and south-east quarters; the eight changesets on the OSM API (user, date, created count, `source=SEMA-MT`,
+  no comments); the OSM wiki Contributors page and Import/Catalogue (no SEMA-MT entry); the SEMA-MT home page footer and
+  the Mato Grosso open-data catalogue (no licence for spring data). The GeoDados MT portal did not load without a
+  browser, so it was not read.
 - **Seen only in search results:** the Ministry of Health open-data plans (CC BY-NC-SA); the CPRM SIAGAS agreements;
   the ANA open-data policy wording.
 - **Not checked:** the ISO Online Browsing Platform (iso.org); the IBGE technical and legal note itself; the CNES health
