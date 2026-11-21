@@ -835,17 +835,24 @@ class AssistantHTTPMessages(unittest.TestCase):
 class ServerMode(unittest.TestCase):
     """server.py run on its own (--lan, the library server): the map asks for 20 or more tiles at once."""
 
-    def test_listen_queue_holds_a_burst_of_tiles(self):
-        # Python's default queue is 5: on macOS the waiting connections beyond it were reset, and those tiles stayed blank.
-        srv = server.HTTPServer(('127.0.0.1', 0), server.Handler, bind_and_activate=False)
+    def listen_queue(self, server_class, handler):
+        srv = server_class(('127.0.0.1', 0), handler, bind_and_activate=False)
         try:
             with mock.patch.object(socket.socket, 'listen') as listen:   # never really listens: WholeProcess checks that
                 srv.server_bind()
                 srv.server_activate()
-            listen.assert_called_once_with(server.LISTEN_QUEUE)
-            self.assertGreaterEqual(server.LISTEN_QUEUE, 64)
+            return listen.call_args.args[0]
         finally:
             srv.server_close()
+
+    def test_listen_queue_holds_a_burst_of_tiles(self):
+        # Python's default queue is 5: on macOS the waiting connections beyond it were reset, and those tiles stayed blank.
+        self.assertGreaterEqual(self.listen_queue(server.HTTPServer, server.Handler), 64)
+
+    def test_library_server_has_the_same_queue(self):
+        # engine/library.py serve: the plain library server, without server.py on top.
+        library = server.library
+        self.assertGreaterEqual(self.listen_queue(library.HTTPServer, library.Handler), 64)
 
 
 class NothingGoesOut(unittest.TestCase):

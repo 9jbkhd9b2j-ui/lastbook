@@ -2145,13 +2145,7 @@ def init(no_index=False):
     threading.Thread(target=prewarm_previews, daemon=True).start()
 
 
-# Connections that may wait to be accepted. Opening the map asks for 20 or more tiles at once; with Python's default of 5,
-# macOS reset the rest and those tiles stayed blank.
-LISTEN_QUEUE = 128
-
-
-class HTTPServer(library.http.server.ThreadingHTTPServer):
-    request_queue_size = LISTEN_QUEUE
+class HTTPServer(library.HTTPServer):   # queues 128 connections: opening the map asks for 20 or more tiles at once
     if os.name == 'nt':  # SO_REUSEADDR on Windows lets a second copy silently share the port
         allow_reuse_address = False
 
