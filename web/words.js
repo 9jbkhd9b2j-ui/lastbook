@@ -109,10 +109,14 @@
   const NUMBER = /^\d+(st|nd|rd|th|am|pm|cm|s|h|secs?|mins?|minutes?|hrs?|hours?|days?|wks?|weeks?)?$/;
   // Where a search names entries of a list: the positions they cover, and their words.
   function spans(all, list) {
-    const at = new Set(), found = [];
+    const at = new Set(), found = [], starts = [];
     for (const p of list) for (let i = 0; i + p.length <= all.length; i++)
-      if (p.every((w, j) => all[i + j] === w)) { p.forEach((_, j) => at.add(i + j)); found.push(...p) }
-    return { at, found };
+      if (p.every((w, j) => all[i + j] === w)) {
+        p.forEach((_, j) => at.add(i + j));
+        found.push(...p);
+        starts.push([i, p]);
+      }
+    return { at, found, starts };
   }
   // A choice's phrases count only in context: the search names one (or a weak phrase), names none of its "unless"
   // entries, and every other word is everyday (PLAIN, a number or a stop word), part of a "context" entry the search
@@ -121,9 +125,13 @@
   // as without the fields. Returns the words found for the choice (phrase and context words), and the search's other
   // words ("bleeding", "flood"): guides that find those stay listed.
   function namedWords(all, words, { phrases, weak, who, own, beside, context, unless }, stop) {
+    const loose = spans(all, weak), near = spans(all, context), strong = spans(all, phrases);
     // A weak phrase right after one of "who" is a full phrase: "my water broke", "wife s water broke".
-    const strong = spans(all, [...phrases, ...weak.flatMap(p => who.map(w => [...w, ...p]))]);
-    const loose = spans(all, weak), near = spans(all, context);
+    for (const [i, p] of loose.starts) for (const w of who)
+      if (i >= w.length && w.every((x, j) => all[i - w.length + j] === x)) {
+        for (let j = i - w.length; j < i + p.length; j++) strong.at.add(j);
+        strong.found.push(...w, ...p);
+      }
     const plain = w => PLAIN.has(w) || NUMBER.test(w) || !!(stop && stop.has(w));
     // Each word must stand where a phrase or context entry was named ("no water" after "my water broke" does not).
     const fits = (w, i) => strong.at.has(i) || loose.at.has(i) || near.at.has(i) || plain(w) || own.has(w) ||
