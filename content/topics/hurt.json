@@ -302,7 +302,7 @@
    "id": "heatcold",
    "label": "Too hot or too cold (heat stroke, hypothermia, frostbite)",
    "hint": "Heatstroke or heat wave, no AC, confused and hot, shivering, frostnip, numb white fingers",
-   "urgent": ["heat stroke", "sun stroke"],
+   "urgent": ["heat stroke", "sun stroke", "stroke from the heat", "stroke in the heat"],
    "read": [
     {
      "doc": "med-2e83e22162a9a006",
