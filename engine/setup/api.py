@@ -32,6 +32,7 @@ RECOMMEND_MARGIN_MAX = 20 * 10 ** 9
 MAX_BODY = 64 * 1024
 ACTIVE = ('waiting', 'downloading', 'verifying', 'unpacking', 'activating', 'copying')
 FAT_MAX = 4 * 2 ** 30 - 1        # the largest file FAT32 can hold
+CLOUD_RECHECK_S = 600             # how long a count of the library's iCloud-only files is kept before the next one (#362)
 COPY_MARK = '.lastbook-copy-in-progress'   # in a copy's LastbookData until it is complete: copying there again carries on
 START_HERE = """Lastbook: an offline survival library
 
@@ -201,6 +202,7 @@ class Setup:
         self.ai_measure, self.measuring = None, False
         self.deleting = set()
         self.rejected = {}         # path -> (size, mtime) of a file already here that failed its SHA-256: not offered or used again
+        self.cloud, self.cloud_thread = None, None   # (folder, time, hardware.cloud_only) of the open library, counted in the background
         self.job = self._load_job()
 
     # ------------------------------------------------------------------------------------------------- saved state --
@@ -363,7 +365,24 @@ class Setup:
             p = self.current / 'models' / m['file']
             if p.is_file() and p.stat().st_size == m['size']:
                 model = m['id']
-        return {'folder': str(self.current), 'pack': pack, 'content_revision': revision, 'map_bytes': install.map_bytes(self.current), 'model': model, 'map': install.map_name(self.current), 'address_indexes': self.address_indexes(), 'old': self._settings().get('old', [])}
+        return {'folder': str(self.current), 'pack': pack, 'content_revision': revision, 'map_bytes': install.map_bytes(self.current), 'model': model, 'map': install.map_name(self.current), 'address_indexes': self.address_indexes(), 'old': self._settings().get('old', []), 'cloud_only': self._cloud_only()}
+
+    def _cloud_only(self):
+        """What of the open library is only in iCloud (#362), or None until it is counted. A large library takes a moment, so the
+        count runs in the background and is kept for CLOUD_RECHECK_S; the page asks again on its next look."""
+        folder = str(self.current)
+        with self.lock:
+            kept = self.cloud if self.cloud and self.cloud[0] == folder else None
+            if kept and time.time() - kept[1] < CLOUD_RECHECK_S:
+                return kept[2]
+            if not (self.cloud_thread and self.cloud_thread.is_alive()):
+                def count():
+                    r = hardware.cloud_only(folder)
+                    with self.lock:
+                        self.cloud = (folder, time.time(), r)
+                self.cloud_thread = threading.Thread(target=count, daemon=True)
+                self.cloud_thread.start()
+            return kept[2] if kept else None
 
     def address_indexes(self):
         if not self.current:

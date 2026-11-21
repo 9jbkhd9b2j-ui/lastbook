@@ -2442,6 +2442,66 @@ def make_map(path, state='CA', extra=None):
     return files
 
 
+class CloudOnly(Base):
+    """Files of the library whose contents are only in iCloud (#362): found from metadata alone, never opened."""
+
+    def library(self):
+        lib = self.tmp / 'LastbookData'
+        for rel in ('library-data/catalog.json', 'videos/a.mp4', 'videos/b.mp4', 'zim/old/c.zim'):
+            (lib / rel).parent.mkdir(parents=True, exist_ok=True)
+            (lib / rel).write_bytes(b'x' * 10)
+        return lib
+
+    def placeholders(self, lib, *rels):
+        """os.lstat as macOS reports an evicted iCloud item: the SF_DATALESS flag (0x40000000), contents not on this computer."""
+        real = os.lstat
+        cloud = {str(lib / r) for r in rels}
+
+        def lstat(path, *a, **kw):
+            st = real(path, *a, **kw)
+            if str(path) not in cloud:
+                return st
+            return mock.Mock(st_flags=st.st_flags | 0x40000000, st_size=st.st_size, st_mode=st.st_mode)
+        return mock.patch.object(hardware.os, 'lstat', lstat)
+
+    def test_placeholder_found_ordinary_file_not(self):
+        lib = self.library()
+        with mock.patch.object(hardware.sys, 'platform', 'darwin'), self.placeholders(lib, 'videos/b.mp4'):
+            r = hardware.cloud_only(lib)
+        self.assertEqual(r, {'files': 1, 'folders': 0, 'bytes': 10, 'examples': ['videos/b.mp4']})
+
+    def test_nothing_in_the_cloud(self):
+        lib = self.library()
+        with mock.patch.object(hardware.sys, 'platform', 'darwin'):
+            self.assertEqual(hardware.cloud_only(lib), {'files': 0, 'folders': 0, 'bytes': 0, 'examples': []})
+
+    def test_folder_in_the_cloud_is_not_listed(self):
+        # Listing an evicted folder asks iCloud for its contents, which can hang offline: count it, do not open it.
+        lib = self.library()
+        with mock.patch.object(hardware.sys, 'platform', 'darwin'), self.placeholders(lib, 'zim/old', 'zim/old/c.zim'):
+            r = hardware.cloud_only(lib)
+        self.assertEqual((r['files'], r['folders'], r['examples']), (0, 1, ['zim/old/']))
+
+    def test_files_are_never_opened(self):
+        lib = self.library()
+        with mock.patch.object(hardware.sys, 'platform', 'darwin'), self.placeholders(lib, 'videos/a.mp4'), \
+                mock.patch('builtins.open', side_effect=AssertionError('opened a file')):
+            self.assertEqual(hardware.cloud_only(lib)['files'], 1)
+
+    def test_only_on_a_mac(self):
+        with mock.patch.object(hardware.sys, 'platform', 'win32'):
+            self.assertIsNone(hardware.cloud_only(self.library()))
+
+    def test_setup_reports_it_for_the_open_library(self):
+        lib = self.library()
+        s = self.setup('manage', current=lib)
+        with mock.patch.object(hardware.sys, 'platform', 'darwin'), self.placeholders(lib, 'videos/a.mp4', 'videos/b.mp4'):
+            s.current_info()                       # counting starts in the background, so the page is not held up
+            s.cloud_thread.join(10)
+            r = s.current_info()['cloud_only']
+        self.assertEqual((r['files'], r['examples']), (2, ['videos/a.mp4', 'videos/b.mp4']))
+
+
 class Maps(Base):
     def map_manifest(self, extra=None):
         files = make_map(self.tmp / 'Lastbook-Map-CA.zip', extra=extra)

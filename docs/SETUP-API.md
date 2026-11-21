@@ -107,7 +107,7 @@ are served by `engine/setup/api.py` alone. In normal mode `server.py` hands `/ap
 
 | Request | Answer |
 |---|---|
-| `GET /api/setup/state` | `{mode: "first-run" or "manage", hardware, manifest: {source: "bundled" or "fetched", packs, models}, current: {folder, pack, model} or null, found: [...], recommend: {pack, ai, why}, job}` |
+| `GET /api/setup/state` | `{mode: "first-run" or "manage", hardware, manifest: {source: "bundled" or "fetched", packs, models}, current: {folder, pack, model, cloud_only} or null (cloud_only: `{files, folders, bytes, examples}` of the library that are only in iCloud, counted from metadata in the background; null until counted and on other systems), found: [...], recommend: {pack, ai, why}, job}` |
 | `POST /api/setup/start` `{pack, ai: true or false, folder?}` | the new `job`, or `{error, need_bytes, free_bytes}` |
 | `GET /api/setup/job` | `job` |
 | `POST /api/setup/pause`, `/resume`, `/cancel`, `/retry` | `job` |

@@ -71,6 +71,8 @@
   /* ------------------------------------------------------------ state */
   let S = null;           // GET state
   let view = 'choose';
+  const CLOUD_POLL_MS = 3000, CLOUD_POLLS = 20;   // the iCloud count runs in the engine's background: ask again for about a minute
+  let cloudPolls = 0;
   let choice = { pack: null, ai: false, map: null };   // map: the selected state code
   let folder = '';
   let shortfall = null;   // the answer to a start that had no room: {need_bytes, free_bytes}
@@ -358,6 +360,18 @@
   }
 
   /* ---- manage */
+  // #362: files of this library whose contents are only in iCloud do not open offline. The engine counts them from metadata alone.
+  function cloudNote(c) {
+    const k = c.cloud_only;
+    if (!k || !(k.files || k.folders)) return '';
+    const n = (count, one) => `${count.toLocaleString()} ${one}${count === 1 ? '' : 's'}`;
+    const what = [k.files ? n(k.files, 'file') : '', k.folders ? n(k.folders, 'folder') : ''].filter(Boolean).join(' and ');
+    const one = k.files + k.folders === 1;
+    return `<p class="s-note" role="status"><b>${what} of this library ${one ? 'is' : 'are'} only in iCloud${k.bytes ? ` (${size(k.bytes)})` : ''}.</b>
+      ${one ? 'It' : 'They'} will not open without internet. Move the LastbookData folder out of iCloud Drive, or in Finder choose Keep Downloaded for it.
+      <br><small>For example: ${k.examples.map(esc).join(', ')}</small></p>`;
+  }
+
   function manageView() {
     const c = cur(), p = packById(c.pack), m = model();
     const libraryUpdate = p && p.available !== false && packNeedsInstall(p);
@@ -374,12 +388,22 @@
           return `<div class="s-row">${ico('map', 's-ri')}<span><b>${mNow ? 'Detailed map: ' + esc(mapName(mNow)) : 'Detailed map'}</b><small>${mNow ? (mNow === 'us' ? 'Local streets and terrain everywhere' : 'Local streets, buildings and terrain') : 'None yet. Add one for your state.'}</small></span>
           <button class="btn plain" id="mapCh">${(c.address_indexes || []).length ? 'Choose state' : 'Add address search'}</button></div>` })() : ''}
       </div>
+      ${cloudNote(c)}
       ${old ? `<div class="s-row s-old">${ico('folder', 's-ri')}<span><b>The old library is still here</b><small>${esc(home(old.path))}${old.bytes ? ' · ' + size(old.bytes) : ''}</small></span>${confirmOld ? `<span class="s-confirm"><span>Delete it for good?</span><button class="btn danger" id="oldYes">Delete</button><button class="btn plain" id="oldNo">Keep</button></span>` : `<button class="btn plain" id="rmOld">${ico('trash')}Delete it</button>`}</div>` : ''}
       ${computer()}
       <div class="s-have"><div class="s-row">${ico('folder', 's-ri')}<span><b data-i18n="setup.copyTitle">Copy for someone else</b><small>Puts this library on a drive, with a START-HERE.txt, so someone can set up Lastbook with no internet. Nothing of yours is copied.</small></span><button class="btn plain" id="copyOut">Copy to a drive…</button></div></div>
       <div class="s-go left">${CAN.repair ? `<button class="btn plain" id="repair">${ico('repair')}Check and repair</button>` : ''}
         <button class="s-link" id="otherLib">${ico('folder')}Open another library folder</button></div>
       <p class="s-note${noteOk ? ' ok' : ''}" id="haveNote"${note ? '' : ' hidden'}>${esc(note)}</p>`;
+    if (c.cloud_only === null && cloudPolls < CLOUD_POLLS) {
+      cloudPolls++;
+      setTimeout(async () => {
+        if (view !== 'manage') return;
+        S = await call('state').catch(() => S);
+        const k = (cur() || {}).cloud_only;
+        if (view === 'manage' && (k === null || (k && (k.files || k.folders)))) manageView();   // redrawn only to show the note, or to ask again
+      }, CLOUD_POLL_MS);
+    }
     $('#otherLib').onclick = () => haveLibrary(false, $('#otherLib'), { library: true });   // only another LastbookData, on a USB stick or another drive (#266)
     if ($('#libraryUpdate')) $('#libraryUpdate').onclick = () => { choice.pack = c.pack; choice.ai = !!c.model; go('choose') };
     if ($('#upgrade')) $('#upgrade').onclick = () => { choice.pack = bigger[0].id; choice.ai = !!c.model; go('choose') };
