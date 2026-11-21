@@ -40,7 +40,7 @@ def export(catalog_path, output_path):
 <title>Lastbook reading catalog</title>
 <style>
 body{font:16px system-ui,sans-serif;max-width:1100px;margin:2rem auto;padding:0 1rem}
-input{font:inherit;padding:.6rem;width:min(100%,35rem);box-sizing:border-box}
+input,select{font:inherit;padding:.6rem;box-sizing:border-box}\ninput{width:min(100%,35rem)}
 table{width:100%;border-collapse:collapse;margin-top:1rem}
 th,td{text-align:left;padding:.6rem;border-bottom:1px solid #8885}
 tr[hidden]{display:none}
@@ -53,11 +53,13 @@ tr[hidden]{display:none}
 <table><thead><tr><th>Collection</th><th>Title</th><th>Type</th><th>Publisher</th></tr></thead>
 <tbody>""" + rows + """</tbody></table>
 <script>
-const q=document.getElementById('q'),rs=[...document.querySelectorAll('tbody tr')],count=document.getElementById('count');
+const q=document.getElementById('q'),type=document.getElementById('type'),letter=document.getElementById('letter'),rs=[...document.querySelectorAll('tbody tr')],count=document.getElementById('count');
+const initials=[...new Set(rs.map(r=>r.cells[1].textContent.trim().charAt(0).toLocaleUpperCase()).filter(Boolean))].sort();
+for(const initial of initials){const option=document.createElement('option');option.value=initial;option.textContent=initial;letter.appendChild(option)}
 function filter(){const v=q.value.toLocaleLowerCase();let n=0;
-for(const r of rs){r.hidden=!r.textContent.toLocaleLowerCase().includes(v);if(!r.hidden)n++}
-count.textContent=n+' titles';}
-q.addEventListener('input',filter);filter();
+for(const r of rs){const title=r.cells[1].textContent.trim();r.hidden=!(r.textContent.toLocaleLowerCase().includes(v)&&(!type.value||r.cells[2].textContent===type.value)&&(!letter.value||title.charAt(0).toLocaleUpperCase()===letter.value));if(!r.hidden)n++}
+count.textContent=n+' of '+rs.length+' titles';}
+for(const control of [q,type,letter])control.addEventListener(control===q?'input':'change',filter);filter();
 </script></html>"""
     Path(output_path).write_text(page, encoding="utf-8")
     return len(entries)
