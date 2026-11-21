@@ -131,6 +131,15 @@ FIRST = {
     'house fire': ['disaster', 'home-fire'], 'my house is on fire': ['disaster', 'home-fire'],
     'smog': ['shelter', 'smoke'],   # winter smog in Lahore and Delhi; the choice cites a page on particles and ozone
 }
+# Words that a reading already cited under a choice is about, but that no title, keyword, label or hint held, so a search
+# for them found nothing: [guide, choice] that comes first.
+ALREADY_COVERED = {
+    'pets': ['food', 'special'], 'propane': ['power', 'gas'], 'propane tank': ['power', 'gas'], 'dental': ['health', None],
+}
+# An emergency that happens to mention a new word still opens the urgent choice first, not the routine one the word was added to.
+URGENT_FIRST = {
+    'child unconscious after pet food': ['hurt', 'breathing'], 'child swallowed pet food': ['hurt', 'poison'],
+}
 # Searches the new words must not disturb: [guide, choice] that comes first.
 UNDISTURBED = {
     'bus': ['disaster', 'no-car'], 'no bus': ['disaster', 'no-car'], 'bar soap': ['sanitation', 'hands'],
@@ -139,6 +148,9 @@ UNDISTURBED = {
     'ice': ['water', 'inhome'], 'micro-hydro': ['energy', None], 'wind': ['disaster', 'hurricane'],
     'winter storm': ['shelter', 'cold'], 'furnace smells like gas': ['power', 'gas'], 'gas furnace': ['power', 'gas'],
     'lost in the forest': ['comms', 'signal'],
+    'baby formula': ['food', 'special'], 'food allergies': ['food', 'outage'], 'spoiled food': ['food', 'outage'],
+    'pet food': ['food', 'outage'],
+    'dentist': ['health', None], 'toothache': ['health', 'teeth'],
     'cold frame': ['repair', 'build'], 'freezing': ['shelter', 'cold'],
     'fire alarm': ['disaster', 'home-fire'], 'smoke alarm': ['disaster', 'home-fire'], 'smoke': ['disaster', 'smoke'],
     'fires after an earthquake': ['disaster', 'earthquake-after'],
@@ -159,7 +171,7 @@ URGENT = {
 }
 # A breathing emergency after a sting must not open routine sting care.
 NOT_STING = ["bee sting can't breathe", 'bee sting cannot breathe', 'bee sting unconscious', 'wasp sting unconscious']
-TOPS = sorted({*SAME_AS, *SAME_AS.values(), *SAME_GUIDE, *SAME_GUIDE.values(), *FIRST, *UNDISTURBED, *URGENT, *EVERYDAY, *LISTED, *NOT_STING})
+TOPS = sorted({*SAME_AS, *SAME_AS.values(), *SAME_GUIDE, *SAME_GUIDE.values(), *FIRST, *ALREADY_COVERED, *URGENT_FIRST, *UNDISTURBED, *URGENT, *EVERYDAY, *LISTED, *NOT_STING})
 
 # Words used in Thailand and Denmark. Emergency numbers find what 911 finds; haze, PM2.5 and cloudburst sit in a
 # guide's keywords only and open the guide their US word opens. Thailand's fire number, 199, is left out: a fire
@@ -349,7 +361,7 @@ class TopicSearch(unittest.TestCase):
                 with self.subTest(q=q, us=us, segmenter=r['segmenter']):
                     self.assertTrue(top[q])
                     self.assertEqual(top[q][0][0], top[us][0][0])
-            for q, first in [*FIRST.items(), *UNDISTURBED.items()]:
+            for q, first in [*FIRST.items(), *ALREADY_COVERED.items(), *URGENT_FIRST.items(), *UNDISTURBED.items()]:
                 with self.subTest(q=q, segmenter=r['segmenter']):
                     self.assertEqual(top[q][0], first)
 
