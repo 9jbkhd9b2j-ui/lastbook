@@ -76,7 +76,11 @@ def main(args):
             if not r: print(f'{f.name} {where}: unknown doc {i.get("doc")}'); errors += 1; continue
             if r['kind'] == 'metadata': print(f'{f.name} {where}: use the video id, not metadata {i["doc"]}'); errors += 1
             p = i.get('page')
-            if p and r.get('pages') and not (1 <= p <= r['pages']): print(f'{f.name} {where}: page {p} out of range for {i["doc"]} ({r["pages"]})'); errors += 1
+            if p is not None:
+                if not isinstance(p, int) or isinstance(p, bool) or p < 1:
+                    print(f'{f.name} {where}: page {p!r} is not a page number'); errors += 1
+                elif r.get('pages') and p > r['pages']:
+                    print(f'{f.name} {where}: page {p} out of range for {i["doc"]} ({r["pages"]})'); errors += 1
             if not i.get('label') and where != 'limits': print(f'{f.name} {where}: missing label for {i.get("doc")}'); errors += 1
         print(f'{f.name}: {n} references checked')
     print('ERRORS', errors)

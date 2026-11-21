@@ -98,6 +98,21 @@ class Validate(unittest.TestCase):
                      'ERRORS 4'):
             self.assertIn(line, out)
 
+    def test_page_must_be_a_positive_integer(self):
+        """The guide's `page` is a 1-based PDF page. 0, a string, a boolean and a fraction are author mistakes and must
+        be named, not skipped or crashed on."""
+        f = self.topic('pages.json', prepare=[
+            {'doc': 'doc-water', 'page': 0, 'label': 'zero'},
+            {'doc': 'doc-water', 'page': '3', 'label': 'text'},
+            {'doc': 'doc-water', 'page': True, 'label': 'bool'},
+            {'doc': 'doc-water', 'page': 3.5, 'label': 'fraction'}])
+        code, out = self.run_tool('--data', str(self.data), f)
+        self.assertEqual(code, 1, out)
+        self.assertNotIn('Traceback', out)
+        for page in ('0', "'3'", 'True', '3.5'):
+            self.assertIn(f'page {page} is not a page number', out)
+        self.assertIn('ERRORS 4', out)
+
     def test_no_library_says_so(self):
         empty = Path(self.dir.name) / 'empty'
         empty.mkdir(exist_ok=True)
