@@ -832,6 +832,22 @@ class AssistantHTTPMessages(unittest.TestCase):
         self.assertNotIn('tools', body)
 
 
+class ServerMode(unittest.TestCase):
+    """server.py run on its own (--lan, the library server): the map asks for 20 or more tiles at once."""
+
+    def test_listen_queue_holds_a_burst_of_tiles(self):
+        # Python's default queue is 5: on macOS the waiting connections beyond it were reset, and those tiles stayed blank.
+        srv = server.HTTPServer(('127.0.0.1', 0), server.Handler, bind_and_activate=False)
+        try:
+            with mock.patch.object(socket.socket, 'listen') as listen:   # never really listens: WholeProcess checks that
+                srv.server_bind()
+                srv.server_activate()
+            listen.assert_called_once_with(server.LISTEN_QUEUE)
+            self.assertGreaterEqual(server.LISTEN_QUEUE, 64)
+        finally:
+            srv.server_close()
+
+
 class NothingGoesOut(unittest.TestCase):
     """The shells cannot run here on both systems, so what must be gone from them is checked in their source."""
 
