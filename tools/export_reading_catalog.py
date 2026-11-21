@@ -40,7 +40,10 @@ def export(catalog_path, output_path):
 <title>Lastbook reading catalog</title>
 <style>
 body{font:16px system-ui,sans-serif;max-width:1100px;margin:2rem auto;padding:0 1rem}
-input,select{font:inherit;padding:.6rem;box-sizing:border-box}\ninput{width:min(100%,35rem)}
+input,select{font:inherit;padding:.6rem;box-sizing:border-box}
+input{width:min(100%,35rem)}
+.controls{display:flex;flex-wrap:wrap;gap:1rem;align-items:end}
+.controls label{display:block;margin-bottom:.25rem}
 table{width:100%;border-collapse:collapse;margin-top:1rem}
 th,td{text-align:left;padding:.6rem;border-bottom:1px solid #8885}
 tr[hidden]{display:none}
@@ -48,8 +51,13 @@ tr[hidden]{display:none}
 </style>
 <h1>Lastbook reading catalog</h1>
 <p>Titles from one installed library pack. This is a listing, not a download service. No network connection is used.</p>
-<label for="q">Search titles and collections</label>
-<input id="q" type="search" placeholder="Search"><p id="count" role="status" aria-live="polite"></p>
+<div class="controls"><div><label for="q">Search titles and collections</label>
+<input id="q" type="search" placeholder="Search"></div>
+<div><label for="type">Format</label>
+<select id="type"><option value="">All formats</option><option value="PDF">PDF</option><option value="HTML">HTML</option><option value="PPTX">PPTX</option></select></div>
+<div><label for="letter">Title starts with</label>
+<select id="letter"><option value="">All titles</option></select></div></div>
+<p id="count" role="status" aria-live="polite"></p>
 <table><thead><tr><th>Collection</th><th>Title</th><th>Type</th><th>Publisher</th></tr></thead>
 <tbody>""" + rows + """</tbody></table>
 <script>
