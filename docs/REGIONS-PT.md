@@ -85,11 +85,13 @@ Cross-checks between the two datasets:
 - Madeira's address group (`MAD`) sits inside the GISCO polygon box on every edge: its raw points reach
   -17.2578…-15.8637 and 30.0351…33.0886 against the polygon's -17.2660…-15.8554 and 30.0257…33.1040.
 - GISCO's own PT20 polygon box is -31.2679, 36.9305, -25.0142, 39.7262: its west edge matches the Corvo-and-Flores
-  address points to 0.002°. Its south edge sits at 36.93° N, as does the eastern address group's lowest row — but what
-  feature that edge covers is **not verified**: the Formigas reserve, per the regional government's published bounds
-  (the document linked in the review, placed at about 37.25–37.27° N, 24.71–24.75° W) lies north-east of Santa Maria,
-  at 36.92–36.94° N only in older references, and the single address row at 36.93° N sits in open water. That row is
-  an **unverified geocoding outlier**, not a Formigas address.
+  address points to 0.002°. Its south edge sits at 36.93° N, as does the eastern address group's lowest row — and that
+  row **is now located**. It is id `pt.ine.add.AC26.76921`, postcode 9580-228, city SANTO ESPÍRITO: an address in the
+  south-eastern parish of Santa Maria. Reverse-geocoding the coordinates (Nominatim, 21 November 2026) puts the point
+  **15 m from OSM's node for the Farol de Gonçalo Velho**, the lighthouse on Santa Maria's south-eastern point — a real
+  address at the island's tip (the keeper's, if the postal record is what it looks like), not an islet in the sea and
+  not a geocoding error. The GISCO 03M polygon's south edge lands about 0.001° north of the lighthouse, which is
+  polygon simplification, not disagreement about where Santa Maria ends.
 - **The proposal's boxes do not include the Formigas.** The `pt-20e` box's eastern edge is -24.86°, and the islets sit
   at about -24.71°, so they fall outside it (they fall outside GISCO's own PT20 polygon too). The islets carry no
   addressable settlement, so a street map loses nothing practical; if the maintainers want the reserve inside the
@@ -105,9 +107,9 @@ Notes:
   and Flores sit 550 km north-west of the central group. The INE address dataset already splits the same two groups (its
   ids are `pt.ine.add.AC25…` for Corvo and Flores and `…AC26…` for the rest), so the proposal keeps that split and
   `pt-20w`'s box is the address group's own box, not a NUTS one. GISCO's PT20 box and the address groups' boxes agree
-  at every edge. The eastern group's southern edge (36.93° N) sits in open water and is labelled an unverified
-  geocoding outlier in the cross-checks below; it is not the Formigas, whose published bounds lie north-east of Santa
-  Maria.
+  at every edge. The eastern group's southern edge (36.93° N) is a real address at the south-eastern tip of Santa
+  Maria — 15 m from OSM's Farol de Gonçalo Velho node, in the Santo Espírito parish — not the Formigas, whose
+  published bounds lie north-east of Santa Maria.
 - **Madeira includes the Selvagens Islands**, a nature reserve whose municipality is Funchal. One address row sits at
   30.035° N, south of the Selvagem Grande island at 30.14° N, and GISCO's polygon reaches 30.026° N there; both agree,
   and neither carries a settlement. The row is one outlier to re-check before any build.
@@ -349,7 +351,9 @@ other proposals.
 - **Also opened on 21 November 2026:** Portuguese Wikipedia's coordinates for the Formigas islets (37.2697° N,
   -24.7137° W — which corrected this proposal's earlier identification of the 36.93° N edge) and Nominatim's search for
   the name (two street-level matches, no islet match, consistent with the reserve being outside OSM's addressable
-  data); taginfo for Geofabrik's Portugal extract for `trees=olive_trees` (4,975 ways) and `produce=olives` (2).
+  data); taginfo for Geofabrik's Portugal extract for `trees=olive_trees` (4,975 ways) and `produce=olives` (2);
+  Nominatim's reverse geocode of the 36.93° N address row itself (nearest feature: the Farol de Gonçalo Velho node,
+  15 m away), and the row's own fields, which settle where that row is — see the cross-checks.
 - **Not checked:** the CAOP download and licence (DGT is a JavaScript application); the INE INSPIRE portal (under
   maintenance on the day); COS 2018 (site did not resolve); APA/SNIAmb hydrography and dam inventories (did not
   respond); the MDT-DGT products and licence; the INE municipality register; the ISO 3166-2:PT codes against the ISO
