@@ -217,6 +217,27 @@ EMERGENCY_UNDISTURBED = {
 }
 TOPS = sorted({*TOPS, *EMERGENCY_FIRST, *EMERGENCY_UNDISTURBED})
 
+# Labor in the words people type. One word at a time, "water broke" found unsafe tap water, "the baby is coming" a
+# hurricane and "contractions" nothing: [guide, choice] that comes first.
+PREGNANT = ['health', 'pregnant']
+LABOR = {q: PREGNANT for q in [
+    'my water broke', 'water broke', 'her water broke', 'my water just broke', 'waters broke', 'her waters have broken',
+    'the baby is coming', 'baby is coming', "the baby's coming", 'how to deliver a baby', 'delivering a baby at home',
+    'giving birth at home', 'going into labour', 'in labour', 'contractions', 'having contractions',
+    'contractions 5 minutes apart', 'childbirth', 'umbilical cord', 'cut the umbilical cord',
+    'giving birth', 'in labor', 'going into labor',
+]}
+# The same words about something else keep their first result; Not breathing still comes first.
+NOT_LABOR = {
+    'water main broke': ['water', 'unsafe'], 'water pipe broke': ['water', 'unsafe'], 'broke water heater': ['water', 'unsafe'],
+    'baby choking': ['hurt', 'breathing'], 'baby not breathing': ['hurt', 'breathing'], 'baby fever': ['health', 'start'],
+    'child not breathing': ['hurt', 'breathing'], 'hurricane coming': ['disaster', 'hurricane'],
+    'extension cord': ['power', 'generator'], 'apartment': ['disaster', 'highrise-fire'],
+    'unconscious and in labor': ['hurt', 'breathing'], 'water broke and she is unconscious': ['hurt', 'breathing'],
+}
+NOT_LABOR_NOWHERE = ['delivery', 'deliver food', 'baby formula', 'minutes', 'power cord']   # no pregnancy guide for these
+TOPS = sorted({*TOPS, *LABOR, *NOT_LABOR, *NOT_LABOR_NOWHERE})
+
 # A guide whose urgent phrase the search names comes first, even when the other words pull another guide ahead or
 # below the cut; that guide is still offered: query -> (first row, a row that must still be shown).
 GUIDE_URGENT = {
@@ -417,6 +438,16 @@ class TopicSearch(unittest.TestCase):
             for q, first in STILL_SHELTER.items():
                 with self.subTest(q=q, segmenter=r['segmenter']):
                     self.assertEqual(top[q][:1], [first])
+
+    def test_labor_finds_the_pregnancy_guide(self):
+        for r in self.modes:
+            top = dict(zip(TOPS, (ok(e) for e in r['tops'])))
+            for q, first in {**LABOR, **NOT_LABOR}.items():
+                with self.subTest(q=q, segmenter=r['segmenter']):
+                    self.assertEqual(top[q][:1], [first])
+            for q in NOT_LABOR_NOWHERE:
+                with self.subTest(q=q, segmenter=r['segmenter']):
+                    self.assertNotIn(PREGNANT, top[q])
 
 if __name__ == '__main__':
     unittest.main()
