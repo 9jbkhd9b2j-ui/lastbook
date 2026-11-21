@@ -253,7 +253,7 @@ NOT_LABOR_FIRST = [
     'deliver the baby to me', 'baby coming with me', 'baby coming from the hospital', 'water broke up',
     'the water just broke', 'water broke in the car', "the hospital's water has broken", 'emergency water broke',
     'the cord came out', 'the power cord came out', 'phone cord came out', 'the baby is coming from the hospital',
-    'the baby is coming with her',
+    'the baby is coming with her', 'water broke in the house', 'the baby is coming to my moms house',
     "the baby is coming to my mom's tonight", 'deliver the baby to her', 'contractions around the neck',
     'cord around neck', 'cord around the babys neck', 'baby is coming to the hospital now',
 ]
@@ -279,6 +279,8 @@ LABOR_EVERYDAY = [
     'her water broke in the car', 'my water broke at work',
     'going through labour', 'her waters break', 'labor pain relief', "contractions won't stop", 'the cord came out first',
     'labour has started', 'signs of labour',
+    'my water broke what should i bring', 'her water broke we are at a friends house',
+    'her water broke and we live far from the hospital', "her water broke we can't reach the hospital",
 ]
 # Every phrase of the pregnancy choice opens it on its own. Next to a life threat, the first guide is the one the search
 # gets with the choice's phrase fields taken out: a phrase never changes what comes first (Breathing, Bleeding, or
