@@ -694,12 +694,19 @@ class Setup:
         for sub in ('downloads', 'unpack', 'unpack-map', 'unpack-addresses'):
             shutil.rmtree(work / sub, ignore_errors=True)
 
-    def use(self, path):
+    def use(self, path, library_only=False):
+        """A library or file already on this computer. library_only (Library and local AI's "Open another library folder", #266):
+        only an existing library, or the folder that holds one, is accepted. A folder holding a pack zip, or a file, is refused
+        and nothing starts, so choosing a folder can never begin replacing the open library."""
         p = Path(path or '').expanduser()
         if not str(path or '').strip() or not p.exists():
             return {'error': 'Lastbook cannot find that file or folder.', 'code': 'missing'}
+        if library_only and not p.is_dir():
+            return {'error': f'Choose a library folder, the one called {DATA_NAME}, not a file.', 'code': 'not_library'}
         if p.is_dir():
             lib = p if install.is_library(p) else p / DATA_NAME
+            if library_only and not install.is_library(lib):
+                return {'error': f'“{p.name}” is not a Lastbook library. Choose the folder called {DATA_NAME}.', 'code': 'not_library'}
             if not install.is_library(lib):
                 known = {f['name'] for pk in self.manifest.current['packs'] for f in pk['files']}
                 model = self.manifest.model()
@@ -1299,7 +1306,7 @@ ROUTES = {
     ('POST', 'resume'): lambda s, b: s.resume(),
     ('POST', 'cancel'): lambda s, b: s.cancel(),
     ('POST', 'retry'): lambda s, b: s.retry(),
-    ('POST', 'use'): lambda s, b: s.use(b.get('path')),
+    ('POST', 'use'): lambda s, b: s.use(b.get('path'), library_only=b.get('library') is True),
     ('POST', 'finish'): lambda s, b: s.finish(),
     ('POST', 'pick'): lambda s, b: s.pick(files=b.get('files') is True),
     ('POST', 'delete-old'): lambda s, b: s.delete_old(b.get('path')),

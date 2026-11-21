@@ -316,11 +316,11 @@
       summary();
     } catch { b.disabled = false; b.textContent = 'Can’t change here' }
   }
-  async function haveLibrary(files, btn) {
+  async function haveLibrary(files, btn, only) {
     const n = $('#haveNote');
     try {
       const r = await call('pick', { files });
-      if (r && r.path) return useFile(r.path, btn || $(files ? '#haveFile' : '#haveLib'));
+      if (r && r.path) return useFile(r.path, btn || $(files ? '#haveFile' : '#haveLib'), only);
       if (r && (r.cancelled || r.path === null)) return;
       throw 0;
     } catch {
@@ -328,10 +328,10 @@
       n.textContent = 'The picker could not open. Try choosing the file or folder again.';
     }
   }
-  async function useFile(path, btn) {
+  async function useFile(path, btn, only) {
     if (btn) btn.disabled = true;
     try {
-      const r = await call('use', { path });
+      const r = await call('use', { path, ...only });
       if (r && r.error) throw new Error(r.error);
       if (r && r.noted) { S = await call('state').catch(() => S); choice.ai = true; chooseView(); const n = $('#haveNote'); n.hidden = false; n.textContent = 'The local AI file will be used. No need to download it.'; return }
       S.job = r; go(r.state === 'done' ? 'done' : 'job'); poll();
@@ -371,7 +371,7 @@
       <div class="s-go left">${CAN.repair ? `<button class="btn plain" id="repair">${ico('repair')}Check and repair</button>` : ''}
         <button class="s-link" id="otherLib">${ico('folder')}Open another library folder</button></div>
       <p class="s-note${noteOk ? ' ok' : ''}" id="haveNote"${note ? '' : ' hidden'}>${esc(note)}</p>`;
-    $('#otherLib').onclick = () => haveLibrary(false, $('#otherLib'));   // another LastbookData, on a USB stick or another drive (#266)
+    $('#otherLib').onclick = () => haveLibrary(false, $('#otherLib'), { library: true });   // only another LastbookData, on a USB stick or another drive (#266)
     if ($('#libraryUpdate')) $('#libraryUpdate').onclick = () => { choice.pack = c.pack; choice.ai = !!c.model; go('choose') };
     if ($('#upgrade')) $('#upgrade').onclick = () => { choice.pack = bigger[0].id; choice.ai = !!c.model; go('choose') };
     if ($('#mapCh')) $('#mapCh').onclick = () => { choice.pack = c.pack; choice.ai = !!c.model; choice.map = null; go('choose'); const m = $('#mapSel'); if (m) m.focus() };
