@@ -154,6 +154,10 @@ as one map.
 [REGIONS-BO.md](REGIONS-BO.md) does the same for Bolivia as one country-wide region, with its nine departments as an
 alternative.
 
+[REGIONS-PT.md](REGIONS-PT.md) does the same for Portugal's ten regions, with the INE address data measured.
+[MAP-PT-30.md](MAP-PT-30.md) builds the first one: Madeira (PT-30), from the official CAOP box, INE addresses and
+OpenStreetMap.
+
 ### To do: maps for every place on Earth
 
 The goal is a detailed map for any place a person lives.
