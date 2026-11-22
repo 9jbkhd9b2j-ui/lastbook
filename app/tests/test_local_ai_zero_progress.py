@@ -1,6 +1,11 @@
 """Regression checks for local AI's explicit 0% startup state."""
 import unittest
+import json
+import queue
+import threading
 from pathlib import Path
+
+from llm_local import Local
 
 ROOT = Path(__file__).resolve().parents[2]
 CHAT = ROOT / "web" / "chat.js"
@@ -23,10 +28,39 @@ class LocalAiZeroProgressTests(unittest.TestCase):
         self.assertIn("self.state, self.pct, self.message = 'loading', None, ''", loader)
         self.assertIn("Local AI available · your first question loads it and may take a while", source)
         self.assertIn("if self.proc is proc:", loader)
-        # The reader may assign the reported percentage directly or via a
-        # validated local variable; assert the event is consumed and stored.
-        self.assertIn("ev.get('p')", loader)
-        self.assertRegex(loader, r"self\.pct\s*=\s*(?:p|ev\.get\('p'\))")
+    def test_runner_zero_percent_event_is_retained(self):
+        # Execute the real reader, rather than depending on how it spells an
+        # assignment. Inspect state before the fake process reaches EOF.
+        local = object.__new__(Local)
+        local.lock = threading.RLock()
+        local.pct = None
+        local.state = 'loading'
+        local.proc = None
+        local.furthest = 0
+        local.t_progress = 0
+        local.failed_loads = 0
+        local.message = ''
+        events = queue.Queue()
+
+        class Process:
+            def __init__(self):
+                self.stdout = self.lines()
+
+            def lines(self):
+                yield json.dumps({'ev': 'progress', 'p': 0})
+                self_owner.assertEqual(local.pct, 0)
+                yield json.dumps({'ev': 'progress', 'p': 5})
+                self_owner.assertEqual(local.pct, 5)
+
+            def wait(self):
+                return 0
+
+        self_owner = self
+        proc = Process()
+        local.proc = proc
+        local._read(proc, events)
+        self.assertEqual(local.furthest, 5)
+        self.assertEqual(events.get_nowait(), {'ev': 'exit', 'code': 0})
 
     def test_chat_asset_version_bumped(self):
         index = INDEX.read_text(encoding="utf-8")
