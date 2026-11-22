@@ -199,6 +199,7 @@ class Setup:
         self.on_model_server = on_model_server   # (base, model) or (None, None): the open library's assistant switches at once (manage)
         self._llm = llm_local
         self.lock = threading.RLock()
+        self.choice_lock = threading.Lock()    # one model-server choice at a time: saved and switched in the same order (two windows)
         self.job, self.control, self.thread = None, None, None
         self.sources = {}          # file name -> a file already on this computer the person chose with `use`
         self.ai_measure, self.measuring = None, False
@@ -554,22 +555,25 @@ class Setup:
             return got
         if model not in got['models']:
             return {'code': 'not_listed', 'error': f'The server at {got["address"]} no longer lists {str(model)[:model_server.MAX_ID]}. List its models again.'}
-        with self.lock:
-            s = self._settings()
-            s['model_server'] = {'base': got['base'], 'model': model}
-            self._save_settings(s)
-        if self.on_model_server:
-            self.on_model_server(got['base'], model)
+        self._choose_server(got['base'], model)
         return {'model_server': self.model_server()}
 
     def stop_server(self):
-        with self.lock:
-            s = self._settings()
-            s.pop('model_server', None)
-            self._save_settings(s)
-        if self.on_model_server:
-            self.on_model_server(None, None)
+        self._choose_server(None, None)
         return {'model_server': None}
+
+    def _choose_server(self, base, model):
+        """Save the choice and switch the open library's assistant as one step, so the last choice to finish wins in both."""
+        with self.choice_lock:
+            with self.lock:
+                s = self._settings()
+                if base:
+                    s['model_server'] = {'base': base, 'model': model}
+                else:
+                    s.pop('model_server', None)
+                self._save_settings(s)
+            if self.on_model_server:
+                self.on_model_server(base, model)
 
     def public_job(self):
         with self.lock:

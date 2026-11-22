@@ -3828,6 +3828,44 @@ class ModelServer(Base):
                 self.assertEqual(used[-1], ('http://' + self.where, 'other'))
                 api.SETUP.use_server(self.where, 'small-9b')
 
+    def test_two_windows_the_last_completed_choice_wins_both_places(self):
+        """One window chooses a model while the other stops using it: the saved choice and the running Chat end the same,
+        as the action that finished last left them."""
+        base = 'http://' + self.where
+        for slow in ('switch', 'list'):    # the choosing window is held after saving, or while it asks the server for its models
+            with self.subTest(slow=slow):
+                self.switched, finished, held, let_go = [], [], threading.Event(), threading.Event()
+                s = self.chooser()
+                switch, listing = s.on_model_server, api.model_server.list_models
+
+                def slow_switch(b, m):
+                    if b and slow == 'switch':
+                        held.set()
+                        let_go.wait(1)    # the stop waits here once the two are kept in order; otherwise it slips in
+                    switch(b, m)
+
+                def slow_list(text):
+                    if slow == 'list':
+                        held.set()
+                        let_go.wait(5)
+                    return listing(text)
+
+                s.on_model_server = slow_switch
+                with mock.patch.object(api.model_server, 'list_models', side_effect=slow_list):
+                    choose = threading.Thread(target=lambda: (s.use_server(self.where, 'small-9b'), finished.append('use')))
+                    choose.start()
+                    self.assertTrue(held.wait(5))
+                    stop = threading.Thread(target=lambda: (s.stop_server(), finished.append('stop')))
+                    stop.start()
+                    stop.join(0.3)
+                    let_go.set()
+                    choose.join(10)
+                    stop.join(10)
+
+                want = (base, 'small-9b') if finished[-1] == 'use' else None
+                self.assertEqual(api.saved_model_server(self.settings), want, finished)
+                self.assertEqual(self.switched[-1], want or (None, None), finished)
+
     def test_routes(self):
         self.assertIn(('POST', 'server-models'), api.ROUTES)
         s = self.chooser()
