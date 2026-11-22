@@ -3,7 +3,7 @@
   "status": "proposal",
   "checked": "2026-11-20",
   "codes": {
-    "proposal": "Lower-case with a hyphen, after the eu-<iso> style: pt-11 to pt-15, pt-20w/pt-20e for the Azores split, pt-30.",
+    "proposal": "Lower-case with a hyphen, after the eu-<iso> style: pt-11, pt-19, pt-1a, pt-1b, pt-1c, pt-1d and pt-15 on the mainland, pt-20w/pt-20e for the Azores split, pt-30.",
     "why": "NUTS codes for Portugal contain digits (PT11, PT1A), so no two-letter US code collides. The hyphen keeps them apart from US codes at a glance, as CA-ON does in REGIONS.md. Note carry_over() in engine/setup/install.py keeps only [A-Z]{2} address indexes on upgrade, so any hyphenated code needs that pattern extended (see REGIONS-ES.md's ES-MD note).",
     "verified": "The NUTS 2021/2024 codes were read from GISCO's NUTS 2024 1:3M GeoJSON (opened). ISO 3166-2:PT (districts) was not checked against the ISO site."
   },
