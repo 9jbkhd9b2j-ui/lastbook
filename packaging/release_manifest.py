@@ -64,9 +64,6 @@ def small_from(folder):
             'files': [{'name': z.name, 'url': f'{BASE}/{z.name}', 'size': z.stat().st_size, 'sha256': sums[z.name], 'kind': 'zip'}]}
 
 
-MAX_PART_BYTES = 256 * 1024 * 1024
-
-
 def split_pack(packs, archive, destination, part_size):
     """Write immutable cache-sized objects and return the selected pack with their pins."""
     matches = [p for p in packs if len(p.get('files', [])) == 1 and p['files'][0]['name'] == archive.name]
@@ -77,7 +74,7 @@ def split_pack(packs, archive, destination, part_size):
     if source.get('kind', 'zip') != 'zip' or not manifest.SHA.fullmatch(source['sha256']):
         raise ValueError(f'{archive.name} needs its published ZIP size and SHA-256 in --packs')
     size = source['size']
-    if not 0 < part_size <= MAX_PART_BYTES:
+    if not 0 < part_size <= manifest.MAX_PACK_PART:
         raise ValueError('part size must be between 1 byte and 256 MiB')
     if archive.stat().st_size != size or size <= part_size:
         raise ValueError(f'{archive.name} must match the published size and be larger than one part')
@@ -139,15 +136,18 @@ def main():
     out = {'version': 1, 'published': src.get('published') or time.strftime('%Y-%m-%d'), 'packs': packs, 'maps': list(src.get('maps') or []),
            'address_indexes': list(src.get('address_indexes') or []),
            'models': [model_entry(measure(a.measure) if a.measure else MEASURED_MEMORY)]}
-    if manifest.validate(out) is None:
+    if manifest.validate(out, bundled=True) is None:
         bad = [f.get('url') for p in packs for f in p.get('files', []) if not download.url_allowed(f.get('url'))]
         sys.exit('the manifest does not pass engine/setup/manifest.validate' + (f'; addresses not allowed: {bad}' if bad else ''))
     if a.split_pack:
         try:
-            split = split_pack(packs, a.split_pack, a.parts_dir, MAX_PART_BYTES if a.part_bytes is None else a.part_bytes)
+            split = split_pack(packs, a.split_pack, a.parts_dir, manifest.MAX_PACK_PART if a.part_bytes is None else a.part_bytes)
         except (OSError, ValueError) as e:
             ap.error(str(e))
         out['packs'] = [split if p['id'] == split['id'] else p for p in packs]
+        if manifest.validate(out, bundled=True) is None:
+            shutil.rmtree(a.parts_dir)  # split_pack created this directory for this invocation.
+            sys.exit('Generated parts do not pass the bundled Setup manifest validator. Check their names, URLs, sizes and SHA-256.')
         print(f'{a.parts_dir}: {len(split["parts"])} parts for {a.split_pack.name}; publish them before shipping this manifest')
     Path(a.out).parent.mkdir(parents=True, exist_ok=True)
     Path(a.out).write_text(json.dumps(out, indent=1) + '\n', encoding='utf-8')

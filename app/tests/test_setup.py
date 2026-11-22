@@ -305,6 +305,30 @@ class fast_backoff:
 
 
 # ----------------------------------------------------------------------------------------------------------- tests --
+class ReleaseManifest(unittest.TestCase):
+    def test_rejects_invalid_generated_part_before_replacing_manifest(self):
+        from app.tests.multipart_fixture import write_fixture
+        from tempfile import TemporaryDirectory
+
+        spec = importlib.util.spec_from_file_location('release_manifest', ROOT / 'packaging/release_manifest.py')
+        builder = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(builder)
+        with TemporaryDirectory() as tmp:
+            folder = Path(tmp) / 'fixture'
+            write_fixture(folder)
+            output = folder / 'single.json'
+            original = output.read_bytes()
+            parts = folder / 'generated'
+            args = ['release_manifest', '--packs', str(output), '--out', str(output), '--part-bytes', '128',
+                    '--split-pack', str(folder / 'Lastbook-Small.zip'), '--parts-dir', str(parts)]
+            # The input ZIP is pinned to the correct host. Only the generated part URLs are invalid.
+            with mock.patch.object(builder, 'BASE', 'https://example.invalid'), mock.patch.object(sys, 'argv', args):
+                with self.assertRaisesRegex(SystemExit, 'parts'):
+                    builder.main()
+            self.assertEqual(output.read_bytes(), original)
+            self.assertFalse(parts.exists())
+
+
 class Allowlist(unittest.TestCase):
     def test_product_hosts(self):
         ok = ['https://downloads.lastbook.org/1.0.0/Lastbook-Small.zip',
