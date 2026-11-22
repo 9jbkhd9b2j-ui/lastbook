@@ -117,6 +117,91 @@ KNOWN_GAPS = {
     'carbon monoxide from making a fire in the tent': 0.5,
 }
 
+# ----------------------------------------------------------------------------------------------------------
+# Mixed searches (#345): an urgent sign in the same search as words that point to another guide, the way people
+# type in a crisis ("during the power outage", "in the flood water", "after the earthquake"). The urgent result
+# should still lead. Expectations follow the guides' own labels and hints; where two first-aid choices are both
+# defensible (an electric shock, passing out from fumes) only the guide is asserted. Measured on main f41b6ce.
+MIXED = [
+    ('baby not breathing after eating', ('hurt', 'breathing'), 'not breathing (#167), next to a food word'),
+    ('child choking on a grape at the picnic', ('hurt', 'breathing'), '"choking" is in the breathing choice'),
+    ('unconscious after the house fire', ('hurt', 'breathing'), 'unconscious (#167), next to "house fire"'),
+    ('not breathing after the earthquake', ('hurt', 'breathing'), 'not breathing, next to "earthquake"'),
+    ('heart stopped while shoveling snow', ('hurt', 'breathing'), 'heart stopped (#345), next to snow and cold'),
+    ('passed out from the generator fumes', ('hurt', None),
+     'passed out is unconscious: first aid before the generator guide (#308 proposes "passed out")'),
+    ('heavy bleeding after the earthquake', ('hurt', 'bleeding'), '"Heavy bleeding" opens the bleeding hint'),
+    ('deep cut from broken glass in the flood water', ('hurt', 'bleeding'), '"deep cut" is in the bleeding hint'),
+    ("bleeding won't stop after a chainsaw accident", ('hurt', 'bleeding'),
+     'uncontrolled bleeding; "after" also starts "aftershock" (#333)'),
+    ('throat swelling after eating peanuts at dinner', ('hurt', 'allergy'), '"Swollen lips or throat"'),
+    ('swollen lips after a bee sting while camping', ('hurt', 'allergy'), '"Swollen lips or throat ... after a sting"'),
+    ('child swallowed bleach while cleaning after the flood', ('hurt', 'poison'), 'a cleaning product swallowed'),
+    ('drank gasoline from the generator can by mistake', ('hurt', 'poison'), '"Poisoned by ... fuel"'),
+    ('toddler swallowed a button battery during the power outage', ('hurt', 'poison'),
+     '"button battery" is in the poisoning hint; the power words must not outvote it'),
+    ('seizure during the power outage', ('hurt', 'sudden'), '"fit or convulsion" is in the sudden choice'),
+    ('chest pain while carrying sandbags', ('hurt', 'sudden'), '"Crushing chest pain"'),
+    ('face drooping during the heat wave', ('hurt', 'sudden'), '"face drooping" is a stroke sign in the sudden hint'),
+    ('diabetic acting confused during the blackout', ('hurt', 'sudden'), '"diabetic acting confused"'),
+    ('confused and very hot during the heat wave', ('hurt', 'heatcold'), 'heat stroke: "confused and hot"'),
+    ('shivering and confused after falling in the cold lake', ('hurt', 'heatcold'), 'hypothermia: "shivering"'),
+    ('snake bite while collecting firewood', ('hurt', 'snakebite'), 'a snakebite next to fire words'),
+    ('dog bite during the evacuation', ('hurt', 'animal-bite'), '"Dog ... bite" next to an evacuation'),
+    ('head injury from falling debris in the storm', ('hurt', 'head'), '"blow to the head"'),
+    ('burned by boiling water while cooking without power', ('hurt', 'burn'), '"burned by ... hot water"'),
+    ('electric shock from a downed power line', ('hurt', None),
+     'a person hurt by electricity: the burn choice names it, and breathing may be the first check'),
+    ('headache and dizzy from the generator in the garage', ('shelter', 'co'),
+     'carbon monoxide symptoms: the generator choice names headache and dizziness indoors'),
+    ('baby dehydrated from diarrhea after drinking well water', ('hurt', 'diarrhea'), '"baby ... dehydrated"'),
+]
+
+BASE_FIRST.update({   # measured on f41b6ce
+    'baby not breathing after eating': ['hurt', 'breathing'],
+    'child choking on a grape at the picnic': ['hurt', 'breathing'],
+    'unconscious after the house fire': ['hurt', 'breathing'],
+    'not breathing after the earthquake': ['hurt', 'breathing'],
+    'heart stopped while shoveling snow': ['hurt', 'breathing'],
+    'passed out from the generator fumes': ['shelter', 'co'],
+    'heavy bleeding after the earthquake': ['hurt', 'shock'],
+    'deep cut from broken glass in the flood water': ['water', 'unsafe'],
+    "bleeding won't stop after a chainsaw accident": ['disaster', 'earthquake-after'],
+    'throat swelling after eating peanuts at dinner': ['hurt', 'allergy'],
+    'swollen lips after a bee sting while camping': ['hurt', 'allergy'],
+    'child swallowed bleach while cleaning after the flood': ['hurt', 'poison'],
+    'drank gasoline from the generator can by mistake': ['repair', 'engine'],
+    'toddler swallowed a button battery during the power outage': ['power', 'batteries-solar'],
+    'seizure during the power outage': ['shelter', 'co'],
+    'chest pain while carrying sandbags': ['hurt', 'sudden'],
+    'face drooping during the heat wave': ['shelter', 'heat'],
+    'diabetic acting confused during the blackout': ['hurt', 'sudden'],
+    'confused and very hot during the heat wave': ['shelter', 'heat'],
+    'shivering and confused after falling in the cold lake': ['hurt', 'heatcold'],
+    'snake bite while collecting firewood': ['hurt', 'snakebite'],
+    'dog bite during the evacuation': ['hurt', 'animal-bite'],
+    'head injury from falling debris in the storm': ['hurt', 'head'],
+    'burned by boiling water while cooking without power': ['hurt', 'burn'],
+    'electric shock from a downed power line': ['shelter', 'damaged'],
+    'headache and dizzy from the generator in the garage': ['shelter', 'co'],
+    'baby dehydrated from diarrhea after drinking well water': ['hurt', 'diarrhea'],
+})
+
+# The mixed searches main gets wrong today, and their score. They may only improve.
+KNOWN_GAPS.update({
+    'passed out from the generator fumes': 0.0,
+    'heavy bleeding after the earthquake': 0.5,
+    'deep cut from broken glass in the flood water': 0.0,
+    "bleeding won't stop after a chainsaw accident": 0.0,
+    'drank gasoline from the generator can by mistake': 0.0,
+    'toddler swallowed a button battery during the power outage': 0.0,
+    'seizure during the power outage': 0.0,
+    'face drooping during the heat wave': 0.0,
+    'confused and very hot during the heat wave': 0.0,
+    'electric shock from a downed power line': 0.0,
+})
+EMERGENCY += MIXED
+
 CASES = {
     'stop': QSTOP,
     'topics': TOPICS,
