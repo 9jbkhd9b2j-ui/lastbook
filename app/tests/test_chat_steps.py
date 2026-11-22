@@ -138,18 +138,75 @@ const fs = require('fs');
 const chat = fs.readFileSync(process.argv[1], 'utf8'), app = fs.readFileSync(process.argv[2], 'utf8');
 const line = re => app.split('\n').find(l => re.test(l));
 let made = 0;
+class TextN {
+  constructor(v) { this.nodeType = 3; this.nodeValue = v; this.parent = null }
+}
+const VOID = new Set(['br','img','hr','input','meta','link']);
+function parseAttrs(s, el) {
+  const re = /([^\s=]+)(?:\s*=\s*(?:"([^"]*)"|'([^']*)'|(\S+)))?/g;
+  let m; while ((m = re.exec(s))) el.setAttribute(m[1], m[2] ?? m[3] ?? m[4] ?? '');
+}
+function parseHTML(html, doc) {
+  const root = doc.createElement('div'), stack = [root];
+  const re = /<!--[\s\S]*?-->|<\/[a-zA-Z][\w:-]*\s*>|<([a-zA-Z][\w:-]*)([^>]*)>|[^<]+/g;
+  let m;
+  while ((m = re.exec(html))) {
+    const tok = m[0], parent = stack[stack.length - 1];
+    if (tok.startsWith('<!--')) continue;
+    if (tok.startsWith('</')) { if (stack.length > 1) stack.pop(); continue }
+    if (tok.startsWith('<')) {
+      const el = doc.createElement(m[1]);
+      parseAttrs(m[2].replace(/\/\s*$/, ''), el);
+      parent.appendChild(el);
+      if (!VOID.has(m[1].toLowerCase()) && !/\/\s*$/.test(m[2])) stack.push(el);
+      continue;
+    }
+    parent.appendChild(new TextN(tok));
+  }
+  return [...root.childNodes];
+}
+function serialize(el) {
+  if (el.nodeType === 3) return el.nodeValue;
+  const name = el.tag.toLowerCase();
+  let out = '<' + name;
+  for (const [k, v] of Object.entries(el.attrs)) out += ' ' + k + '="' + String(v).replace(/&/g, '&amp;').replace(/"/g, '&quot;') + '"';
+  if (VOID.has(name)) return out + '>';
+  return out + '>' + el.childNodes.map(serialize).join('') + '</' + name + '>';
+}
 class El {
-  constructor(tag) { this.tag = tag; this.id = ++made; this.children = []; this.parent = null; this.className = ''; this.style = {}; this.attrs = {}; this.html = ''; this.writes = 0; this.text = '' }
+  constructor(tag) {
+    this.tag = tag; this.nodeType = 1; this.id = ++made; this.childNodes = []; this.parent = null;
+    this._class = ''; this.style = {}; this.attrs = {}; this.writes = 0;
+  }
+  get tagName() { return this.tag.toUpperCase() }
   get ownerDocument() { return doc }
+  get children() { return this.childNodes.filter(n => n.nodeType === 1) }
+  get firstChild() { return this.childNodes[0] || null }
+  get lastChild() { return this.childNodes[this.childNodes.length - 1] || null }
+  get className() { return this._class }
+  set className(v) { this._class = v; if (v) this.attrs.class = v; else delete this.attrs.class }
   get classList() { const el = this, has = c => el.className.split(' ').includes(c);
     return { contains: has, toggle(c, on) { if (on === undefined) on = !has(c); const k = el.className.split(' ').filter(x => x && x !== c); if (on) k.push(c); el.className = k.join(' ') } } }
-  set innerHTML(h) { this.html = h; this.writes++ } get innerHTML() { return this.html }
-  set textContent(t) { this.text = t }
-  setAttribute(k, v) { this.attrs[k] = v }
-  append(...ns) { for (const n of ns) { n.parent = this; this.children.push(n) } }
-  prepend(n) { n.parent = this; this.children.unshift(n) }
-  after(n) { const s = this.parent.children; n.parent = this.parent; s.splice(s.indexOf(this) + 1, 0, n) }
-  remove() { const s = this.parent.children; s.splice(s.indexOf(this), 1); this.parent = null }
+  get attributes() { return Object.entries(this.attrs).map(([name, value]) => ({ name, value })) }
+  setAttribute(k, v) { this.attrs[k] = String(v); if (k === 'class') this._class = String(v) }
+  getAttribute(k) { return Object.prototype.hasOwnProperty.call(this.attrs, k) ? this.attrs[k] : null }
+  hasAttribute(k) { return Object.prototype.hasOwnProperty.call(this.attrs, k) }
+  removeAttribute(k) { delete this.attrs[k]; if (k === 'class') this._class = '' }
+  set innerHTML(h) {
+    this.writes++;
+    this.childNodes.slice().forEach(n => this.removeChild(n));
+    for (const n of parseHTML(h, doc)) this.appendChild(n);
+  }
+  get innerHTML() { return this.childNodes.map(serialize).join('') }
+  get html() { return this.innerHTML }
+  get outerHTML() { return serialize(this) }
+  set textContent(t) { this.childNodes.slice().forEach(n => this.removeChild(n)); if (t !== '') this.appendChild(new TextN(t)) }
+  appendChild(n) { if (n.parent) n.parent.removeChild(n); n.parent = this; this.childNodes.push(n); return n }
+  removeChild(n) { const i = this.childNodes.indexOf(n); if (i < 0) throw new Error('not a child'); this.childNodes.splice(i, 1); n.parent = null; return n }
+  append(...ns) { for (const n of ns) this.appendChild(n) }
+  prepend(n) { if (n.parent) n.parent.removeChild(n); n.parent = this; this.childNodes.unshift(n) }
+  after(n) { if (n.parent) n.parent.removeChild(n); const s = this.parent.childNodes; n.parent = this.parent; s.splice(s.indexOf(this) + 1, 0, n) }
+  remove() { this.parent.removeChild(this) }
 }
 const doc = { createElement: t => new El(t) };
 const stubs = [line(/^const esc\s*=/), line(/^const fileUrl\s*=/), "const ico = n => '<svg>' + n + '</svg>';", 'const clock = t => String(t);',
@@ -166,9 +223,11 @@ for (const change of JSON.parse(process.argv[3])) {
   const part = c => el.children.find(n => n.classList.contains(c));
   const work = part('working'), stages = work.children.find(n => n.classList.contains('wk-stages')), bar = work.children.find(n => n.classList.contains('wk-bar'));
   const steps = work.children.find(n => n.classList.contains('steps'));
+  const ans = part('answer');
   seen.push({ order: el.children.map(n => n.className), label: work.children[0].html, stages: stages.children.map(li => li.className),
     stageIds: [stages.id, ...stages.children.map(li => li.id)], bar: [bar.id, bar.className, bar.children[0].style.width],
-    steps: steps ? steps.html : null, answer: part('answer') ? part('answer').html : null,
+    steps: steps ? steps.html : null, answer: ans ? ans.html : null,
+    answerIds: ans ? ans.children.map(n => n.id) : null,
     found: part('prefound') ? [part('prefound').id, part('prefound').writes, part('prefound').html] : null });
 }
 process.stdout.write(JSON.stringify(seen));
@@ -246,6 +305,30 @@ class Streaming(unittest.TestCase):
         self.assertNotIn('<img', seen[0]['answer'])
         self.assertIn('<strong>bold</strong>', seen[0]['answer'])
         self.assertNotIn('<b>q', seen[0]['steps'])
+
+    def test_a_reported_zero_percent_is_shown(self):
+        # Same rule as #381: a runner-reported 0 is a real figure, not "unknown progress".
+        seen = self.run_steps([{'state': 'starting', 'pct': 0}, {'pct': 5}])
+        self.assertEqual([s['bar'][1:] for s in seen], [['wk-bar', '0%'], ['wk-bar', '5%']])
+        self.assertEqual(seen[0]['label'], 'Starting the local AI… 0%')
+        self.assertEqual(seen[1]['label'], 'Starting the local AI… 5%')
+
+    def test_finished_paragraphs_keep_their_nodes_while_more_text_streams(self):
+        # A finished paragraph must keep the same DOM node while a later paragraph is written, so a selection in
+        # the first one can stay put. The trailing, still-growing block may be replaced.
+        first = 'Bring the water to a rolling boil for one minute.\n\n'
+        seen = self.run_steps(
+            [{'state': 'writing', 'content': first}] +
+            [{'content': first + 'Use clean, covered containers' + ' now' * n + '.'} for n in range(16)]
+        )
+        self.assertEqual(len(seen[0]['answerIds']), 1)
+        first_id = seen[0]['answerIds'][0]
+        for s in seen:
+            self.assertEqual(s['answerIds'][0], first_id, s['answerIds'])
+        self.assertEqual(len(seen[-1]['answerIds']), 2)
+        self.assertNotEqual(seen[-1]['answerIds'][1], first_id)
+        self.assertIn('covered containers', seen[-1]['answer'])
+        # The trailing paragraph may be replaced as it grows; only the finished one has to stay.
 
 
 # Article names straight from a ZIM file: a ? would cut the address, a bare % makes decodeURIComponent throw, a " would end the attribute.

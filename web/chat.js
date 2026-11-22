@@ -252,10 +252,52 @@ const Chat = (() => {
   }
   /* An answer being written changes many times a second. Rebuilding the whole message each time loaded every page thumbnail
      again (they blinked), started the spinner and the progress bar over, and dropped any text being selected. While it is
-     written, only the parts that changed are touched; when it is done, the message is drawn once in full, as before. */
+     written, only the parts that changed are touched. Finished answer paragraphs keep their nodes, so a selection in an
+     earlier paragraph stays put while the last, still-growing block is updated. When the answer is done, the message is
+     drawn once in full, as before. */
   const kid = (parent, cls) => [...parent.children].find(n => n.classList.contains(cls));
+  // patch-answer:start
+  // Put new HTML into el without replacing earlier block nodes whose markup has not changed, so a selection in a
+  // finished paragraph stays put while the trailing, still-growing block is updated.
+  const PATCH_DESCEND = new Set(['UL', 'OL', 'TABLE', 'THEAD', 'TBODY', 'TFOOT', 'DIV', 'BLOCKQUOTE']);
+  function sameNode(a, b) {
+    if (a.nodeType !== b.nodeType) return false;
+    if (a.nodeType === 3) return a.nodeValue === b.nodeValue;
+    if (a.nodeType !== 1) return false;
+    return a.tagName === b.tagName && a.outerHTML === b.outerHTML;
+  }
+  function syncAttrs(a, b) {
+    for (const at of [...b.attributes]) if (a.getAttribute(at.name) !== at.value) a.setAttribute(at.name, at.value);
+    for (const at of [...a.attributes]) if (!b.hasAttribute(at.name)) a.removeAttribute(at.name);
+  }
+  function syncChildren(dst, src) {
+    const want = [...src.childNodes];
+    let i = 0;
+    while (i < want.length) {
+      const b = want[i], a = dst.childNodes[i];
+      if (a && sameNode(a, b)) { i++; continue }
+      if (a && b && a.nodeType === 1 && b.nodeType === 1 && a.tagName === b.tagName && PATCH_DESCEND.has(a.tagName)) {
+        syncAttrs(a, b);
+        syncChildren(a, b);
+        i++;
+        continue;
+      }
+      break;
+    }
+    while (dst.childNodes.length > i) dst.removeChild(dst.lastChild);
+    for (; i < want.length; i++) dst.appendChild(want[i]);
+  }
+  function patchAnswer(el, html) {
+    if (!html) { while (el.firstChild) el.removeChild(el.firstChild); el.lbHtml = ''; return }
+    if (el.lbHtml === html) return;
+    const tmp = el.ownerDocument.createElement('div');
+    tmp.innerHTML = html;
+    syncChildren(el, tmp);
+    el.lbHtml = html;
+  }
+  // patch-answer:end
   // One part of the message: made when it first has something to show, removed when it has nothing (a reset clears the
-  // draft), and its HTML set only when that HTML changed.
+  // draft), and its HTML set only when that HTML changed. The answer uses patchAnswer so finished paragraphs stay put.
   function region(parent, tag, cls, inner, place) {
     let n = kid(parent, cls);
     if (!inner) { if (n) n.remove(); return }
@@ -273,7 +315,7 @@ const Chat = (() => {
       work.append(doc.createElement('b'), ol, bar);
       el.prepend(work);
     }
-    const label = esc(STATES[m.state] || 'Working…') + (m.state === 'starting' && m.pct ? ` ${m.pct}%` : ''), b = work.children[0];
+    const label = esc(STATES[m.state] || 'Working…') + (m.state === 'starting' && m.pct != null ? ` ${m.pct}%` : ''), b = work.children[0];
     if (b.lbHtml !== label) { b.innerHTML = label; b.lbHtml = label }
     // The stage list and the bar keep their elements, so the spinner and the bar's sweep carry on.
     [...kid(work, 'wk-stages').children].forEach((li, k) => { const c = stageClass(k, at); if (li.className !== c) li.className = c });
@@ -281,7 +323,14 @@ const Chat = (() => {
     bar.classList.toggle('run', pct === null);
     if (fill.style.width !== width) fill.style.width = width;
     region(work, 'ul', 'steps', (m.steps || []).map(s => `<li>${stepText(s)}</li>`).join(''), n => work.append(n));
-    region(el, 'div', 'answer', m.content ? md(m.content, m) : '', n => work.after(n));
+    const html = m.content ? md(m.content, m) : '';
+    let ans = kid(el, 'answer');
+    if (!html) { if (ans) ans.remove() }
+    else {
+      if (!ans) { ans = doc.createElement('div'); ans.className = 'answer'; work.after(ans) }
+      patchAnswer(ans, html);
+    }
+
     const found = m.sources || [];
     region(el, 'div', 'prefound', found.length ? `<p class="small muted">Pages found so far — you can open them while the answer is written:</p>${srcCards(found.slice(0, 6), true)}` : '', n => el.append(n));
   }
