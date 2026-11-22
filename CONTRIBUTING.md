@@ -61,7 +61,8 @@ library does not cover something, record that in `content/gaps.json` instead of 
 system's locale encoding for text unless told otherwise or UTF-8 Mode is on (often cp1252), so code that works on a Mac or
 Linux can stop there with `UnicodeDecodeError: 'charmap' codec ...` (#170, #290). Python 3.15 turns UTF-8 Mode on by
 default ([PEP 686](https://peps.python.org/pep-0686/)), but Lastbook supports 3.11 and later, so say the encoding
-anyway.
+anyway. On 3.15 or later the failure no longer shows up, so to check a change, run it with `PYTHONUTF8=0` or on an
+older Python.
 
 - For the project's own text files (Python, `web/`, `content/`, JSON and Markdown), pass `encoding='utf-8'` to `open()`,
   `Path.read_text()` and `Path.write_text()`. Binary reads (`'rb'`, `read_bytes()`) take no encoding.
