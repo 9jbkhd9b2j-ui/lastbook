@@ -22,7 +22,7 @@ const Chat = (() => {
   // Where an answer is: search, then read, then write (none yet while the local AI starts). A later round can search again, so a step can light up a second time.
   const STAGES = ['Search', 'Read', 'Write'], STAGE_AT = { starting: -1, thinking: 0, searching: 0, reading: 1, writing: 2 };
   function progress(m) {
-    const at = STAGE_AT[m.state] ?? 0, pct = m.state === 'starting' && m.pct ? Math.max(0, Math.min(100, +m.pct || 0)) : null;
+    const at = STAGE_AT[m.state] ?? 0, pct = m.state === 'starting' && m.pct != null ? Math.max(0, Math.min(100, +m.pct || 0)) : null;
     const stages = STAGES.map((t, i) => `<li class="${i < at ? 'done' : i === at ? 'now' : ''}">${t}</li>`).join('');
     return `<ol class="wk-stages" aria-hidden="true">${stages}</ol><span class="wk-bar${pct === null ? ' run' : ''}" aria-hidden="true"><span${pct === null ? '' : ` style="width:${pct}%"`}></span></span>`;
   }
@@ -116,7 +116,7 @@ const Chat = (() => {
     return ({
       ready: [true, 'Local AI ready'],
       stopped: [true, 'Local AI available · your first question loads it and may take a while'],
-      loading: [true, `Starting the local AI${l.pct ? ' ' + l.pct + '%' : '…'}`],
+      loading: [true, `Starting the local AI${l.pct != null ? ' ' + l.pct + '%' : '…'}`],
       checking: [false, `Checking the local AI file${l.pct != null ? ' ' + l.pct + '%' : '…'}`],
       measuring: [false, 'Checking this computer’s memory…'],
       absent: [false, 'No local AI added'],
