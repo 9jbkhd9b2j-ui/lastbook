@@ -157,6 +157,22 @@ MIXED = [
     ('baby dehydrated from diarrhea after drinking well water', ('hurt', 'diarrhea'), '"baby ... dehydrated"'),
 ]
 
+# The same context words with no emergency in them must keep their own guide, so a fix for MIXED can't simply
+# send every "power outage" or "heat wave" search to first aid. Only searches whose current answer is sensible
+# are pinned here; false matches of the kind #333 lists (e.g. "broken glass cleanup" opening broken bone) are not.
+MIXED_COUNTER = [
+    ('picnic food safety', ('food', 'outage'), 'food safety, no injury'),
+    ('camping in bear country', ('shelter', 'outdoors'), 'outdoor shelter, no injury'),
+    ('generator gas can storage', ('repair', 'engine'), 'storing fuel, nobody swallowed it'),
+    ('heat wave', ('shelter', 'heat'), 'keeping cool, nobody is ill'),
+    ('cold lake swimming', ('shelter', 'cold'), 'cold, nobody is hypothermic'),
+    ('storm debris cleanup', ('disaster', 'flood'), 'clearing up, nobody hurt'),
+    ('cooking without power', ('food', 'cook'), 'cooking, nobody burned'),
+    ('downed power line', ('shelter', 'damaged'), 'a hazard, nobody shocked'),
+    ('is well water safe to drink', ('water', 'outside'), 'water safety, nobody ill'),
+    ('evacuation with a dog', ('disaster', 'wildfire'), 'an evacuation, nobody bitten'),
+]
+
 BASE_FIRST.update({   # measured on f41b6ce
     'baby not breathing after eating': ['hurt', 'breathing'],
     'child choking on a grape at the picnic': ['hurt', 'breathing'],
@@ -185,6 +201,16 @@ BASE_FIRST.update({   # measured on f41b6ce
     'electric shock from a downed power line': ['shelter', 'damaged'],
     'headache and dizzy from the generator in the garage': ['shelter', 'co'],
     'baby dehydrated from diarrhea after drinking well water': ['hurt', 'diarrhea'],
+    'picnic food safety': ['food', 'outage'],
+    'camping in bear country': ['shelter', 'outdoors'],
+    'generator gas can storage': ['repair', 'engine'],
+    'heat wave': ['shelter', 'heat'],
+    'cold lake swimming': ['shelter', 'cold'],
+    'storm debris cleanup': ['disaster', 'flood'],
+    'cooking without power': ['food', 'cook'],
+    'downed power line': ['shelter', 'damaged'],
+    'is well water safe to drink': ['water', 'outside'],
+    'evacuation with a dog': ['disaster', 'wildfire'],
 })
 
 # The mixed searches main gets wrong today, and their score. They may only improve.
@@ -201,6 +227,7 @@ KNOWN_GAPS.update({
     'electric shock from a downed power line': 0.0,
 })
 EMERGENCY += MIXED
+COUNTER += MIXED_COUNTER
 
 CASES = {
     'stop': QSTOP,
