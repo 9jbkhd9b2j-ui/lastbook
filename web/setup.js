@@ -243,7 +243,7 @@
       <h2 id="packH" data-i18n="nav.library">Library</h2>
       <div class="s-opts" role="radiogroup" aria-labelledby="packH">${packCards}</div>
       ${ai ? `<h2>Local AI</h2>${ai}` : ''}
-      ${c ? '' : `${ai ? '' : '<h2>Local AI</h2>'}<div id="srvSlot"></div>`}
+      ${c ? '' : '<div id="srvSlot"></div>'}
       <section class="s-sum" id="sum" aria-live="polite"></section>
       <div class="s-go">
         <button class="btn big" id="start"></button>
@@ -260,6 +260,7 @@
     $('#haveFile').onclick = () => haveLibrary(true);
     mapSection();
     summary();
+    srv.heading = !ai;   // no Local AI section above: the full row brings its own heading
     renderServer();
     globalThis.LastbookI18n?.apply(main);
   }
@@ -360,12 +361,18 @@
   }
 
   /* ---- a model server on this computer (#78): Ollama, llama.cpp. Asked only when the person presses List models. */
-  const srv = { open: false, address: '', models: null, note: '', ok: false };
+  const srv = { open: false, address: '', models: null, note: '', ok: false, heading: false };
   function serverBox() {
     const ms = S.model_server, firstRun = !cur();
     const after = firstRun ? ' Used once setup is done.' : '';
     const note = srv.note ? `<p class="s-note${srv.ok ? ' ok' : ''}" id="srvNote" role="status">${esc(srv.note)}</p>` : '';
     const head = small => `<div class="s-row">${ico('ai', 's-ri')}<span><b>Model server on this computer</b><small>${small}</small></span>`;
+    // First-run Setup shows only a link until the person opens the chooser or has chosen a server.
+    if (firstRun && !ms && !srv.open) return `<button class="s-link" id="srvOpen">${ico('ai')}Use a model server on this computer</button>${note}`;
+    const h2 = firstRun && srv.heading ? '<h2>Local AI</h2>' : '';
+    return h2 + serverRow(ms, head, after, note);
+  }
+  function serverRow(ms, head, after, note) {
     if (!srv.open) return ms
       ? `<div class="s-have">${head(`${esc(ms.model)} at ${esc(ms.address)} · answers instead of the local AI.${after}`)}
           <span class="s-confirm"><button class="btn plain" id="srvOpen">Change</button><button class="btn plain" id="srvStop">Stop using</button></span></div></div>${note}`
