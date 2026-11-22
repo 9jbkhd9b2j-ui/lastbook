@@ -2011,6 +2011,20 @@ class PackPlan(unittest.TestCase):
                                  ['derived/geo/national.sqlite', 'derived/geo/places.sqlite', 'map-set.json'])
                 self.assertEqual(d['map'], 'RI')
 
+    def test_changed_pack_file_with_a_state_map_installed(self):
+        # An older pack with a state map installed on its own; the release changes one pack file and its base map.
+        # Only the changed pack file counts toward the fetch; the state map is kept, not fetched over.
+        self.own_map()
+        release = {**self.pack, 'library-data/a.pdf': b'A' * 120, 'derived/geo/national.sqlite': b'new base map' * 9}
+        d = install.plan_update(self.lib, self.rows(release))
+        self.assertEqual((d['changed'], d['added'], d['removed']), (['library-data/a.pdf'], [], []))
+        self.assertEqual(d['unchanged'], ['library-data/catalog.json', 'pack.json'])
+        self.assertEqual((d['fetch_bytes'], d['bytes']['changed']), (120, 120))
+        self.assertEqual(d['reuse_bytes'], len(self.pack['library-data/catalog.json']) + len(self.pack['pack.json']))
+        self.assertEqual(d['kept']['map'], [('derived/geo/national.sqlite', 270), ('derived/geo/places.sqlite', 40),
+                                            ('map-set.json', len((self.lib / 'map-set.json').read_bytes()))])
+        self.assertEqual(d['map'], 'RI')
+
     def test_without_its_own_map_the_packs_map_is_compared(self):
         d = install.plan_update(self.lib, self.rows({**self.pack, 'derived/geo/national.sqlite': b'new base map' * 9}))
         self.assertEqual((d['changed'], d['kept']['map']), (['derived/geo/national.sqlite'], []))
