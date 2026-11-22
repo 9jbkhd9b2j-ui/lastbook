@@ -31,13 +31,14 @@ def make_library(data):
     (lib / 'text/test-pdf.txt').write_text('First page\fSecond page\fThird page', encoding='utf-8')
 
 
-def press(run, key, selector=None, *, alt=False, page=None):
+def press(run, key, selector=None, *, alt=False, shift=False, page=None):
     return run.js(f"""
       const selector = {json.dumps(selector)};
       if (selector) document.querySelector(selector).focus();
       const target = document.activeElement;
       target.dispatchEvent(new KeyboardEvent('keydown', {{
-        key: {json.dumps(key)}, bubbles: true, cancelable: true, altKey: {json.dumps(alt)}
+        key: {json.dumps(key)}, bubbles: true, cancelable: true, altKey: {json.dumps(alt)},
+        shiftKey: {json.dumps(shift)}
       }}));
       const page = {json.dumps(None if page is None else str(page))};
       if (page !== null) await until(() => document.querySelector('#pg')?.value === page, 1500);
@@ -69,6 +70,11 @@ def check(run):
     assert modified['page'] == '3', modified
     text = press(run, 'ArrowLeft', page=2)
     assert text['hash'] == '#/read/test-pdf?p=2&view=text', text
+    run.go('#/read/test-pdf?p=2&view=text', '.pagetext')
+    assert run.js("return document.activeElement.id") == 'pageTop'
+    for key in ('ArrowRight', 'ArrowLeft'):
+        selecting = press(run, key, shift=True, page=2)    # Shift+Arrow is left for selecting text
+        assert selecting['hash'] == '#/read/test-pdf?p=2&view=text', selecting
 
     run.go('#/about', '#main h1')
     about = run.js("return location.hash")

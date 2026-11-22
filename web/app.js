@@ -907,7 +907,7 @@ async function reader(id, page, from, view) {
   }
   if (!isPdf) return;
   main.onkeydown = e => {
-    if (e.target.tagName === 'INPUT' || e.altKey || e.metaKey || e.ctrlKey) return;
+    if (e.target.tagName === 'INPUT' || e.altKey || e.metaKey || e.ctrlKey || e.shiftKey) return;   // Shift+Arrow selects text
     let next = page;
     if (e.key === 'ArrowRight') next++;
     if (e.key === 'ArrowLeft') next--;
