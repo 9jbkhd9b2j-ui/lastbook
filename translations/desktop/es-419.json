@@ -48,5 +48,5 @@
   "language.saved": "Idioma guardado.",
   "language.saveFailed": "No se pudo guardar el idioma. Intenta de nuevo.",
   "language.loadFailed": "No se pudo cargar el idioma guardado.",
-  "language.unavailable": "El español no está disponible. Lastbook usa inglés."
+  "language.unavailable": "El idioma guardado no está disponible. Lastbook usa inglés."
 }
