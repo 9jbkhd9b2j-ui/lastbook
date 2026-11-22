@@ -151,6 +151,9 @@ as one map.
 
 [REGIONS-BR.md](REGIONS-BR.md) does the same for Brazil's 26 states and the Federal District (Distrito Federal), 27 in all.
 
+[REGIONS-BO.md](REGIONS-BO.md) does the same for Bolivia as one country-wide region, with its nine departments as an
+alternative.
+
 ### To do: maps for every place on Earth
 
 The goal is a detailed map for any place a person lives.
