@@ -23,7 +23,10 @@ class LocalAiZeroProgressTests(unittest.TestCase):
         self.assertIn("self.state, self.pct, self.message = 'loading', None, ''", loader)
         self.assertIn("Local AI available · your first question loads it and may take a while", source)
         self.assertIn("if self.proc is proc:", loader)
-        self.assertIn("self.pct = ev.get('p')", loader)
+        # The reader may assign the reported percentage directly or via a
+        # validated local variable; assert the event is consumed and stored.
+        self.assertIn("ev.get('p')", loader)
+        self.assertRegex(loader, r"self\\.pct\\s*=\\s*(?:p|ev\\.get\\('p'\\))")
 
     def test_chat_asset_version_bumped(self):
         index = INDEX.read_text(encoding="utf-8")
