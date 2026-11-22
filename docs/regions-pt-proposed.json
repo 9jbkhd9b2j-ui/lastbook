@@ -1,5 +1,5 @@
 {
-  "about": "Proposed region definitions for detailed maps of Portugal: seven continental NUTS II, the Azores split into two regions that follow the INE address dataset's own two groups (Corvo and Flores are 550 km west of the rest), and Madeira. See docs/REGIONS-PT.md. Boxes carry full-precision inputs (GISCO polygon bounds; the two Azores boxes from the INE address groups' exact extremes) with the 0.15° outward margin floored/ceiled to 0.01°.",
+  "about": "Proposed region definitions for detailed maps of Portugal: seven continental NUTS II, the Azores split into two regions that follow the INE address dataset's own two groups (Corvo and Flores are about 240 km west of the rest (242 km straight-line between the published Flores and Horta airport coordinates)), and Madeira. See docs/REGIONS-PT.md. Boxes carry full-precision inputs (GISCO polygon bounds; the two Azores boxes from the INE address groups' exact extremes) with the 0.15° outward margin floored/ceiled to 0.01°.",
   "status": "proposal",
   "checked": "2026-11-20",
   "codes": {

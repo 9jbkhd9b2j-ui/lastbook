@@ -33,7 +33,7 @@ is built on them.
 - **The islands make the country's bounding box useless.** The Azores lie about 1,500 km west of the mainland and
   Madeira 1,000 km south-west, so Portugal's box (which the European country sets of PR #84 compute at about 25° of
   longitude) is mostly ocean. Any per-region design has to split the islands out. The INE address dataset already
-  splits the Azores into two address groups (Corvo and Flores are 550 km west of the other islands), and this proposal
+  splits the Azores into two address groups (Corvo and Flores are about 240 km west of the other islands), and this proposal
   follows that split.
 - **The NUTS 2021 reform changed the mainland's regions.** Portugal had five continental regions for decades; the
   2021 reform (in force for 2024 data) split out Grande Lisboa, Península de Setúbal and Oeste e Vale do Tejo. Nine
@@ -89,7 +89,7 @@ Cross-checks between the two datasets:
   row **is now located**. It is id `pt.ine.add.AC26.76921`, postcode 9580-228, city SANTO ESPÍRITO: an address in the
   south-eastern parish of Santa Maria. Reverse-geocoding the coordinates (Nominatim, 21 November 2026) puts the point
   **15 m from OSM's node for the Farol de Gonçalo Velho**, the lighthouse on Santa Maria's south-eastern point — a real
-  address at the island's tip (the keeper's, if the postal record is what it looks like), not an islet in the sea and
+  Santo Espírito address near the island's tip, not an islet in the sea and
   not a geocoding error. The GISCO 03M polygon's south edge lands about 0.001° north of the lighthouse, which is
   polygon simplification, not disagreement about where Santa Maria ends.
 - **The proposal's boxes do not include the Formigas.** The `pt-20e` box's eastern edge is -24.86°, and the islets sit
@@ -104,7 +104,8 @@ Notes:
   small (the whole old AML is 3,015 km²) but hold about three million people, so they are separate regions rather than
   one.
 - **The Azores split.** The NUTS polygon of the Azores (PT20) spans 6.3° of longitude, almost all ocean, because Corvo
-  and Flores sit 550 km north-west of the central group. The INE address dataset already splits the same two groups (its
+  and Flores sit about 240 km north-west of the central group (the published Flores and Horta airport coordinates,
+  eAIP LPFL and LPHR, give 242 km in a straight line). The INE address dataset already splits the same two groups (its
   ids are `pt.ine.add.AC25…` for Corvo and Flores and `…AC26…` for the rest), so the proposal keeps that split and
   `pt-20w`'s box is the address group's own box, not a NUTS one. GISCO's PT20 box and the address groups' boxes agree
   at every edge. The eastern group's southern edge (36.93° N) is a real address at the south-eastern tip of Santa
