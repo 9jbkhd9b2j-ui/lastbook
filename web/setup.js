@@ -185,7 +185,7 @@
     else if (view === 'copy') copyView();
     if (focus && !languageHasFocus()) { const h = main.querySelector('h1'); if (h) { h.tabIndex = -1; h.focus({ preventScroll: true }) } scrollTo(0, 0) }
   }
-  function go(v) { view = v; confirmCancel = confirmRemove = confirmOld = false; note = ''; if (v === 'manage' || v === 'choose') repair = null; render(true) }
+  function go(v) { view = v; confirmCancel = confirmRemove = confirmOld = false; note = ''; srv.open = false; srv.note = ''; if (v === 'manage' || v === 'choose') repair = null; render(true) }
 
   /* ---- this computer */
   function computer() {
@@ -243,6 +243,7 @@
       <h2 id="packH" data-i18n="nav.library">Library</h2>
       <div class="s-opts" role="radiogroup" aria-labelledby="packH">${packCards}</div>
       ${ai ? `<h2>Local AI</h2>${ai}` : ''}
+      ${c ? '' : `${ai ? '' : '<h2>Local AI</h2>'}<div id="srvSlot"></div>`}
       <section class="s-sum" id="sum" aria-live="polite"></section>
       <div class="s-go">
         <button class="btn big" id="start"></button>
@@ -259,6 +260,7 @@
     $('#haveFile').onclick = () => haveLibrary(true);
     mapSection();
     summary();
+    renderServer();
     globalThis.LastbookI18n?.apply(main);
   }
   /* Map geometry and address indexes are separate downloads, chosen by state. */
@@ -357,6 +359,63 @@
     S.job = r; go('job'); poll();
   }
 
+  /* ---- a model server on this computer (#78): Ollama, llama.cpp. Asked only when the person presses List models. */
+  const srv = { open: false, address: '', models: null, note: '', ok: false };
+  function serverBox() {
+    const ms = S.model_server, firstRun = !cur();
+    const after = firstRun ? ' Used once setup is done.' : '';
+    const note = srv.note ? `<p class="s-note${srv.ok ? ' ok' : ''}" id="srvNote" role="status">${esc(srv.note)}</p>` : '';
+    const head = small => `<div class="s-row">${ico('ai', 's-ri')}<span><b>Model server on this computer</b><small>${small}</small></span>`;
+    if (!srv.open) return ms
+      ? `<div class="s-have">${head(`${esc(ms.model)} at ${esc(ms.address)} · answers instead of the local AI.${after}`)}
+          <span class="s-confirm"><button class="btn plain" id="srvOpen">Change</button><button class="btn plain" id="srvStop">Stop using</button></span></div></div>${note}`
+      : `<div class="s-have">${head('Use a model you already run with Ollama or llama.cpp, instead of the local AI.')}
+          <button class="btn plain" id="srvOpen">Choose…</button></div></div>${note}`;
+    const opts = (srv.models || []).map(m => `<option${ms && ms.model === m ? ' selected' : ''}>${esc(m)}</option>`).join('');
+    return `<div class="s-have s-srv">${head(`Lastbook asks only this computer, and only when you press List models.${after}`)}</div>
+        <div class="s-srv-in">
+          <label class="s-maplabel" for="srvAddr">Address</label>
+          <input id="srvAddr" class="s-select" inputmode="url" autocomplete="off" spellcheck="false" placeholder="127.0.0.1:11434" value="${esc(srv.address)}" aria-describedby="srvHint">
+          <p class="s-hint" id="srvHint">Ollama uses port 11434, llama.cpp port 8080. A server that needs a key does not work yet.</p>
+          ${opts ? `<label class="s-maplabel" for="srvModel">Model</label><select id="srvModel" class="s-select">${opts}</select>` : ''}
+          <div class="s-go left">${opts ? '<button class="btn" id="srvUse">Use this model</button><button class="btn plain" id="srvList">List again</button>' : '<button class="btn" id="srvList">List models</button>'}
+            <button class="s-link" id="srvCancel">Cancel</button></div>
+        </div></div>${note}`;
+  }
+  function renderServer(focus) {
+    const slot = $('#srvSlot'); if (!slot) return;
+    slot.innerHTML = serverBox();
+    const say = (text, ok) => { srv.note = text; srv.ok = !!ok };
+    const addr = () => { srv.address = ($('#srvAddr') || {}).value || srv.address; return srv.address };
+    if ($('#srvOpen')) $('#srvOpen').onclick = () => { srv.open = true; srv.models = null; say(''); srv.address = srv.address || (S.model_server || {}).address || ''; renderServer('#srvAddr') };
+    if ($('#srvCancel')) $('#srvCancel').onclick = () => { srv.open = false; say(''); renderServer('#srvOpen') };
+    if ($('#srvAddr')) $('#srvAddr').onkeydown = e => { if (e.key === 'Enter') $('#srvList').click() };
+    if ($('#srvList')) $('#srvList').onclick = async () => {
+      $('#srvList').disabled = true;
+      const r = await call('server-models', { address: addr() }).catch(e => ({ error: e.message }));
+      srv.models = r && r.models || null;
+      say(r && r.error ? r.error : `${r.models.length === 1 ? 'One model' : r.models.length + ' models'} at ${r.address}.`, !(r && r.error));
+      renderServer(srv.models ? '#srvModel' : '#srvAddr');
+    };
+    if ($('#srvUse')) $('#srvUse').onclick = async () => {
+      $('#srvUse').disabled = true;
+      const model = $('#srvModel').value;
+      const r = await call('use-server', { address: addr(), model }).catch(e => ({ error: e.message }));
+      if (r && r.error) { say(r.error); renderServer('#srvAddr'); return }
+      S.model_server = r.model_server; srv.open = false; srv.models = null;
+      say(cur() ? `Chat now answers with ${model}.` : `Chat will answer with ${model} once setup is done.`, true);
+      renderServer('#srvNote');
+    };
+    if ($('#srvStop')) $('#srvStop').onclick = async () => {
+      const r = await call('stop-server', {}).catch(e => ({ error: e.message }));
+      if (r && r.error) { say(r.error); renderServer('#srvNote'); return }
+      S.model_server = null;
+      say(cur() && model() && cur().model ? 'Chat answers with the local AI again.' : 'The model server is no longer used.', true);
+      renderServer('#srvNote');
+    };
+    const f = focus && $(focus); if (f) { if (focus === '#srvNote') f.tabIndex = -1; f.focus() }
+  }
+
   /* ---- manage */
   function manageView() {
     const c = cur(), p = packById(c.pack), m = model();
@@ -374,6 +433,7 @@
           return `<div class="s-row">${ico('map', 's-ri')}<span><b>${mNow ? 'Detailed map: ' + esc(mapName(mNow)) : 'Detailed map'}</b><small>${mNow ? (mNow === 'us' ? 'Local streets and terrain everywhere' : 'Local streets, buildings and terrain') : 'None yet. Add one for your state.'}</small></span>
           <button class="btn plain" id="mapCh">${(c.address_indexes || []).length ? 'Choose state' : 'Add address search'}</button></div>` })() : ''}
       </div>
+      <div id="srvSlot"></div>
       ${old ? `<div class="s-row s-old">${ico('folder', 's-ri')}<span><b>The old library is still here</b><small>${esc(home(old.path))}${old.bytes ? ' · ' + size(old.bytes) : ''}</small></span>${confirmOld ? `<span class="s-confirm"><span>Delete it for good?</span><button class="btn danger" id="oldYes">Delete</button><button class="btn plain" id="oldNo">Keep</button></span>` : `<button class="btn plain" id="rmOld">${ico('trash')}Delete it</button>`}</div>` : ''}
       ${computer()}
       ${CAN.repair ? `<div class="s-have"><div class="s-row">${ico('ok', 's-ri')}<span><b>Library check</b><small id="lastCheck">${checkLine(c.checked)}</small></span><button class="btn plain" id="checkNow">Check now</button></div></div>` : ''}
@@ -407,6 +467,7 @@
       if (!r || r.error) { note = (r && r.error) || 'Repair could not start.'; manageView(); return }
       repair = { fixed: false, sure: true }; S.job = r; go('job'); poll();
     };
+    renderServer();
     globalThis.LastbookI18n?.apply(main);
   }
   /* ---- copy for someone else (#114): what goes onto the drive, and what does not */
