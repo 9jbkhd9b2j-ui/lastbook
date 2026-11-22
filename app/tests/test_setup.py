@@ -2388,6 +2388,27 @@ console.log(JSON.stringify({copy: jobLead(j), download: jobLead(Object.assign({}
         self.assertIn('Stopped when Lastbook closed', out['download'])   # the same complete item in a download job: unchanged
 
     @unittest.skipUnless(shutil.which('node'), 'needs Node')
+    def test_copy_item_line_never_speaks_of_downloads(self):
+        """The line under a copy's bar, drawn by setup.js's own fillItem: paused at 100% it said "Stopped. Nothing to download.",
+        paused part way it lost "copied and checked", and waiting it said "to download"."""
+        script = r"""
+const src = require('fs').readFileSync(process.argv[1], 'utf8');
+const section = (a, b) => src.slice(src.indexOf(a), src.indexOf(b, src.indexOf(a)));
+const size = b => b + ' B', rate = () => '', eta = () => '', retryIn = () => '', line = {};
+const bar = {classList: {contains: () => false}, firstChild: {style: {}}, setAttribute() {}, removeAttribute() {}};
+const el = {querySelector: s => s.includes('bar') ? bar : line};
+let repair = null, S = {job: {copy: true}};
+const checkOnly = () => false, behind = () => false, afterAbove = () => false;
+eval(section('  const noDownload = ', '  const above = ') + section('  function fillItem(', '  function jobView(') + 'globalThis.fill = fillItem;');   // one eval: their scope
+const show = (state, done) => { fill(el, {kind: 'copy', state, bytes_done: done, bytes_total: 100, source: 'download'}); return line.textContent };
+console.log(JSON.stringify({waiting: show('waiting', 0), paused_0: show('paused', 0), paused_40: show('paused', 40), paused_100: show('paused', 100), copying: show('copying', 40)}));
+"""
+        r = subprocess.run([shutil.which('node'), '-e', script, str(ROOT / 'web' / 'setup.js')], check=True, capture_output=True, text=True, encoding='utf-8')
+        self.assertEqual(json.loads(r.stdout), {'waiting': '100 B to copy', 'paused_0': '0 B of 100 B copied and checked',
+                                                'paused_40': '40 B of 100 B copied and checked', 'paused_100': '100 B of 100 B copied and checked',
+                                                'copying': '40 B of 100 B copied and checked'})
+
+    @unittest.skipUnless(shutil.which('node'), 'needs Node')
     def test_copy_screen_words(self):
         """A copy's cancel and stops speak of the copy and the drive, never of a download or the internet."""
         script = r"""
