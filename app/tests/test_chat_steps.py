@@ -382,5 +382,34 @@ class SourceCards(unittest.TestCase):
         self.assertEqual(p.anchors[1]['href'], '#/map?lat=1.5&lon=2.5&z=16&pin=Clinic%20%22A%22')
 
 
+FINISH = r"""
+const src = require('fs').readFileSync(process.argv[1], 'utf8');
+const i = src.indexOf('// sources-finish:start'), j = src.indexOf('// sources-finish:end');
+if (i < 0 || j < i) throw new Error('chat.js has no sources-finish block');
+const { sourcesForFinish } = new Function(src.slice(i, j) + '\nreturn { sourcesForFinish };')();
+const out = JSON.parse(process.argv[2]).map(m => (sourcesForFinish(m) || []).map(s => s.key));
+process.stdout.write(JSON.stringify(out));
+"""
+
+
+@unittest.skipUnless(NODE, 'needs Node')
+class StopKeepsSources(unittest.TestCase):
+    def keys(self, *msgs):
+        r = subprocess.run([NODE, '-e', FINISH, str(ROOT / 'web/chat.js'), json.dumps(list(msgs))],
+                           capture_output=True, text=True, check=True, encoding='utf-8')
+        return json.loads(r.stdout)
+
+    def test_stopping_mid_stream_keeps_sources_already_received(self):
+        page = {'key': 'S1', 'title': 'Water'}
+        got = self.keys(
+            {'sources': [page], 'stopped': True},
+            {'cited': [page]},
+            {'sources': [page]},                          # still running, not finished
+            {'cited': [], 'sources': [page]},             # a `done` event with no sources wins
+            {'stopped': True, 'sources': []},
+        )
+        self.assertEqual(got, [['S1'], ['S1'], [], [], []])
+
+
 if __name__ == '__main__':
     unittest.main()

@@ -334,6 +334,11 @@ const Chat = (() => {
     const found = m.sources || [];
     region(el, 'div', 'prefound', found.length ? `<p class="small muted">Pages found so far — you can open them while the answer is written:</p>${srcCards(found.slice(0, 6), true)}` : '', n => el.append(n));
   }
+  // sources-finish:start (app/tests/test_chat_steps.py)
+  // After a normal `done` event, `cited` is the final list. If the user stops mid-stream,
+  // `cited` is empty, so keep the sources already received.
+  const sourcesForFinish = m => m.cited || (m.stopped ? (m.sources || []) : []) || [];
+  // sources-finish:end
   function botHtml(m, i) {
     const l = live[cur.id], running = l && l.running && i === cur.messages.length - 1;
     const steps = (m.steps || []).map(s => `<li>${stepText(s)}</li>`).join('');
@@ -345,7 +350,7 @@ const Chat = (() => {
     if (running && found.length) h += `<div class="prefound"><p class="small muted">Pages found so far — you can open them while the answer is written:</p>${srcCards(found.slice(0, 6), true)}</div>`;
     if (m.fallback) h += srcCards(m.fallback, true);
     if (!running && m.content) {
-      const cited = m.cited || [];
+      const cited = sourcesForFinish(m);
       if ((m.invalid || []).length) h += `<p class="small" style="color:var(--stop)">The model referred to sources that don’t exist (${m.invalid.join(', ')}); those markers were removed.</p>`;
       h += `<div class="legend small"><span><span class="lg-c">1</span> linked to a page or video</span><span><span class="lg-u">dotted</span> the model’s own wording, not linked to a source</span></div>`;
       if (cited.length) h += `<h3 class="srch">Sources (${cited.length})</h3>${srcCards(cited, false)}`;
@@ -549,7 +554,12 @@ const Chat = (() => {
       else m.error = e.message || 'Something went wrong.';
     }
     m.running = false; delete m.state;
-    if (m.stopped && m.content) m.content += '\n\n(Stopped.)';
+    if (m.stopped && m.content) {
+      m.content += '\n\n(Stopped.)';
+      // The `done` event never arrives, so `cited` would be empty and the finished view
+      // would say the answer is unverified. Keep the sources already received.
+      if (m.cited == null && (m.sources || []).length) m.cited = m.sources;
+    }
     live[c.id].running = false;
     c.updated = Date.now(); persist();
     if (cur === c) { updateBot(idx); setBusy(false); scrollEnd(); const t = $('#chatIn'); if (t && matchMedia('(hover:hover)').matches) t.focus({ preventScroll: true }) }
