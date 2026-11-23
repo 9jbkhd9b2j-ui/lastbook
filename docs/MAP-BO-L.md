@@ -53,32 +53,94 @@ The build machine needs Python 3.11 or later and pyosmium. Nothing else is insta
 Geofabrik offers Bolivia only as one country file (about 175 MB), so the department is cut from it by the box. Sizes
 on this page are in MB, where 1 MB is 1,000,000 bytes.
 
-The builder and checker are not in the main branch. Step 0 takes them from #80 at the exact commit this map was built
-with, into a checkout of this repository, without merging #80.
+There are two ways to build it. **Reproduce the recorded build** rebuilds this map from the same dated source file, with
+#80 at the same commit, and checks the result against the checksums recorded under "The build this was checked with"
+below. **A fresh build** makes the same map from today's data; its checksums and counts will differ.
+
+The builder and checker are not in the main branch. Both ways start by taking them from #80 at the exact commit this
+map was built with, into a checkout of this repository, without merging #80.
+
+### Reproduce the recorded build
+
+Run from the top of a checkout of this repository.
 
 ```bash
 # 0. The prototype builder and checker from pull request #80 (still open), at commit a453274.
 git fetch https://github.com/AngryAnt3201/lastbook.git a453274353b2816b4ccb0114310024ea54c970b2
 git checkout FETCH_HEAD -- tools/build_region_map.py tools/check_region_map.py tools/test_build_region_map.py
 
-# 1. The source: Geofabrik's Bolivia extract (OpenStreetMap, ODbL 1.0). About 175 MB.
-curl -LO https://download.geofabrik.de/south-america/bolivia/bolivia-latest.osm.pbf
-curl -LO https://download.geofabrik.de/south-america/bolivia/bolivia-latest.osm.pbf.md5 && md5sum -c bolivia-latest.osm.pbf.md5
+# 1. The dated source this map was built from: Geofabrik's Bolivia extract with data up to 20 November 2026
+#    (OpenStreetMap, ODbL 1.0), 175,175,057 bytes. Check it against Geofabrik's MD5 and the recorded SHA-256.
+curl -LO https://download.geofabrik.de/south-america/bolivia/bolivia-261120.osm.pbf
+curl -LO https://download.geofabrik.de/south-america/bolivia/bolivia-261120.osm.pbf.md5 && md5sum -c bolivia-261120.osm.pbf.md5
+echo "de4b37089c5b31d37205a6ac3ae497c533c8c7df6911626a336e63034ac14c63  bolivia-261120.osm.pbf" | sha256sum -c
 
-# 2. A build environment with pyosmium.
-python3 -m venv derived/buildenv && derived/buildenv/bin/pip install osmium
+# 2. A build environment with the pyosmium version the recorded build used.
+python3 -m venv derived/buildenv && derived/buildenv/bin/pip install osmium==4.3.2
 
 # 3. Build. The box is BO-L's COD-AB box with the 0.15 degree margin, from REGIONS-BO.md.
 #    Write --bbox=... with "=": the box starts with a minus sign, which argparse would otherwise read as an option.
-derived/buildenv/bin/python tools/build_region_map.py bolivia-latest.osm.pbf \
+derived/buildenv/bin/python tools/build_region_map.py bolivia-261120.osm.pbf \
     --id BO-L --name "La Paz" --bbox=-69.80,-18.20,-66.58,-11.69 --out derived/regions
 
-# 4. Check the files, then check that the engine can use them with every connection blocked.
+# 4. Compare the five files with the recorded checksums. Every line should say OK.
+(cd derived/regions/BO-L && sha256sum -c <<'EOF'
+7ab010bd1c1854e0f84a7ddaed33d7a4b91c7993e4417cafae734c009f515127  derived/geo/national.sqlite
+319ffec7ddd992142419bbde4dc3b53c8d05f779f96ca639e5a35a7872092c85  derived/geo/map.sqlite
+b9ac19a406d6d3279e894f11cccc2a14a47b342e7c562b8f27c1527502a70343  derived/geo/places.sqlite
+a99feb4a93464dc04a3fd142763c0c70eb5f89773f800383fad37aca523e3192  derived/geo/national-status.json
+4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945  derived/geo/socal-cells.json
+EOF
+)
+
+# 5. Check the files, then check that the engine can use them with every connection blocked.
 python3 tools/check_region_map.py derived/regions/BO-L
 python3 tools/check_region_map.py derived/regions/BO-L --engine \
     --find "El Alto" --find Sopocachi --find "Hospital de Clínicas" --find Copacabana --find Coroico \
     --find Charaña --find charana --find "hospital de clinicas" --near=-16.4955,-68.1336
 ```
+
+The recorded build was made with Python 3.12.4 and SQLite 3.45.3 on Linux. Whether another SQLite version or platform
+gives the same bytes was not tested; if step 4 fails there but step 5 passes and the counts in
+`derived/regions/BO-L.build.json` match the tables below, the difference is most likely in how the files were written,
+not in what they hold.
+
+**If the dated file is no longer offered.** Geofabrik keeps only recent daily files. On 23 November 2026 its [Bolivia
+folder](https://download.geofabrik.de/south-america/bolivia/) listed daily files for 12 to 22 November only, then the
+first of each month back to September 2026, then 1 January of each year back to 2014. The folder page does not say how
+long each is kept, so expect `bolivia-261120.osm.pbf` to drop out of that list within a few weeks. No other copy of the
+file has been verified for this page. When it is gone, the recorded checksums cannot be reproduced: make a fresh build
+(below), check it, and compare its counts with the tables below rather than its checksums. Anyone who kept a copy of the
+file can still use it here: step 1's two checks tell whether it is the same file.
+
+### A fresh build
+
+From the latest data, which Geofabrik replaces every day. Run step 0 and step 2 above first. The builder will not
+write over a map it has already built, so this build goes to its own folder.
+
+```bash
+# 1. The source: Geofabrik's latest Bolivia extract (OpenStreetMap, ODbL 1.0). About 175 MB.
+curl -LO https://download.geofabrik.de/south-america/bolivia/bolivia-latest.osm.pbf
+curl -LO https://download.geofabrik.de/south-america/bolivia/bolivia-latest.osm.pbf.md5 && md5sum -c bolivia-latest.osm.pbf.md5
+
+# 2. Build, with the same options.
+derived/buildenv/bin/python tools/build_region_map.py bolivia-latest.osm.pbf \
+    --id BO-L --name "La Paz" --bbox=-69.80,-18.20,-66.58,-11.69 --out derived/regions-latest
+
+# 3. Check the files, then check that the engine can use them with every connection blocked.
+python3 tools/check_region_map.py derived/regions-latest/BO-L
+python3 tools/check_region_map.py derived/regions-latest/BO-L --engine \
+    --find "El Alto" --find Sopocachi --find "Hospital de Clínicas" --find Copacabana --find Coroico \
+    --find Charaña --find charana --find "hospital de clinicas" --near=-16.4955,-68.1336
+```
+
+The checksums will not match the recorded ones, and the counts in `derived/regions-latest/BO-L.build.json` will move as
+OpenStreetMap is edited. As a guide: a fresh build on 23 November 2026, from data up to 22 November, passed every check,
+and every count was within 0.5% of the tables below (rivers and streams +0.45%, the rest +0.05% or less: 24,131 rivers,
+162,839 roads, 5,959 places, 11,341 help points). Larger gaps after a longer time are normal; a layer that drops sharply
+or a check that fails is worth a look.
+
+### Look at it in the app
 
 To look at it in the app's interface, give the engine a data folder that holds the map and an empty library:
 
@@ -89,15 +151,14 @@ python3 server.py --data /path/to/LaPazData --port 8890
 # then open the address it prints, choose Map, and go to:  #/map?lat=-16.4955&lon=-68.1336&z=16
 ```
 
-Geofabrik's Bolivia files sit under `south-america/bolivia/`; the older `south-america/bolivia-latest.osm.pbf`
-address redirects there. `bolivia-latest` is replaced every day; the dated file used here is `bolivia-261120.osm.pbf`,
-the same file REGIONS-BO.md was written from.
+Geofabrik's Bolivia files sit under `south-america/bolivia/`; the older `south-america/bolivia-...` addresses
+redirect there. The dated file is the same one REGIONS-BO.md was written from.
 
 ## The build this was checked with
 
 | | |
 |---|---|
-| Source file | `bolivia-261120.osm.pbf` (from `https://download.geofabrik.de/south-america/bolivia/bolivia-261120.osm.pbf`), 175,175,057 bytes (175.2 MB), `Last-Modified` 21 Nov 2026 01:11:23 GMT |
+| Source file | `bolivia-261120.osm.pbf` (from `https://download.geofabrik.de/south-america/bolivia/bolivia-261120.osm.pbf`), 175,175,057 bytes (175.2 MB). Served with `Last-Modified` 21 Nov 2026 01:11:23 GMT when downloaded, and 20 Nov 2026 23:32:40 GMT on 23 Nov, with the same size and MD5: check the file by its checksums, not by that date |
 | Source SHA-256 | `de4b37089c5b31d37205a6ac3ae497c533c8c7df6911626a336e63034ac14c63` |
 | Source MD5 (matches Geofabrik's `.md5`) | `a142ed996037a4005a68196ad154f036` |
 | OpenStreetMap data up to | 2026-11-20T21:21:21Z (from the file's header) |
@@ -113,9 +174,10 @@ the same file REGIONS-BO.md was written from.
 | `derived/geo/national-status.json` | 59 | `a99feb4a93464dc04a3fd142763c0c70eb5f89773f800383fad37aca523e3192` |
 | `derived/geo/socal-cells.json` | 2 | `4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945` |
 
-The map set is 99,631,165 bytes in all (99.6 MB). The files hold no build time, so the same extract and options give
-the same bytes: a second build on the same machine (102 seconds) gave identical checksums for all five files.
-Whether another SQLite version or platform gives the same bytes was not tested.
+The map set is 99,631,165 bytes in all (99.6 MB). The files hold no build time, so the same extract and options give the
+same bytes: a second build on the same machine (102 seconds) gave identical checksums for all five files. Running
+"Reproduce the recorded build" above as written, on 23 November 2026 with the file downloaded again from Geofabrik, gave
+the same five checksums again. Whether another SQLite version or platform gives the same bytes was not tested.
 
 What the map holds:
 
