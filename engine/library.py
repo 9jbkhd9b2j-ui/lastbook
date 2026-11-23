@@ -151,7 +151,7 @@ def query_terms(text,keep='-'):
 
 STYLE='''body{font:17px/1.65 system-ui,sans-serif;color:#202b30;background:#f8f6ef;max-width:1100px;margin:32px auto;padding:0 24px}a{color:#166456}aside{background:#e6ede4;padding:14px;margin-bottom:26px;font-size:14px}table{border-collapse:collapse;max-width:100%;overflow:auto;display:block}td,th{border:1px solid #bbc4bb;padding:8px}img,video{max-width:100%;height:auto}h1,h2,h3{line-height:1.2}pre{white-space:pre-wrap}'''
 
-def catalog():
+def catalog(write=True):
  records=[];bad=[]
  remote=remote_records()
  for manifest in sorted((ROOT/'manifests').glob('*.json')):
@@ -180,7 +180,7 @@ def catalog():
    winner.setdefault('also_in',[]).append(r['collection'])
    winner.setdefault('alternate_paths',[]).append(r['path'])
  records=sorted(unique.values(),key=lambda r:(r['category'],r['collection'],r['title']))
- atomic_write(ROOT/'catalog.json',json.dumps(records,indent=2))   # the app knows a library by this file: never half of it
+ if write:atomic_write(ROOT/'catalog.json',json.dumps(records,indent=2))   # the app knows a library by this file: never half of it
  return records,bad
 
 def extract(r):
@@ -265,7 +265,15 @@ def extract(r):
 
 def build():
  (ROOT/'text').mkdir(exist_ok=True)
- records,bad=catalog();building=DB.with_suffix('.building.sqlite')
+ # catalog.json goes with the index: it is written below with the new index, and not at all when the index is kept.
+ records,bad=catalog(write=False);building=DB.with_suffix('.building.sqlite')
+ # Nothing listed to index at all, where the index in use has pages, is a library that could not be read (a disk not
+ # there, an empty manifests folder), not a library that was emptied: stop before catalog.json or the index is touched,
+ # so the app still shows the library it had. Resources that are listed but give no text (captions gone, say) do build,
+ # and say why in extraction_errors; that includes every extractor failing at once, which empties the index as before.
+ if not records and index_has_pages(DB):
+  raise SystemExit('The new search index was not put in place: the library lists nothing to index, and the index in use has '
+                   'pages (remove search.sqlite to start again with none). The index already there is unchanged.')
  discard_index(building)  # what an interrupted build left: the new index starts as a new file
  # The index searches use is touched once, by the replace below, and only by a file that has passed index_fault. A build
  # that stops for any reason before that leaves search.sqlite exactly as it was and takes its own file away.
@@ -287,10 +295,6 @@ def build():
   finally:
    if not finished:discard_index(building)
  why=index_fault(building,rows)
- # Nothing listed to index at all, where the index in use has pages, is a library that could not be read (a disk not
- # there, an empty manifests folder), not a library that was emptied. Resources that were there but gave no text (their
- # captions gone, say) still build, and say why in extraction_errors. An empty library with an empty or no index builds.
- if not why and not rows and not records and index_has_pages(DB):why='nothing was indexed, and the index in use has pages (remove search.sqlite to start again with none)'
  if not why:
   try:replace_index(building,DB)
   except OSError as e:why=f'the index in use could not be replaced ({type(e).__name__}: {e.strerror or e})'

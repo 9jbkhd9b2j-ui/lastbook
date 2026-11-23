@@ -161,7 +161,7 @@ class Search(unittest.TestCase):
         records = [{'id': d, 'title': d, 'collection': 'Hindi', 'category': 'water', 'path': f'documents/{d}.pdf', 'kind': 'pdf',
                     'pages': 1, 'bytes': 1} for d, _ in HINDI]
         text = dict(HINDI)
-        with mock.patch.object(library, 'catalog', lambda: (records, [])), \
+        with mock.patch.object(library, 'catalog', lambda write=True: (records, [])), \
                 mock.patch.object(library, 'extract', lambda r: (r, [text[r['id']]], None)), \
                 mock.patch('builtins.print'):
             library.build()
@@ -359,7 +359,7 @@ class Rebuild(unittest.TestCase):
         records = [{'id': d, 'title': d, 'collection': 'Hindi', 'category': 'water', 'path': f'documents/{d}.pdf', 'kind': 'pdf',
                     'pages': 1, 'bytes': 1} for d, _ in pages]
         text = dict(pages)
-        with mock.patch.object(library, 'catalog', lambda: (records, [])), \
+        with mock.patch.object(library, 'catalog', lambda write=True: (records, [])), \
                 mock.patch.object(library, 'extract', extract or (lambda r: (r, [text[r['id']]], None))), \
                 mock.patch('builtins.print'):
             library.build()
@@ -407,8 +407,35 @@ class Rebuild(unittest.TestCase):
         self.assertNotEqual((library.ROOT / 'catalog.json').read_text(encoding='utf-8'), '"as it was"')
 
     def test_an_empty_build_does_not_wipe_an_index_that_has_pages(self):
-        """Nothing to index, as when the library's disk is not there: the pages already indexed stay searchable."""
-        self.assertIn('nothing was indexed', self.refused(pages=[]))
+        """Nothing listed to index: the pages already indexed stay searchable. (The real case, a library whose files are not
+        there, is test_a_library_whose_files_are_not_there_refuses.)"""
+        self.assertIn('lists nothing to index', self.refused(pages=[]))
+
+    def test_a_library_whose_files_are_not_there_refuses(self):
+        """The real catalog(), with the manifests there and the files they list gone, as when the library's disk is not
+        plugged in: nothing is listed to index, so the index in use and the catalog.json the app reads stay as they were."""
+        manifests = library.ROOT / 'manifests'
+        manifests.mkdir(exist_ok=True)
+        self.addCleanup(shutil.rmtree, manifests, ignore_errors=True)
+        (manifests / 'hindi.json').write_text(json.dumps([{'title': 'water', 'collection': 'Hindi', 'category': 'water',
+                                                          'path': 'documents/not-there.pdf'}]), encoding='utf-8')
+        records, bad = library.catalog(write=False)
+        self.assertEqual((records, [b['reason'] for b in bad]), ([], ['missing file']))
+        with mock.patch('builtins.print'), self.assertRaises(SystemExit) as stopped:
+            library.build()
+        self.assertIn('lists nothing to index', str(stopped.exception))
+        self.unchanged()
+
+    def test_resources_that_give_no_text_still_replace_the_index(self):
+        """Listed resources that give no text (a video whose captions are gone, say) are a library that changed, not one
+        that could not be read: the build goes through, the old pages go, and extraction_errors says why."""
+        self.build(extract=lambda r: (r, [], 'no captions'))
+        self.assertTrue(library.index_is_current(self.db))
+        self.assertEqual(new_search(self.db, 'boil'), [])
+        summary = json.loads((library.ROOT / 'summary.json').read_text(encoding='utf-8'))
+        self.assertEqual([e['error'] for e in summary['extraction_errors']], ['no captions'] * len(HINDI))
+        catalog = json.loads((library.ROOT / 'catalog.json').read_text(encoding='utf-8'))
+        self.assertEqual([r['id'] for r in catalog], [d for d, _ in HINDI])
 
     def test_an_empty_library_still_builds(self):
         self.db.unlink()
