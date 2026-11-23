@@ -685,11 +685,6 @@
  ],
  "learn": [
   {
-   "doc": "med-443ae5cfaa6ecc68",
-   "label": "New Where There Is No Doctor: First Aid chapter",
-   "note": "Hesperian's plain-language first aid chapter (2020 advance chapter) covering bleeding, wounds, burns, bones, breathing, heat, cold, bites and poisoning; medicine pages at the end include doses."
-  },
-  {
    "doc": "med-2e83e22162a9a006",
    "label": "IFRC International First Aid Guidelines 2025",
    "note": "Current evidence-based guidelines from the Red Cross Red Crescent, topic by topic with key actions. Written for first-aid educators and programme designers, so it is detailed."
@@ -698,12 +693,6 @@
    "doc": "clinical-14def41d1ef369f1",
    "label": "Where There Is No Doctor (2025): Chapter 10 First Aid",
    "note": "The classic village health book's first aid chapter, including shock, bleeding, wounds, burns, fractures and moving injured people."
-  },
-  {
-   "doc": "ed5bac0a81b009",
-   "page": 100,
-   "label": "CERT Basic Training: Disaster Medical Operations",
-   "note": "FEMA CERT 2019 units on life-threatening conditions, basic first aid, treatment areas and head-to-toe checks. A volunteer training course; hands-on practice is part of it."
   },
   {
    "doc": "med-68adb7585ea5d7e0",
