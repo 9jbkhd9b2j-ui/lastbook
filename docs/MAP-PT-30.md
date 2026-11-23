@@ -16,16 +16,19 @@ address fixtures at the end are what a future runtime path can be checked agains
 
 ```sh
 python3 tools/build_region_pt_30.py fetch    # downloads the sources, about 1.03 GB, into derived/regions/PT-30/source/
-python3 tools/build_region_pt_30.py build    # writes derived/regions/PT-30/data/ (about 40 seconds after fetch)
-python3 tools/build_region_pt_30.py check    # validates it; exits non-zero on any failure
+python3 tools/build_region_pt_30.py build    # stages derived/regions/PT-30/data.new/, checks it, then swaps it into data/
+python3 tools/build_region_pt_30.py check    # validates data/; exits non-zero on any failure
 python3 tools/build_region_pt_30.py demo     # adds an empty library beside it for trying the map alone
 python3 server.py --data derived/regions/PT-30/demo --no-index
 ```
 
 Python 3.9 or newer and its standard library; no GDAL, no other packages. `fetch` is the only step that uses
 the network, and it keeps files whose SHA-256 matches the previous fetch. Everything is written under
-`derived/regions/PT-30/`, so no existing map set changes. `build.json` there records every source (URL, dated
-file name, data date, licence, size, SHA-256) and every output (size, SHA-256).
+`derived/regions/PT-30/`, so no existing map set changes. A build never rewrites a good output: it stages into
+`data.new/`, checks the staging, and only then replaces `data/` — a rebuild that fails or stops leaves the last
+good `data/` (with its `build.json`) as it was, and one that stops between the two final renames is repaired by
+the next build. `data/build.json` records every source (URL, dated file name, data date, licence, size,
+SHA-256) and every output (size, SHA-256).
 
 ## Sources
 
@@ -75,7 +78,7 @@ extract to cut it.
 | `derived/geo/addresses/PT-30.sqlite` | 12.4 MB | `25a8404c…1a70` | 88,218 indexed addresses, `meta.norm = pt-1` |
 | `map-set.json` | 189 B | `0be38861…2c26` | the file list and sizes, as every map set carries |
 
-Full checksums are in `build.json`, which also records every source (URL, dated file name, data date, licence,
+Full checksums are in `data/build.json`, which also records every source (URL, dated file name, data date, licence,
 size, SHA-256).
 
 Every place in the place finder answers through the app in `--data` mode: "Funchal" returns the CAOP

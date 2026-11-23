@@ -2,16 +2,18 @@
 """Madeira (PT-30): a self-contained offline map set with places, help points and street addresses.
 
   python3 tools/build_region_pt_30.py fetch    # downloads the sources (about 1.03 GB) into derived/regions/PT-30/source/
-  python3 tools/build_region_pt_30.py build    # writes the data folder derived/regions/PT-30/data/
-  python3 tools/build_region_pt_30.py check    # validates it; exits non-zero on any failure
+  python3 tools/build_region_pt_30.py build    # builds derived/regions/PT-30/data.new/ and swaps it into data/ after check
+  python3 tools/build_region_pt_30.py check    # validates data/; exits non-zero on any failure
   python3 tools/build_region_pt_30.py demo     # adds an empty library beside it, then prints the command below
   python3 server.py --data derived/regions/PT-30/demo --no-index   # the map, place and address search, offline
 
-Everything goes under derived/regions/PT-30/, so no existing map set is touched. The region keeps its full ID:
+Everything goes under derived/regions/PT-30/, so no existing map set is touched. A build never rewrites a good
+output: it stages into data.new/, checks the staging, and only then replaces data/, so a rebuild that fails or
+stops leaves the last good data/ (with its build.json) as it was. The region keeps its full ID:
 PT-30 is the ISO 3166-2:PT code, the NUTS II code and the former district of Madeira — they coincide. Plan and
 sources: docs/REGIONS-PT.md; what this build holds and what it lacks: docs/MAP-PT-30.md.
 
-Sources (all redistributable; details, dates and checksums end up in derived/regions/PT-30/build.json):
+Sources (all redistributable; details, dates and checksums end up in data/build.json):
   - OpenStreetMap via Geofabrik, portugal-YYMMDD-free.gpkg.zip: streets, water, land use, buildings, named places
     and points (ODbL 1.0, "© OpenStreetMap contributors"). Geofabrik publishes no Madeira subregion, so the country
     extract is downloaded once and cut to the region box here.
@@ -50,7 +52,6 @@ BASE = ROOT / 'derived' / 'regions' / REGION
 SOURCE = BASE / 'source'
 DATA = BASE / 'data'
 GEO = DATA / 'derived' / 'geo'
-REPORT = BASE / 'build.json'
 # W,S,E,N of Madeira's land area: the exact WGS84 extent of the official CAOP 2025 NUTS II polygon (RAM),
 # every vertex converted from EPSG:5016 (PTRA08 / UTM zone 28N) and rounded outward to 6 dp. Porto Santo's
 # north tip is what moves the north edge 0.024° past the GISCO 1:3M approximation in docs/regions-pt-proposed.json.
@@ -460,9 +461,9 @@ def cut_map(fetched):
     return {'cut': kept}
 
 
-def build_map(fetched):
+def build_map(fetched, geo):
     """The region map through the existing tools/build_map.py; meta is corrected to what this build holds."""
-    national = GEO / 'national.sqlite'
+    national = geo / 'national.sqlite'
     subprocess.run([sys.executable, str(ROOT / 'tools' / 'build_map.py'), str(BASE / 'work' / 'cut.gpkg'), str(national)],
                    check=True, stdout=subprocess.DEVNULL)
     osm = fetched['files']['osm.gpkg.zip']
@@ -479,7 +480,7 @@ def build_map(fetched):
         db.execute('VACUUM')
     finally:
         db.close()
-    empty = sqlite3.connect(GEO / 'map.sqlite')
+    empty = sqlite3.connect(geo / 'map.sqlite')
     try:
         empty.executescript('''CREATE TABLE feat(id INTEGER PRIMARY KEY, layer TEXT, cls TEXT, name TEXT, minz INTEGER, geom BLOB);
           CREATE VIRTUAL TABLE feat_idx USING rtree(id, minx, maxx, miny, maxy, minz, maxz);
@@ -501,11 +502,11 @@ def build_map(fetched):
     return {'roads': roads, 'pois': pois}
 
 
-def build_addresses(fetched):
+def build_addresses(fetched, geo):
     """The address sidecar from the INE register rows inside the region box. Rows whose house field does not
     start with a number (rural doors registered without one, or with a word instead) stay out of the index and
     are counted; their streets still appear in the place finder."""
-    path = GEO / 'addresses' / f'{REGION}.sqlite'
+    path = geo / 'addresses' / f'{REGION}.sqlite'
     path.parent.mkdir(parents=True, exist_ok=True)
     db = sqlite3.connect(path)
     counts = {'kept': 0, 'skipped_without_number': 0, 'skipped_without_point': 0, 'total_in_box': 0}
@@ -551,10 +552,10 @@ def build_addresses(fetched):
     return counts
 
 
-def build_places(fetched):
+def build_places(fetched, geo):
     """The place finder: municipios and freguesias from the CAOP, postcode areas and streets from the addresses,
     and named OpenStreetMap places and points."""
-    path = GEO / 'places.sqlite'
+    path = geo / 'places.sqlite'
     path.unlink(missing_ok=True)
     db = sqlite3.connect(path)
     counts = {}
@@ -613,7 +614,7 @@ def build_places(fetched):
             rows.append((street, 'street', f'{where}, Madeira' if where else 'Madeira', lat, lon, 3,
                          'Instituto Nacional de Estatística, I.P.'))
         add('street', rows)
-        national = sqlite3.connect(f"file:{GEO / 'national.sqlite'}?mode=ro", uri=True)
+        national = sqlite3.connect(f"file:{geo / 'national.sqlite'}?mode=ro", uri=True)
         add('osm_point', [(name, cls.replace('_', ' '), 'Madeira (OpenStreetMap)', lat, lon, 4, 'OpenStreetMap')
                           for cls, name, lon, lat in national.execute("SELECT cls,name,lon,lat FROM poi WHERE name IS NOT NULL AND name<>''")])
         rows = []
@@ -634,35 +635,57 @@ def build_places(fetched):
 
 
 def build():
+    """Builds into data.new/ beside the previous output and puts it in place of data/ only once it passes
+    check, so a rebuild that fails or stops leaves the last good data/ (with its build.json) as it was."""
     if not (SOURCE / 'fetched.json').exists():
         raise SystemExit(f'no fetched.json in {SOURCE}; run the fetch step first')
     fetched = json.loads((SOURCE / 'fetched.json').read_text(encoding='utf-8'))
-    if DATA.exists():
-        shutil.rmtree(DATA)
-    GEO.mkdir(parents=True)
+    data, staging, previous = BASE / 'data', BASE / 'data.new', BASE / 'data.old'
+    if previous.exists() and not data.exists():
+        previous.rename(data)         # an earlier build stopped between the two renames at the end
+    for leftover in (staging, previous):
+        if leftover.exists():
+            shutil.rmtree(leftover)
+    geo = staging / 'derived' / 'geo'
+    geo.mkdir(parents=True)
     started = time.time()
     counts = {}
     log('map cut (OpenStreetMap to the region box)')
     counts.update(cut_map(fetched))
     log('map (tools/build_map.py)')
-    counts.update(build_map(fetched))
+    counts.update(build_map(fetched, geo))
     log('addresses')
-    counts.update(build_addresses(fetched))
+    counts.update(build_addresses(fetched, geo))
     log('places')
-    counts.update(build_places(fetched))
-    map_files = {f.relative_to(DATA).as_posix(): f.stat().st_size for f in sorted(GEO.glob('*.sqlite'))}
-    (DATA / 'map-set.json').write_text(json.dumps({'name': REGION, 'files': map_files, 'bytes': sum(map_files.values()),
-                                                   'seconds': round(time.time() - started)}, indent=1), encoding='utf-8')
+    counts.update(build_places(fetched, geo))
+    map_files = {f.relative_to(staging).as_posix(): f.stat().st_size for f in sorted(geo.glob('*.sqlite'))}
+    (staging / 'map-set.json').write_text(json.dumps({'name': REGION, 'files': map_files, 'bytes': sum(map_files.values()),
+                                                      'seconds': round(time.time() - started)}, indent=1), encoding='utf-8')
     outputs = {}
-    for f in sorted(DATA.rglob('*')):
+    for f in sorted(staging.rglob('*')):
         if f.is_file():
-            outputs[f.relative_to(DATA).as_posix()] = {'bytes': f.stat().st_size, 'sha256': sha256(f)}
+            outputs[f.relative_to(staging).as_posix()] = {'bytes': f.stat().st_size, 'sha256': sha256(f)}
     report = {'region': REGION, 'built': time.strftime('%Y-%m-%dT%H:%M:%S'), 'bbox': BBOX, 'sources': fetched,
               'counts': counts, 'outputs': outputs,
               'note': 'map-set.json lists the map files; the address index is a separate sidecar, as for US states. '
                       'The region box is the official CAOP 2025 NUTS II extent (CC BY 4.0, Direção-Geral do Território).'}
-    REPORT.write_text(json.dumps(report, indent=1, ensure_ascii=False), encoding='utf-8')
+    (staging / 'build.json').write_text(json.dumps(report, indent=1, ensure_ascii=False), encoding='utf-8')
     log('built in', round(time.time() - started), 's;', json.dumps({k: v for k, v in counts.items() if k != 'cut'}, ensure_ascii=False))
+    failures = check(staging)
+    if failures:
+        raise SystemExit(f'{len(failures)} check(s) failed: {data} is unchanged; the failed build is in {staging}')
+    if data.exists():
+        data.rename(previous)
+    try:
+        staging.rename(data)
+    except OSError:
+        if previous.exists():
+            previous.rename(data)
+        raise
+    if previous.exists():
+        shutil.rmtree(previous)
+    (BASE / 'build.json').unlink(missing_ok=True)     # where earlier versions of this builder wrote the report
+    log('in place:', data)
 
 
 # ------------------------------------------------------------------- check ----
@@ -672,29 +695,33 @@ def build():
 SAMPLE_ADDRESSES = []
 
 
-def check():
-    sys.path.insert(0, str(ROOT))
+def check(root=None):
+    """The built data folder, wherever it is (staging or in place): file hashes as built, SQLite integrity,
+    the counts the sources fix, and the place finder. Returns the list of failed checks; each result prints."""
+    root = root if root is not None else DATA
+    geo = root / 'derived' / 'geo'
     failures = []
 
     def expect(ok, what):
         print(('ok    ' if ok else 'FAIL  ') + what)
         if not ok:
             failures.append(what)
-    report = json.loads(REPORT.read_text(encoding='utf-8')) if REPORT.exists() else None
-    if report is None:
-        raise SystemExit(f'no build.json in {BASE}; run the build step first')
+    report_path = root / 'build.json'
+    if not report_path.exists():
+        raise SystemExit(f'no build.json in {root}; run the build step first')
+    report = json.loads(report_path.read_text(encoding='utf-8'))
     for rel, info in report['outputs'].items():
-        f = DATA / rel
+        f = root / rel
         expect(f.is_file() and f.stat().st_size == info['bytes'] and sha256(f) == info['sha256'], f'{rel}: size and SHA-256 as built')
-    map_set = json.loads((DATA / 'map-set.json').read_text(encoding='utf-8'))
+    map_set = json.loads((root / 'map-set.json').read_text(encoding='utf-8'))
     expect(map_set['name'] == REGION, f"map-set.json name is {REGION}")
-    expect(all((DATA / rel).stat().st_size == size for rel, size in map_set['files'].items()), 'map-set.json sizes match the files')
+    expect(all((root / rel).stat().st_size == size for rel, size in map_set['files'].items()), 'map-set.json sizes match the files')
     for rel in [*map_set['files'], f'derived/geo/addresses/{REGION}.sqlite']:
-        db = sqlite3.connect(f'file:{DATA / rel}?mode=ro', uri=True)
+        db = sqlite3.connect(f'file:{root / rel}?mode=ro', uri=True)
         expect(db.execute('PRAGMA integrity_check').fetchone()[0] == 'ok', f'{rel}: SQLite integrity')
         db.close()
     west, south, east, north = BBOX
-    nat = sqlite3.connect(f"file:{GEO / 'national.sqlite'}?mode=ro", uri=True)
+    nat = sqlite3.connect(f"file:{geo / 'national.sqlite'}?mode=ro", uri=True)
     roads = nat.execute("SELECT count(*) FROM feat WHERE layer='road'").fetchone()[0]
     expect(roads > 5000, f'streets drawn from OpenStreetMap: {roads:,} road features')
     for cls, low in (('hospital', 1), ('pharmacy', 20), ('fire_station', 2), ('police', 2)):
@@ -704,7 +731,7 @@ def check():
                           (west - MARGIN, east + MARGIN, south - MARGIN, north + MARGIN)).fetchone()[0]
     expect(outside == 0, f'every help point within PT-30 plus the 0.15° margin ({outside} outside)')
     nat.close()
-    addr = sqlite3.connect(f"file:{GEO / 'addresses' / (REGION + '.sqlite')}?mode=ro", uri=True)
+    addr = sqlite3.connect(f"file:{geo / 'addresses' / (REGION + '.sqlite')}?mode=ro", uri=True)
     n, bad_zip, outside, no_norm = addr.execute(
         "SELECT count(*), sum(CAST(substr(zip,1,4) AS INTEGER) NOT BETWEEN 9000 AND 9400),"
         " sum(lon NOT BETWEEN ? AND ? OR lat NOT BETWEEN ? AND ?),"
@@ -722,7 +749,7 @@ def check():
     avenida = addr.execute("SELECT count(*) FROM addr WHERE norm LIKE 'avenida arriaga%'").fetchone()[0]
     expect(avenida > 0, f'the abbreviated street type expands in the pt-1 key ({avenida} rows on Avenida Arriaga)')
     addr.close()
-    places = sqlite3.connect(f"file:{GEO / 'places.sqlite'}?mode=ro", uri=True)
+    places = sqlite3.connect(f"file:{geo / 'places.sqlite'}?mode=ro", uri=True)
     for name, kind in (('Funchal', 'município'), ('Porto Santo', 'município'), ('Funchal (Sé)', 'freguesia'),
                        ('Câmara de Lobos', 'freguesia'), ('9000', 'postcode area')):
         hit = places.execute('SELECT count(*) FROM place_fts f JOIN place p ON p.id=f.rowid WHERE place_fts MATCH ? AND p.name=? AND p.kind=?',
@@ -730,14 +757,13 @@ def check():
         expect(hit > 0, f'place finder has {kind} "{name}"')
     places.close()
     if SAMPLE_ADDRESSES:
+        sys.path.insert(0, str(ROOT))
         from engine.address_search import find_addresses
         for query, street, number in SAMPLE_ADDRESSES:
-            found = find_addresses(query, GEO)
+            found = find_addresses(query, geo)
             expect(bool(found) and found[0]['name'] == f'{street} {number}', f'address search "{query}" -> {found[0]["name"] if found else "nothing"}')
-        expect(find_addresses('Rua Fernão Ornelas 99999', GEO) == [], 'an unknown house number returns nothing, never a guess')
-    if failures:
-        raise SystemExit(f'{len(failures)} check(s) failed')
-    print('all checks passed')
+        expect(find_addresses('Rua Fernão Ornelas 99999', geo) == [], 'an unknown house number returns nothing, never a guess')
+    return failures
 
 
 def demo():
@@ -756,11 +782,18 @@ def demo():
     print(f'python3 server.py --data {folder.relative_to(ROOT)} --no-index')
 
 
+def check_cli():
+    failures = check()
+    if failures:
+        raise SystemExit(f'{len(failures)} check(s) failed')
+    print('all checks passed')
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__.split('\n')[0])
     parser.add_argument('step', choices=('fetch', 'build', 'check', 'demo'))
     step = parser.parse_args().step
-    {'fetch': fetch, 'build': build, 'check': check, 'demo': demo}[step]()
+    {'fetch': fetch, 'build': build, 'check': check_cli, 'demo': demo}[step]()
 
 
 if __name__ == '__main__':
