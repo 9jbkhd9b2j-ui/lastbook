@@ -16,6 +16,18 @@
   "cold",
   "freezing",
   "winter",
+  "ice storm",
+  "freezing rain",
+  "blizzard",
+  "snowstorm",
+  "snow squall",
+  "whiteout",
+  "extreme cold",
+  "cold snap",
+  "polar vortex",
+  "wind chill",
+  "arctic outflow",
+  "warming centre",
   "hypothermia",
   "warm",
   "heater",
@@ -29,8 +41,12 @@
   "wildfire",
   "smoke",
   "air quality",
+  "AQHI",
+  "smog",
   "N95",
   "mask",
+  "haze",
+  "PM2.5",
   "evacuate",
   "shelter in place",
   "damaged house",
@@ -45,7 +61,8 @@
   "high-rise",
   "city",
   "upper floor",
-  "cooling center"
+  "cooling center",
+  "cooling centre"
  ],
  "choices": [
   {
@@ -106,7 +123,7 @@
   {
    "id": "cold",
    "label": "It's freezing and the heat is out",
-   "hint": "Winter storm, no heating, staying warm overnight",
+   "hint": "Winter storm or blizzard, furnace out, no heating in the cold, staying warm overnight",
    "read": [
     {
      "doc": "f6becaef71ffd5",
@@ -136,7 +153,7 @@
   {
    "id": "co",
    "label": "Using a generator, heater, grill or stove for power or heat",
-   "hint": "Power outage, space heater, camp stove, headache or dizziness indoors",
+   "hint": "Power outage, space heater, camp stove, headache or dizziness indoors, carbon monoxide",
    "read": [
     {
      "doc": "18bf4604bf28c4",
@@ -166,7 +183,7 @@
   {
    "id": "smoke",
    "label": "Wildfire smoke or bad air outside",
-   "hint": "Smoky sky, ash falling, air quality alert, asthma",
+   "hint": "Smoky sky, smog, ash falling, air quality alert, asthma",
    "read": [
     {
      "doc": "a90ff7e6f3cf01",
@@ -419,6 +436,12 @@
    "title": "Hypothermia",
    "label": "Encyclopedia: Hypothermia (MDWiki)",
    "note": "Medical encyclopedia article on causes, stages and prevention of dangerous cold."
+  },
+  {
+   "zim": "zim/mdwiki_en_all_maxi_2025-11.zim/Air_quality_index",
+   "title": "Air quality index",
+   "label": "Encyclopedia: Air quality index (MDWiki)",
+   "note": "What air quality index numbers and colors mean, how they differ by country, and the advice that comes with high readings, such as for older people and children."
   }
  ],
  "related": [

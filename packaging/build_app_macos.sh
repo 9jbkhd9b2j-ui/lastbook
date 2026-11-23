@@ -32,6 +32,7 @@ uv pip install --python "$VENV/bin/python" -r "$HERE/requirements_macos.txt"
 export LASTBOOK_SHIP="$OUT/ship"
 "$VENV/bin/python" -m PyInstaller --noconfirm --distpath "$OUT/dist" --workpath "$OUT/work" "$HERE/lastbook_macos.spec" 2>&1 | tee "$OUT/build.log"
 BUNDLE="$OUT/dist/Lastbook.app"
+"$VENV/bin/python" -I -B "$HERE/i18n_catalogs.py" --check --web-dir "$BUNDLE/Contents/Resources/web"
 "$VENV/bin/python" "$HERE/scan_package_macos.py" "$BUNDLE" --terms-file "$BUILD/scan-terms.txt" | tee "$OUT/scan.txt"
 # The built app makes and searches the library's search index with its own SQLite (Lastbook --self-test): the build fails if it cannot
 "$BUNDLE/Contents/MacOS/Lastbook" --self-test | tee "$OUT/self-test.json"

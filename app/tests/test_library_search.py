@@ -26,7 +26,8 @@ def load_library():
     """A private copy of engine/library.py whose library folder is a new, empty temporary one. engine.library itself is left
     alone: it fixes its folder when first imported, and test_bridge needs it to be the data folder it sets up."""
     with mock.patch.dict(os.environ, {'LASTBOOK_LIBRARY': LIBRARY_DIR.name}):
-        spec = importlib.util.spec_from_file_location('library_under_test', ROOT / 'engine' / 'library.py')
+        import engine  # the package, so the copy's relative import (from .saved_pages) finds engine/saved_pages.py
+        spec = importlib.util.spec_from_file_location('engine.library_under_test', ROOT / 'engine' / 'library.py')
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
     return module
