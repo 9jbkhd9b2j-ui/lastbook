@@ -3047,6 +3047,107 @@ def make_map(path, state='CA', extra=None):
     return files
 
 
+class CloudOnly(Base):
+    """Files of the library whose contents are only in iCloud (#362): found from metadata alone, never opened."""
+
+    def library(self):
+        lib = self.tmp / 'LastbookData'
+        for rel in ('library-data/catalog.json', 'videos/a.mp4', 'videos/b.mp4', 'zim/old/c.zim'):
+            (lib / rel).parent.mkdir(parents=True, exist_ok=True)
+            (lib / rel).write_bytes(b'x' * 10)
+        return lib
+
+    def placeholders(self, lib, *rels):
+        """os.lstat as macOS reports an evicted iCloud item: the SF_DATALESS flag (0x40000000), contents not on this computer."""
+        real = os.lstat
+        cloud = {str(lib / r) for r in rels}
+
+        def lstat(path, *a, **kw):
+            st = real(path, *a, **kw)
+            if str(path) not in cloud:
+                return st
+            return mock.Mock(st_flags=st.st_flags | 0x40000000, st_size=st.st_size, st_mode=st.st_mode)
+        return mock.patch.object(hardware.os, 'lstat', lstat)
+
+    def test_placeholder_found_ordinary_file_not(self):
+        lib = self.library()
+        with mock.patch.object(hardware.sys, 'platform', 'darwin'), self.placeholders(lib, 'videos/b.mp4'):
+            r = hardware.cloud_only(lib)
+        self.assertEqual(r, {'files': 1, 'folders': 0, 'bytes': 10, 'examples': ['videos/b.mp4']})
+
+    def test_nothing_in_the_cloud(self):
+        lib = self.library()
+        with mock.patch.object(hardware.sys, 'platform', 'darwin'):
+            self.assertEqual(hardware.cloud_only(lib), {'files': 0, 'folders': 0, 'bytes': 0, 'examples': []})
+
+    def test_folder_in_the_cloud_is_not_listed(self):
+        # Listing an evicted folder asks iCloud for its contents, which can hang offline: count it, do not open it.
+        lib = self.library()
+        with mock.patch.object(hardware.sys, 'platform', 'darwin'), self.placeholders(lib, 'zim/old', 'zim/old/c.zim'):
+            r = hardware.cloud_only(lib)
+        self.assertEqual((r['files'], r['folders'], r['examples']), (0, 1, ['zim/old/']))
+
+    def test_files_are_never_opened(self):
+        lib = self.library()
+        with mock.patch.object(hardware.sys, 'platform', 'darwin'), self.placeholders(lib, 'videos/a.mp4'), \
+                mock.patch('builtins.open', side_effect=AssertionError('opened a file')):
+            self.assertEqual(hardware.cloud_only(lib)['files'], 1)
+
+    def test_only_on_a_mac(self):
+        with mock.patch.object(hardware.sys, 'platform', 'win32'):
+            self.assertIsNone(hardware.cloud_only(self.library()))
+
+    def test_setup_reports_it_for_the_open_library(self):
+        lib = self.library()
+        s = self.setup('manage', current=lib)
+        with mock.patch.object(hardware.sys, 'platform', 'darwin'), self.placeholders(lib, 'videos/a.mp4', 'videos/b.mp4'):
+            s.current_info()                       # counting starts in the background, so the page is not held up
+            s.cloud_thread.join(10)
+            r = s.current_info()['cloud_only']
+        self.assertEqual((r['files'], r['examples']), (2, ['videos/a.mp4', 'videos/b.mp4']))
+
+    def info_on(self, system):
+        """current_info as the page gets it on this system, and whether a count was started."""
+        s = self.setup('manage', current=self.library())
+        with mock.patch.object(hardware.sys, 'platform', system):
+            info = s.current_info()
+        return info, s.cloud_thread
+
+    def test_other_systems_are_not_counting(self):
+        # #370 review: None alone also meant "still counting", so Windows and Linux were asked again up to CLOUD_POLLS times.
+        for system in ('win32', 'linux'):
+            with self.subTest(system=system):
+                info, thread = self.info_on(system)
+                self.assertEqual((info['cloud_only'], info['cloud_counting'], thread), (None, False, None))
+        info, thread = self.info_on('darwin')
+        self.assertEqual((info['cloud_only'], info['cloud_counting']), (None, True))
+        thread.join(10)
+
+    @unittest.skipUnless(shutil.which('node'), 'needs Node')
+    def test_page_asks_again_only_while_counting_with_one_timer(self):
+        """setup.js's own cloudPoll, fed the engine's answer and drawn five times (every redraw of Manage calls it): no timer on
+        Windows or Linux, one timer on a Mac while the count runs, and a new one only after that one has run."""
+        script = r"""
+const src = require('fs').readFileSync(process.argv[1], 'utf8'), infos = JSON.parse(process.argv[2]);
+const section = (a, b) => src.slice(src.indexOf(a), src.indexOf(b, src.indexOf(a)));
+const out = {};
+for (const [system, c] of Object.entries(infos)) {
+  const timers = [];
+  const setTimeout = f => { timers.push(f); return timers.length };
+  let view = 'manage', S = {}, cloudPolls = 0, cloudT = null, cloudFor = '';
+  const CLOUD_POLL_MS = 3000, CLOUD_POLLS = 20, call = async () => S, cur = () => c, manageView = () => cloudPoll(c);
+  eval(section('  function cloudPoll(', '  function manageView('));
+  for (let i = 0; i < 5; i++) cloudPoll(c);
+  out[system] = timers.length;
+}
+console.log(JSON.stringify(out));
+"""
+        infos = {system: self.info_on(system)[0] for system in ('win32', 'linux', 'darwin')}
+        r = subprocess.run([shutil.which('node'), '-e', script, str(ROOT / 'web' / 'setup.js'), json.dumps(infos)],
+                           check=True, capture_output=True, text=True, encoding='utf-8')
+        self.assertEqual(json.loads(r.stdout), {'win32': 0, 'linux': 0, 'darwin': 1})
+
+
 class Maps(Base):
     def map_manifest(self, extra=None):
         files = make_map(self.tmp / 'Lastbook-Map-CA.zip', extra=extra)
