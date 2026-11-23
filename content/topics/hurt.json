@@ -695,11 +695,6 @@
    "note": "The classic village health book's first aid chapter, including shock, bleeding, wounds, burns, fractures and moving injured people."
   },
   {
-   "doc": "med-68adb7585ea5d7e0",
-   "label": "WHO/ICRC Basic Emergency Care workbook",
-   "note": "Systematic ABCDE approach to the acutely ill and injured (2018). For frontline health workers; many skills need supervised training."
-  },
-  {
    "doc": "video-k98ilfQmUWw",
    "label": "Video: how to use a tourniquet",
    "note": "American Red Cross demonstration (about 3 minutes, captions) of placing and tightening a windlass tourniquet for life-threatening limb bleeding."
@@ -735,6 +730,12 @@
    "title": "Simple triage and rapid treatment",
    "label": "Encyclopedia: START triage, for trained responders (MDWiki)",
    "note": "How trained responders sort many injured people into four color groups by walking, breathing, pulse and following commands. Reference reading, not training."
+  },
+  {
+   "zim": "zim/mdwiki_en_all_maxi_2025-11.zim/Psychological_first_aid",
+   "title": "Psychological first aid",
+   "label": "Encyclopedia: Psychological first aid (MDWiki)",
+   "note": "Medical encyclopedia article on how responders and volunteers support people right after a disaster: safety and comfort, listening without pressure, practical help and referral. Background reading, not training."
   }
  ],
  "related": [

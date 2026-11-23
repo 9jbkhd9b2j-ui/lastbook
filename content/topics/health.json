@@ -1051,6 +1051,11 @@
    "note": "Start here: the table of contents and how the book is meant to be used, including when to seek help. All chapters of this 2025 edition are in the library."
   },
   {
+   "doc": "clinical-d5fa69d5756dae1f",
+   "label": "Where There Is No Doctor: Green Pages (medicines)",
+   "note": "Uses, doses and precautions for the medicines mentioned in the book, grouped by use. Read the precautions; doses are by age or weight."
+  },
+  {
    "doc": "med-27894636f99b2041",
    "label": "New Where There Is No Doctor: contents",
    "note": "Planned contents of Hesperian's new book (advance chapters 2015–2020). Only some chapters are in the library, e.g. first aid, heart, belly and diarrhea, diabetes, pregnancy, children."
@@ -1090,12 +1095,6 @@
    "title": "Hypertension",
    "label": "Encyclopedia: High blood pressure (MDWiki)",
    "note": "Medical encyclopedia article on causes, risks and treatment of high blood pressure, for background reading."
-  },
-  {
-   "zim": "zim/mdwiki_en_all_maxi_2025-11.zim/Psychological_first_aid",
-   "title": "Psychological first aid",
-   "label": "Encyclopedia: Psychological first aid (MDWiki)",
-   "note": "Medical encyclopedia article on how responders and volunteers support people right after a disaster: safety and comfort, listening without pressure, practical help and referral. Background reading, not training."
   }
  ],
  "route": [
