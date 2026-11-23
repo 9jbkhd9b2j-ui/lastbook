@@ -708,7 +708,11 @@ def check(root=None):
             failures.append(what)
     report_path = root / 'build.json'
     if not report_path.exists():
-        raise SystemExit(f'no build.json in {root}; run the build step first')
+        # a surviving output from a previous builder keeps its report beside data/, not inside it; until a
+        # successful rebuild replaces it, that legacy report is the one describing this preserved output
+        report_path = BASE / 'build.json'
+        if not report_path.exists():
+            raise SystemExit(f'no build.json in {root}; run the build step first')
     report = json.loads(report_path.read_text(encoding='utf-8'))
     for rel, info in report['outputs'].items():
         f = root / rel
