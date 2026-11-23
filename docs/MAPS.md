@@ -153,6 +153,9 @@ as one map.
 
 [REGIONS-BO.md](REGIONS-BO.md) does the same for Bolivia as one country-wide region, with its nine departments as an
 alternative.
+[MAP-BO-L.md](MAP-BO-L.md) describes a first build from the Bolivia proposal: a detailed map of La Paz department,
+cut by its COD-AB box from Geofabrik's Bolivia extract. It depends on the prototype region map builder from the
+still-open pull request #80, at commit `a453274`; that builder is not in the main branch.
 
 ### To do: maps for every place on Earth
 
