@@ -3047,8 +3047,28 @@ def make_map(path, state='CA', extra=None):
     return files
 
 
+class WithFlags:
+    """A stat result with st_flags, for a system whose own results have none. Everything else is the real result's."""
+
+    def __init__(self, st):
+        self._st, self.st_flags = st, 0
+
+    def __getattr__(self, name):
+        return getattr(self._st, name)
+
+
 class CloudOnly(Base):
     """Files of the library whose contents are only in iCloud (#362): found from metadata alone, never opened."""
+
+    def setUp(self):
+        super().setUp()
+        # These tests tell the code it is on a Mac. Only macOS and the BSDs put st_flags on a stat result, so on Linux and
+        # Windows os.lstat is given the flags of an ordinary file here. On a Mac nothing is patched.
+        if not hasattr(os.lstat(self.tmp), 'st_flags'):
+            real = os.lstat
+            patch = mock.patch.object(hardware.os, 'lstat', lambda path, *a, **kw: WithFlags(real(path, *a, **kw)))
+            patch.start()
+            self.addCleanup(patch.stop)
 
     def library(self):
         lib = self.tmp / 'LastbookData'
