@@ -519,7 +519,71 @@ class Downloads(Base):
         self.files.etag['model.gguf'] = '"new"'
         d.run()
         self.assertEqual(Path(d.dest).read_bytes(), self.model)
-        self.assertEqual([r for _, r, _ in self.files.log], ['bytes=600000-', None])   # tried to resume, then started over
+        self.assertEqual([r for _, r, _ in self.files.log], ['bytes=600000-', 'bytes=0-599999', None])   # tried to resume, compared what was here, then started over
+
+    def stale(self, d, data, n, etag='"old"'):
+        """Leaves the first n bytes of `data` as d's partial file, saved under an ETag the server no longer gives."""
+        os.makedirs(os.path.dirname(d.part), exist_ok=True)
+        Path(d.part).write_bytes(data[:n])
+        Path(d.meta).write_text(json.dumps({'url': d.url, 'size': d.size, 'sha256': d.sha256, 'etag': etag, 'bytes_done': n}))
+
+    def test_etag_changed_same_bytes_keeps_the_part(self):
+        """The server's copy got a new ETag (uploaded again, say) but holds the same bytes: what is here is kept (#208)."""
+        d = self.dl('model.gguf')
+        self.stale(d, self.model, 600_000)
+        self.files.etag['model.gguf'] = '"new"'
+        seen = []
+        d.progress = lambda done, total, phase: phase == 'downloading' and seen.append(done)
+        d.run()
+        self.assertEqual(Path(d.dest).read_bytes(), self.model)
+        log = [r for _, r, _ in self.files.log]
+        self.assertEqual(log[0], 'bytes=600000-')
+        self.assertNotIn(None, log)                                   # never asked for the whole file
+        self.assertTrue(all(int(r[6:].split('-')[1]) < 600_000 for r in log[1:]), log)   # the rest: samples of what was here
+        self.assertEqual(min(seen), 600_000)                          # and the count never went back
+
+    def test_etag_changed_sample_differs_starts_over(self):
+        """One byte of what is here is not the server's: that is another file, and it starts over as before."""
+        d = self.dl('model.gguf')
+        self.stale(d, self.model[:599_999] + bytes([self.model[599_999] ^ 1]), 600_000)
+        self.files.etag['model.gguf'] = '"new"'
+        d.run()
+        self.assertEqual(Path(d.dest).read_bytes(), self.model)
+        self.assertEqual([r for _, r, _ in self.files.log][-1], None)
+
+    def test_etag_changed_between_the_samples_is_left_to_the_checksum(self):
+        """The comparison looks at stretches, not at every byte. A difference between them is found by the SHA-256 at the end, as
+        for any download that came out wrong."""
+        d = self.dl('model.gguf')
+        self.stale(d, self.model[:150_000] + bytes([self.model[150_000] ^ 1]) + self.model[150_001:], 600_000)
+        self.files.etag['model.gguf'] = '"new"'
+        with mock.patch.object(download, 'SAMPLE', 1000), self.assertRaises(download.BadChecksum):
+            d.run()
+        self.assertEqual([r for _, r, _ in self.files.log], ['bytes=600000-', 'bytes=0-999', 'bytes=299500-300499', 'bytes=599000-599999'])
+        self.assertFalse(Path(d.part).exists() or Path(d.dest).exists())
+
+    def test_etag_changed_and_the_check_breaks_keeps_the_part(self):
+        """A busy answer and a cut connection during the comparison are waited out like any other: nothing is thrown away."""
+        d = self.dl('model.gguf')
+        self.stale(d, self.model, 600_000)
+        self.files.etag['model.gguf'] = '"new"'
+        self.files.answers['model.gguf'] = [None, (503, None)]        # the resume is answered, the first sample is not
+        with fast_backoff():
+            d.run()
+        self.assertEqual(Path(d.dest).read_bytes(), self.model)
+        self.assertNotIn(None, [r for _, r, _ in self.files.log])
+
+    def test_etag_changed_and_the_check_gets_the_whole_file_keeps_the_part(self):
+        """A 200 to a sample tells nothing about what is here. It gives up as a network failure with the partial file kept."""
+        d = self.dl('model.gguf')
+        self.stale(d, self.model, 600_000)
+        self.files.etag['model.gguf'] = '"new"'
+        self.files.answers['model.gguf'] = [None, 'whole'] * download.NETWORK_TRIES     # each resume is answered, each sample is not
+        with fast_backoff(), self.assertRaises(download.Failed) as e:
+            d.run()
+        self.assertEqual(e.exception.code, 'network')
+        self.assertEqual(os.path.getsize(d.part), 600_000)
+        self.assertEqual(json.loads(Path(d.meta).read_text())['etag'], '"old"')   # so the next try checks again
 
     def test_server_ignores_range(self):
         """A 200 with the whole file to a resume (seen on downloads.lastbook.org for minutes after an upload): after one more ask,
@@ -822,6 +886,42 @@ class ParallelDownloads(Base):
         with pieces():
             self.assertEqual(Path(d.run()).read_bytes(), self.big)
         self.assertIn('bytes=0-262143', self.ranges())
+
+    def test_etag_changed_same_bytes_keeps_the_part(self):
+        """The same over several connections: the hashed run is kept, and the pieces carry on from it (#208)."""
+        d = self.dl()
+        os.makedirs(os.path.dirname(d.part), exist_ok=True)
+        Path(d.part).write_bytes(self.big[:512 * 1024] + b'\0' * (300 * 1024))     # and a window past it, not vouched for
+        Path(d.meta).write_text(json.dumps({'url': d.url, 'size': d.size, 'sha256': d.sha256, 'etag': '"old"', 'bytes_done': 512 * 1024, 'parallel': True}))
+        self.files.etag['big.bin'] = '"new"'
+        with pieces():
+            self.assertEqual(Path(d.run()).read_bytes(), self.big)
+        r = self.ranges()
+        self.assertNotIn('bytes=0-262143', r)                              # the first piece was not fetched again
+        self.assertNotIn(None, r)
+        self.assertIn(f'bytes={len(self.big) - 4321}-{len(self.big) - 1}', r)   # the last one came as a piece: still several connections
+
+    def test_etag_changed_and_the_check_breaks_keeps_the_part(self):
+        """The comparison could not be made (a busy server): it goes on over one connection, which waits and checks again."""
+        d = self.dl()
+        os.makedirs(os.path.dirname(d.part), exist_ok=True)
+        Path(d.part).write_bytes(self.big[:512 * 1024])
+        Path(d.meta).write_text(json.dumps({'url': d.url, 'size': d.size, 'sha256': d.sha256, 'etag': '"old"', 'bytes_done': 512 * 1024, 'parallel': True}))
+        self.files.etag['big.bin'] = '"new"'
+        real = download.Download._same_bytes
+
+        def busy_once(self_, n, ctx):
+            if not busy_once.done:
+                busy_once.done = True
+                self.files.answers['big.bin'] = [(503, None)]
+            return real(self_, n, ctx)
+        busy_once.done = False
+        with pieces(), fast_backoff(), mock.patch.object(download.Download, '_same_bytes', busy_once):
+            self.assertEqual(Path(d.run()).read_bytes(), self.big)
+        r = self.ranges()
+        self.assertNotIn(None, r)
+        self.assertNotIn('bytes=0-262143', r)
+        self.assertIn(f'bytes={512 * 1024}-', r)                           # carried on over one connection from the hashed run
 
     def test_server_ignores_range_goes_to_one_connection(self):
         self.files.ignore_range.add('big.bin')
