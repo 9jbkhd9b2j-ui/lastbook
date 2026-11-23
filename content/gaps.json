@@ -71,7 +71,8 @@
  },
  "energy": {
   "missing": [
-   "Micro-hydro and wind material is mostly old or utility-scale."
+   "Micro-hydro and wind material is mostly old or utility-scale.",
+   "No official, beginner-level guide to pedal power or to charging a battery from it safely. The two Appropedia build guides (route step 7) are community-written and leave out battery gas and ventilation."
   ]
  },
  "comms": {
