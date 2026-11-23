@@ -151,6 +151,24 @@ class LegacyLayoutMigrationTests(RebuildRecoveryTests):
         self.assertIn('+ 3 without a number', joined)                 # the in-data report drove the address check
         self.assertNotIn('+ 0 without a number', joined)              # not the legacy one beside it
 
+    def test_checking_a_staging_folder_without_its_report_reports_it_missing(self):
+        """The legacy fallback belongs to the live data/ folder only: a staging folder without its own
+        report must be told as missing, never validated against the live map's report."""
+        (self.base / 'build.json').write_text(json.dumps(self.legacy_report()), encoding='utf-8')
+        staging = self.base / 'data.new'
+        self.write_minimal_output(staging)
+        with self.assertRaises(SystemExit) as caught:
+            builder.check(staging)
+        self.assertIn('no build.json', str(caught.exception))
+        self.assertIn('data.new', str(caught.exception))
+        # its own report, however slim, is enough
+        (staging / 'build.json').write_text(json.dumps(
+            {'region': REGION, 'built': 'staged', 'counts': {'kept': 0, 'skipped_without_number': 1}, 'outputs': {}}),
+            encoding='utf-8')
+        failures = builder.check(staging)
+        joined = ' | '.join(failures)
+        self.assertIn('+ 1 without a number', joined)                 # judged by the staging's own report
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -707,12 +707,14 @@ def check(root=None):
         if not ok:
             failures.append(what)
     report_path = root / 'build.json'
-    if not report_path.exists():
-        # a surviving output from a previous builder keeps its report beside data/, not inside it; until a
-        # successful rebuild replaces it, that legacy report is the one describing this preserved output
+    if not report_path.exists() and root == BASE / 'data':
+        # only the live map can fall back: a surviving output from a previous builder keeps its report
+        # beside data/, not inside it, until a successful rebuild replaces it. A staging folder without
+        # its own report has nothing to read — validating it against the live map's report would check
+        # the wrong files against the wrong hashes.
         report_path = BASE / 'build.json'
-        if not report_path.exists():
-            raise SystemExit(f'no build.json in {root}; run the build step first')
+    if not report_path.exists():
+        raise SystemExit(f'no build.json in {root}; run the build step first')
     report = json.loads(report_path.read_text(encoding='utf-8'))
     for rel, info in report['outputs'].items():
         f = root / rel

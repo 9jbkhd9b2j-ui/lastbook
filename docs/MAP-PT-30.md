@@ -28,7 +28,8 @@ the network, and it keeps files whose SHA-256 matches the previous fetch. Everyt
 `data.new/`, checks the staging, and only then replaces `data/` — a rebuild that fails or stops leaves the last
 good `data/` (with its `build.json`) as it was, and one that stops between the two final renames is repaired by
 the next build. An output kept from the earlier builder carries its report beside `data/` rather than inside it;
-`check` reads that legacy report for the preserved output until a successful build replaces it.
+`check` reads that legacy report for the live map until a successful build replaces it — a staging folder without
+its own report is reported as missing, never validated against another output's report.
 `data/build.json` records every source (URL, dated file name, data date, licence, size,
 SHA-256) and every output (size, SHA-256).
 
