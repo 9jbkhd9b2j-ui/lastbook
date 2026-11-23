@@ -14,15 +14,19 @@ the runtime half, offered in #79 and coordinated with the other regions in #31 a
 
 ```sh
 python3 tools/build_region_de_be.py fetch    # downloads the sources, about 270 MB, into derived/regions/DE-BE/source/
-python3 tools/build_region_de_be.py build    # writes derived/regions/DE-BE/data/ (about 30 s)
+python3 tools/build_region_de_be.py build    # builds beside the last build, replaces data/ once it passes check (about a minute)
 python3 tools/build_region_de_be.py check    # validates it; exits non-zero on any failure
 python3 tools/build_region_de_be.py demo     # adds an empty library beside it for trying the map alone
 python3 server.py --data derived/regions/DE-BE/demo --no-index
 ```
 
 Python 3.9 or newer and its standard library; no GDAL, no other packages. `fetch` is the only step that uses the
-network. Everything is written under `derived/regions/DE-BE/`, so no existing map set changes. `build.json` there
-records every source (URL, dated file name, data date, licence, size, SHA-256) and every output (size, SHA-256).
+network. Everything is written under `derived/regions/DE-BE/`, so no existing map set changes. `data/build.json`
+records every source (URL, dated file name, data date, licence, size, SHA-256) and every other output (size, SHA-256).
+
+`build` writes into `data.new/` and runs `check` on it; only if every check passes does it take the place of `data/`.
+A rebuild that fails, or fails its checks, leaves the previous `data/` and its `build.json` as they were (a failed build
+stays in `data.new/` to look at, and the next build clears it).
 
 ## Sources
 
@@ -47,20 +51,22 @@ the public register. Everything else, including street hand pumps, comes from Op
 Built on 23 November 2026 from the sources fetched on 17 November 2026: OpenStreetMap data of 16 November 2026
 (`berlin-261116-free.gpkg.zip`) and the Geoportal services as served that morning. On 17 November a full `fetch`,
 `build`, `check` took under two minutes. Row for row, every table holds what the builder in #79 writes from the same
-sources with `tools/build_map.py`'s region options; only the build times differ.
+sources with `tools/build_map.py`'s region options, apart from the build times and one fix: the place finder's 952 named
+hospitals, pharmacies, fire stations and police stations now carry their source, Geoportal Berlin, where #79 labels
+them OpenStreetMap.
 
 | File | Size | SHA-256 (this build) | Holds |
 |---|---|---|---|
-| `derived/geo/national.sqlite` | 188.1 MB | `77526420…edeb2` | 467,739 road features plus water, land, rail, buildings and places; 21,000-odd help and supply points |
+| `derived/geo/national.sqlite` | 188.1 MB | `c2b77fa2…9d34e` | 467,739 road features plus water, land, rail, buildings and places; 21,000-odd help and supply points |
 | `derived/geo/map.sqlite` | 32 KB | `5d421123…650dd` | empty, as in a US state map; carries the map's source and date |
-| `derived/geo/places.sqlite` | 3.3 MB | `e7eee1fb…fccbe` | 12 districts, 97 localities, 193 postcode areas, 11,321 streets, 13,488 named points, 196 named places |
-| `derived/geo/addresses/DE-BE.sqlite` | 51.6 MB | `8fa33af9…dd7aa` | 404,303 addresses; a sidecar, as the US address indexes are |
+| `derived/geo/places.sqlite` | 3.3 MB | `4b59f374…f30d9` | 12 districts, 97 localities, 193 postcode areas, 11,321 streets, 13,488 named points, 196 named places |
+| `derived/geo/addresses/DE-BE.sqlite` | 51.6 MB | `d06f25d7…5a4b2` | 404,303 addresses; a sidecar, as the US address indexes are |
 | `map-set.json` | 191 B | | name `DE-BE` and the sizes of the map files |
 
 Help points: 111 hospitals, 702 pharmacies, 102 fire stations and 37 police stations from the Geoportal (replacing
 59, 685, 103 and 68 OpenStreetMap points), and 2,080 street hand pumps from OpenStreetMap.
 
-Full checksums are in `build.json`. They identify one build: the map and address files record their build time, so two
+Full checksums are in `data/build.json`. They identify one build: the map and address files record their build time, so two
 builds of the same sources differ in those bytes, not in content.
 
 ## Checks
@@ -76,11 +82,13 @@ builds of the same sources differ in those bytes, not in content.
   street key is `normalize_de(street)`;
 - three public buildings are in the index exactly once with their postcode and locality (Unter den Linden 77, Platz der
   Republik 1, Straße des 17. Juni 135);
-- the place finder has a locality, a district, a postcode area and a street.
+- the place finder has a locality, a district, a postcode area and a street, and labels every official help point
+  with its source, Geoportal Berlin.
 
 `check` reads the files with SQL only and imports nothing from the app, so it says nothing about how the app searches
 them. `app/tests/test_build_region_de_be.py` runs offline: the `de-1` spellings, the stored house-number form, the
-fixtures' consistency, and that each pump lands exactly where `tools/build_map.py` puts a point.
+fixtures' consistency, that each pump lands exactly where `tools/build_map.py` puts a point, that each place names the
+source it came from, and that a rebuild which fails, or fails its checks, leaves the previous output in place.
 
 ## Try it
 
